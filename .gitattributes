@@ -1,0 +1,12 @@
+# Normalize line endings to LF for all text files.
+* text=auto eol=lf
+
+# Mark binaries so git doesn't try to diff or normalize them.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.svg  binary
+*.woff  binary
+*.woff2 binary

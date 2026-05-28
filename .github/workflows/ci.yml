@@ -1,0 +1,26 @@
+# CI — runs on every PR and push to main.
+# This is a stub. Fill in once the test suites have real tests; tune later.
+#
+# Intended jobs (see CONTRIBUTING.md § "Running checks locally"):
+#   - python-checks   : ruff + mypy + pytest on Python 3.11 and 3.12
+#   - rust-checks     : cargo fmt --check + clippy -D warnings + cargo test
+#   - build-wheels    : maturin build on linux/macos/windows (smoke build only)
+#   - docs-build      : mkdocs build --strict
+#
+# Real implementation lands as a follow-up; do not enable required-status-checks
+# in GitHub branch protection until at least python-checks and rust-checks are
+# green on this file.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: stub
+        run: echo "CI scaffolding only — replace with real jobs."

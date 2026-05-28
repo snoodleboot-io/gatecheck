@@ -1,0 +1,53 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.installed.cfg
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.python-version
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Compiled extensions produced by maturin develop
+*.so
+*.pyd
+
+# ── Rust ──────────────────────────────────────────────────────
+gatecheck-rs/target/
+# Cargo.lock is kept — gatecheck-core ships as a binary wheel and we want
+# reproducible release builds.
+
+# ── Docs ──────────────────────────────────────────────────────
+site/
+docs/_build/
+
+# ── IDE / OS ──────────────────────────────────────────────────
+.idea/
+.vscode/
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+
+# ── Local secrets / scratch ───────────────────────────────────
+.env
+.env.local
+.secrets.baseline
+*.log
+scratch/

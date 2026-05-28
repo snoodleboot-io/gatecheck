@@ -1,0 +1,68 @@
+# gatecheck uses gatecheck to lint itself
+# This is the project's own check.toml
+
+[sources]
+default-registry = "https://pypi.org/simple"
+
+[[hook]]
+id    = "ruff"
+from  = "pypi:ruff>=0.4"
+run   = "ruff check --fix {files}"
+files = "*.py"
+
+[[hook]]
+id    = "ruff-format"
+from  = "pypi:ruff>=0.4"
+run   = "ruff format {files}"
+files = "*.py"
+depends-on = ["ruff"]
+
+[[hook]]
+id        = "mypy"
+from      = "project"
+run       = "mypy src/gatecheck"
+pass-files = false
+when      = { env-not = "SKIP_MYPY" }
+
+[[hook]]
+id    = "cargo-fmt-check"
+from  = "system"
+run   = "cargo fmt --manifest-path gatecheck-rs/Cargo.toml -- --check"
+pass-files = false
+
+[[hook]]
+id    = "cargo-clippy"
+from  = "system"
+run   = "cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings"
+pass-files = false
+depends-on = ["cargo-fmt-check"]
+
+[[hook]]
+id        = "check-secrets"
+from      = "pypi:detect-secrets"
+run       = "detect-secrets audit .secrets.baseline"
+pass-files = false
+when      = { on-ci = true }
+
+[[hook]]
+id        = "conventional-commit"
+from      = "pypi:commitizen"
+run       = "cz check --commit-msg-file .git/COMMIT_EDITMSG"
+pass-files = false
+
+[group.format]
+hooks     = ["ruff-format"]
+parallel  = false
+on-event  = "commit"
+
+[group.lint]
+hooks     = ["ruff", "cargo-fmt-check", "cargo-clippy"]
+parallel  = true
+fail-fast = false
+on-event  = "commit"
+
+[group.full]
+hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy", "check-secrets"]
+parallel  = true
+fail-fast = false
+on-event  = "push"

@@ -1,0 +1,170 @@
+site_name: gatecheck
+site_description: A modern pre-commit replacement with real package sources, monorepo support, and Rust-powered parallel execution.
+site_url: https://gatecheck.dev
+repo_url: https://github.com/snoodleboot-io/gatecheck
+repo_name: snoodleboot-io/gatecheck
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/logo.svg
+  favicon: assets/favicon.png
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: gatecheck-light
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: gatecheck-dark
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - announce.dismiss
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      fallback_to_build_date: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: snoodleboot-io
+      repo: gatecheck
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Migration from pre-commit: getting-started/migration.md
+  - Configuration:
+    - config/index.md
+    - check.toml Reference: config/reference.md
+    - Source Types: config/sources.md
+    - Conditions & Filters: config/conditions.md
+    - Groups & Ordering: config/groups.md
+    - Monorepo / Workspace: config/workspace.md
+  - Guides:
+    - guides/index.md
+    - Python Projects: guides/python.md
+    - Monorepo Setup: guides/monorepo.md
+    - CI Integration: guides/ci.md
+    - Private Registries: guides/private-registries.md
+    - Docker Hooks: guides/docker.md
+    - Writing Custom Hooks: guides/custom-hooks.md
+  - CLI Reference:
+    - cli/index.md
+    - gatecheck run: cli/run.md
+    - gatecheck install: cli/install.md
+    - gatecheck sync: cli/sync.md
+    - gatecheck cache: cli/cache.md
+    - gatecheck migrate: cli/migrate.md
+    - gatecheck workspace: cli/workspace.md
+  - Design:
+    - design/index.md
+    - Architecture Overview: design/architecture.md
+    - Why Not pre-commit: design/why-not-precommit.md
+    - Rust Core: design/rust-core.md
+    - Config Design: design/config-design.md
+    - Monorepo Model: design/monorepo.md
+    - Environment Strategy: design/environments.md
+    - Versioning & Stability: design/versioning.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md
+
+extra:
+  version:
+    provider: mike
+    default: stable
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/snoodleboot-io/gatecheck
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/gatecheck/
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation.

@@ -1,0 +1,27 @@
+# Release — automated. Triggered when a vX.Y.Z tag lands on main.
+# This is a stub. Real implementation per CONTRIBUTING.md § "Release process".
+#
+# Intended jobs:
+#   - compute-version : runs scripts/compute_version.py against the tag
+#   - build-wheels    : maturin build --release for the wheel matrix
+#                       (linux x86_64+aarch64, macos x86_64+arm64, windows x86_64)
+#   - publish-pypi    : OIDC trusted publishing — manual approval gate
+#   - github-release  : create the GH release with generated changelog
+#   - docs-deploy     : mike deploy the versioned alias
+#
+# The `release` GitHub Actions environment must require manual approval before
+# publish-pypi runs, per the PRD's "human checkpoint before public release".
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: stub
+        run: echo "Release scaffolding only — replace with real jobs."

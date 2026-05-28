@@ -1,0 +1,65 @@
+version: '1.0'
+repository:
+  type: multi-language-monorepo
+  mappings: {}
+spec:
+  - folder: src/gatecheck
+    type: backend
+    subtype: cli
+    language: python
+    runtime: '3.11'
+    package_manager: uv
+    test_framework: pytest
+    linter: ruff
+    linters:
+      - ruff
+      - mypy
+    formatter: ruff
+    coverage:
+      line: 85
+      branch: 80
+      function: 90
+      statement: 85
+      mutation: 80
+      path: 60
+    python_version: '3.11'
+    python_package_manager: uv
+    python_test_framework: pytest
+    python_linter:
+      - ruff
+      - mypy
+    python_formatter: ruff
+  - folder: gatecheck-rs
+    type: backend
+    subtype: library
+    language: rust
+    runtime: '1.75'
+    package_manager: cargo
+    test_framework: cargo test
+    linter: clippy
+    linters:
+      - clippy
+    formatter: rustfmt
+    coverage:
+      line: 80
+      branch: 70
+      function: 90
+      statement: 85
+      mutation: 80
+      path: 60
+    rust_version: '1.75'
+    rust_package_manager: Cargo
+    rust_linter:
+      - clippy
+    rust_formatter: rustfmt
+    rust_test_framework: built-in
+variant: verbose
+active_personas:
+  - backend_software_engineer
+  - software_engineer
+  - architect
+  - qa_tester
+  - devops_engineer
+  - security_engineer
+  - product_manager
+  - technical_writer

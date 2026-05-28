@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gatecheck — modern pre-commit actions, blazing fast.</title>
+    <meta
+      name="description"
+      content="The next-generation runner for your pre-commit actions — real package sources, monorepo-aware execution, and a Rust-powered parallel runner that starts in under 10ms."
+    />
+    <meta name="theme-color" content="#0e0e0e" />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+
+    <!-- Open Graph / social -->
+    <meta property="og:title" content="gatecheck — modern pre-commit actions, blazing fast." />
+    <meta
+      property="og:description"
+      content="The next-generation runner for your pre-commit actions — real package sources, monorepo support, and Rust-powered parallel execution."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://gatecheck.dev" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">
+        <img src="assets/logo.svg" alt="" width="32" height="32" />
+        <span>gatecheck</span>
+      </a>
+      <nav class="site-nav">
+        <a href="https://gatecheck.dev/getting-started/quickstart/">Docs</a>
+        <a href="https://github.com/snoodleboot-io/gatecheck">GitHub</a>
+        <a href="https://pypi.org/project/gatecheck/">PyPI</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero__inner">
+        <h1 class="hero__title">
+          pre-commit actions,<br />
+          <span>blazing fast.</span>
+        </h1>
+        <p class="hero__tagline">
+          gatecheck is the next-generation runner for your pre-commit actions —
+          real package sources, monorepo-aware execution, and a Rust-powered
+          parallel runner that starts in under 10ms.
+        </p>
+
+        <div class="install">
+          <span class="install__prefix">$</span>
+          <span class="install__cmd">pip install gatecheck</span>
+          <button
+            class="install__copy"
+            type="button"
+            aria-label="Copy install command"
+            onclick="navigator.clipboard.writeText('pip install gatecheck'); this.textContent='copied';"
+          >
+            copy
+          </button>
+        </div>
+
+        <div class="hero__ctas">
+          <a
+            href="https://gatecheck.dev/getting-started/quickstart/"
+            class="btn btn--primary"
+            >Quick Start →</a
+          >
+          <a
+            href="https://gatecheck.dev/getting-started/migration/"
+            class="btn btn--secondary"
+            >Import your existing hooks</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <h2>Why gatecheck?</h2>
+        <p class="section__lede">
+          Pre-commit actions should be fast, reproducible, and monorepo-aware.
+          gatecheck is built for the way modern teams ship — PyPI-native package
+          sources, a dependency-aware DAG runner, and a Rust core that gets out
+          of your way.
+        </p>
+
+        <div class="features">
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">📦</span>
+            <h3 class="feature__title">Real package sources</h3>
+            <p class="feature__body">
+              Install hooks from PyPI (public or private), git refs, local paths,
+              or Docker images. No more GitHub-URL-only requirement.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🏢</span>
+            <h3 class="feature__title">Monorepo native</h3>
+            <p class="feature__body">
+              Workspace-aware config with per-package overrides, dependency
+              graphs, and <code>--affected</code> execution that only runs what
+              changed.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">⚡</span>
+            <h3 class="feature__title">Rust-powered runner</h3>
+            <p class="feature__body">
+              DAG execution, parallel subprocess management, and file hashing
+              implemented in Rust. Sub-10ms startup on a no-op commit.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🔒</span>
+            <h3 class="feature__title">Lockfile reproducibility</h3>
+            <p class="feature__body">
+              <code>check.lock</code> pins every resolved dependency with content
+              hashes. <code>gatecheck sync</code> installs exactly what's locked.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🧩</span>
+            <h3 class="feature__title">Composable groups</h3>
+            <p class="feature__body">
+              Named groups with explicit parallelism, ordering, and git event
+              bindings. <code>gatecheck run lint</code> just works.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🔍</span>
+            <h3 class="feature__title">Transparent cache</h3>
+            <p class="feature__body">
+              <code>gatecheck cache why black</code> tells you exactly why a
+              rebuild was triggered. No more debugging opaque invalidations.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🌿</span>
+            <h3 class="feature__title">Project venv reuse</h3>
+            <p class="feature__body">
+              <code>from = "project"</code> runs hooks inside your existing venv
+              — no shadow copies, no version drift, no duplicate installs.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature__icon" aria-hidden="true">🔀</span>
+            <h3 class="feature__title">Rich conditionals</h3>
+            <p class="feature__body">
+              Run hooks only on certain branches, when env vars are set, on CI,
+              or when specific file patterns are staged.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--dark">
+      <div class="container">
+        <h2>What you get</h2>
+        <p class="section__lede">
+          Every capability you'd expect from a modern hook runner — and a few
+          you've been working around for years.
+        </p>
+        <div class="compare-wrap">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>gatecheck</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>PyPI package sources (public + private)</td><td><span class="ok">✓</span> native</td></tr>
+              <tr><td>Project venv reuse</td><td><span class="ok">✓</span> <code>from = "project"</code></td></tr>
+              <tr><td>Monorepo / workspace awareness</td><td><span class="ok">✓</span> per-package configs</td></tr>
+              <tr><td>Affected-package execution</td><td><span class="ok">✓</span> <code>--affected</code></td></tr>
+              <tr><td>Parallel execution</td><td><span class="ok">✓</span> Rust rayon</td></tr>
+              <tr><td>Dependency graph (DAG)</td><td><span class="ok">✓</span> topological waves</td></tr>
+              <tr><td>Lockfile reproducibility</td><td><span class="ok">✓</span> <code>check.lock</code></td></tr>
+              <tr><td>Branch / env / CI conditions</td><td><span class="ok">✓</span> rich <code>when:</code></td></tr>
+              <tr><td>Cache debugging</td><td><span class="ok">✓</span> <code>cache why</code></td></tr>
+              <tr><td>Startup time</td><td><span class="ok">✓</span> ~8 ms</td></tr>
+              <tr><td>Import existing hooks</td><td><span class="ok">✓</span> <code>gatecheck migrate</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <h2>One config to rule them</h2>
+        <p class="section__lede">
+          A single <code>check.toml</code> at the root of your repo. No YAML,
+          no GitHub URLs, no shadow copies of your tools.
+        </p>
+        <pre class="code"><code>[sources]
+default-registry = "https://pypi.org/simple"
+
+[[hook]]
+id    = "ruff"
+from  = "pypi:ruff>=0.4"
+run   = "ruff check --fix {files}"
+files = "*.py"
+
+[[hook]]
+id         = "mypy"
+from       = "project"
+run        = "mypy src/"
+pass-files = false
+when       = { env-not = "SKIP_MYPY" }
+
+[group.lint]
+hooks    = ["ruff", "mypy"]
+parallel = true
+on-event = "commit"</code></pre>
+
+        <div class="cta-row">
+          <a
+            href="https://gatecheck.dev/getting-started/quickstart/"
+            class="btn btn--primary"
+            >Get started in 2 minutes →</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="container site-footer__row">
+        <span>© gatecheck contributors · MIT</span>
+        <nav>
+          <a href="https://gatecheck.dev">Docs</a>
+          <a href="https://github.com/snoodleboot-io/gatecheck">GitHub</a>
+          <a href="https://pypi.org/project/gatecheck/">PyPI</a>
+          <a href="https://gatecheck.dev/changelog/">Changelog</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

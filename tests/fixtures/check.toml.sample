@@ -1,0 +1,16 @@
+# Minimal fixture for the config loader tests.
+# Mirrors the smallest valid shape from docs/config/reference.md.
+
+[sources]
+default-registry = "https://pypi.org/simple"
+
+[[hook]]
+id    = "ruff"
+from  = "pypi:ruff>=0.4"
+run   = "ruff check --fix {files}"
+files = "*.py"
+
+[group.lint]
+hooks    = ["ruff"]
+parallel = true
+on-event = "commit"
