@@ -163,6 +163,9 @@ def test_unit_test_coverage_meets_ninety_percent() -> None:
             str(pytest_bin),
             "tests/unit/test_config_loader.py",
             "tests/unit/test_config_schema.py",
+            # STY-0002: ConfigError + _error_translator live alongside the loader and
+            # share the same coverage gate. Include their unit tests in the gate.
+            "tests/unit/test_config_error.py",
             "--cov=gatecheck.config",
             "--cov-report=term",
             "--cov-fail-under=90",

@@ -31,7 +31,7 @@ from pathlib import Path
 import pydantic
 import pytest
 
-from gatecheck.config import GatecheckConfig, load_config
+from gatecheck.config import ConfigError, GatecheckConfig, load_config
 
 # ---------------------------------------------------------------------------
 # Happy path
@@ -142,9 +142,11 @@ def test_load_config_raises_toml_decode_error_on_malformed_toml(
     bad_toml = tmp_path / "broken.toml"
     bad_toml.write_text("[malformed")
 
-    # Act & Assert
-    with pytest.raises(tomllib.TOMLDecodeError):
+    # Act & Assert — two-layer test (STY-0002): wrapper exception is ConfigError,
+    # but its ``__cause__`` retains the raw TOMLDecodeError identity (STY-0001).
+    with pytest.raises(ConfigError) as exc_info:
         load_config(bad_toml)
+    assert isinstance(exc_info.value.__cause__, tomllib.TOMLDecodeError)
 
 
 def test_load_config_raises_validation_error_on_missing_required_hook_id(
@@ -154,9 +156,11 @@ def test_load_config_raises_validation_error_on_missing_required_hook_id(
     cfg_file = tmp_path / "check.toml"
     cfg_file.write_text('[[hook]]\nfrom = "pypi:ruff"\nrun  = "ruff check"\n')
 
-    # Act & Assert
-    with pytest.raises(pydantic.ValidationError) as exc_info:
+    # Act & Assert — two-layer test (STY-0002): wrapper exception is ConfigError,
+    # but its ``__cause__`` retains the raw ValidationError identity (STY-0001).
+    with pytest.raises(ConfigError) as exc_info:
         load_config(cfg_file)
+    assert isinstance(exc_info.value.__cause__, pydantic.ValidationError)
     assert "id" in str(exc_info.value)
 
 
@@ -169,9 +173,11 @@ def test_load_config_raises_validation_error_on_unknown_key(
         '[[hook]]\nid   = "ruff"\nfrom = "pypi:ruff"\nrun  = "ruff check"\nunknown-key = "x"\n'
     )
 
-    # Act & Assert
-    with pytest.raises(pydantic.ValidationError) as exc_info:
+    # Act & Assert — two-layer test (STY-0002): wrapper exception is ConfigError,
+    # but its ``__cause__`` retains the raw ValidationError identity (STY-0001).
+    with pytest.raises(ConfigError) as exc_info:
         load_config(cfg_file)
+    assert isinstance(exc_info.value.__cause__, pydantic.ValidationError)
     message = str(exc_info.value)
     assert "unknown-key" in message or "unknown_key" in message
 
@@ -192,9 +198,11 @@ def test_load_config_raises_validation_error_on_wrong_type(
         'parallel = "yes"\n'
     )
 
-    # Act & Assert
-    with pytest.raises(pydantic.ValidationError):
+    # Act & Assert — two-layer test (STY-0002): wrapper exception is ConfigError,
+    # but its ``__cause__`` retains the raw ValidationError identity (STY-0001).
+    with pytest.raises(ConfigError) as exc_info:
         load_config(cfg_file)
+    assert isinstance(exc_info.value.__cause__, pydantic.ValidationError)
 
 
 # ---------------------------------------------------------------------------
