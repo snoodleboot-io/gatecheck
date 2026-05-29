@@ -255,3 +255,19 @@ def test_load_config_rejects_str_path(sample_check_toml: Path) -> None:
     # Act & Assert
     with pytest.raises(AttributeError):
         load_config(str_path)  # type: ignore[arg-type]
+
+
+def test_load_dump_reload_round_trips(sample_check_toml: Path, tmp_path: Path) -> None:
+    """Round-trip smoke: load → dump → reload yields equal GatecheckConfig."""
+    # Arrange
+    from gatecheck.config import dump_config
+
+    cfg1 = load_config(sample_check_toml)
+    out = tmp_path / "check.toml"
+
+    # Act
+    dump_config(cfg1, out)
+    cfg2 = load_config(out)
+
+    # Assert
+    assert cfg1 == cfg2

@@ -268,16 +268,99 @@ for name, group in cfg.group.items():
     print(name, group.hooks, group.parallel)
 ```
 
-The package exposes exactly six public symbols, all re-exported from `gatecheck.config`:
+The package exposes exactly seven public symbols, all re-exported from `gatecheck.config`:
 
 | Symbol | Kind | Source module |
 |---|---|---|
-| `load_config` | function | `gatecheck.config.loader` |
 | `ConfigError` | exception | `gatecheck.config.config_error` |
 | `GatecheckConfig` | pydantic model | `gatecheck.config.gatecheck_config` |
+| `GroupDef` | pydantic model | `gatecheck.config.group_def` |
 | `HookDef` | pydantic model | `gatecheck.config.hook_def` |
 | `SourceSpec` | pydantic model | `gatecheck.config.source_spec` |
-| `GroupDef` | pydantic model | `gatecheck.config.group_def` |
+| `dump_config` | function | `gatecheck.config.dumper` |
+| `load_config` | function | `gatecheck.config.loader` |
+
+### `dump_config`
+
+```python
+from gatecheck.config import dump_config
+
+dump_config(config: GatecheckConfig, path: Path) -> None
+```
+
+Serialize a `GatecheckConfig` back to a valid `check.toml` file at `path`. Complements `load_config` — where `load_config` reads and validates a TOML file into a typed model, `dump_config` writes a typed model back to a TOML file.
+
+#### Round-trip contract
+
+`dump_config` and `load_config` are inverses of each other:
+
+```python
+from pathlib import Path
+from gatecheck.config import dump_config, load_config
+
+original = load_config(Path("check.toml"))
+dump_config(original, Path("check.copy.toml"))
+copy = load_config(Path("check.copy.toml"))
+assert original == copy  # round-trip fidelity
+```
+
+Any `GatecheckConfig` produced by `load_config` can be passed to `dump_config`, and the resulting file will produce an equal `GatecheckConfig` when loaded again.
+
+#### Field omission
+
+Fields are omitted from the output when their value is `None` or when their value equals the pydantic-declared default for that field. This keeps the output clean and human-editable — only fields with meaningful, non-default values appear in the file.
+
+Examples of omitted fields: `pass-files = true` (default is `true`), `depends-on = []` (default is empty list), `when` when no conditions are set.
+
+#### TOML structure
+
+The output uses the same idiomatic TOML constructs as a hand-written `check.toml`:
+
+- `[[hook]]` — each hook is emitted as an array-of-tables block.
+- `[group.<name>]` — each group uses a dotted-table header.
+- `when = { … }` — conditional execution is serialized as an inline table, never a sub-table.
+
+Sections whose data is absent (`hook` list empty, `group` dict empty, `sources` is `None`) are not written to the output at all.
+
+TOML key names use hyphens (`pass-files`, `depends-on`, `from`, `on-event`, `fail-fast`, `env-not`, `on-ci`, `default-registry`), matching the canonical `check.toml` format.
+
+#### Errors
+
+`dump_config` is synchronous and side-effect-free beyond writing `path`. The following OS errors propagate unchanged — no new exception types are introduced:
+
+| Exception | Cause |
+|---|---|
+| `IsADirectoryError` (or `OSError`) | `path` is an existing directory |
+| `FileNotFoundError` | `path`'s parent directory does not exist |
+| `PermissionError` | `path` is not writable |
+
+#### Example
+
+```python
+from pathlib import Path
+from gatecheck.config import GatecheckConfig, HookDef, dump_config
+
+cfg = GatecheckConfig(
+    hook=[
+        HookDef(**{"id": "ruff", "from": "pypi:ruff>=0.4", "run": "ruff check --fix {files}", "files": "*.py"}),
+    ]
+)
+dump_config(cfg, Path("check.toml"))
+```
+
+The above produces:
+
+```toml
+[[hook]]
+id = "ruff"
+from = "pypi:ruff>=0.4"
+run = "ruff check --fix {files}"
+files = "*.py"
+```
+
+Note that `pass-files` is absent because its value (`true`) equals the default.
+
+---
 
 ### Error handling
 
