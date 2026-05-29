@@ -152,12 +152,20 @@ file:line:col translation of `ValidationError`.
 | `path` exists but is not readable | `PermissionError` | `open()`. |
 | File contents are not valid TOML | `tomllib.TOMLDecodeError` | `tomllib.load`. |
 | TOML parses but violates the schema (missing required field, wrong type, unknown key, bad `Literal` value) | `pydantic.ValidationError` | `GatecheckConfig.model_validate`. |
+| Any of the four above | wrapped as `ConfigError` (a `ValueError` subclass) in `load_config`, with the original exception preserved on `__cause__` | STY-0002 (BUILD-0002 / [BUILD-0002-ARCH](0002-architecture-decision.md) §5) |
 
 **Explicitly out of scope** for STY-0001:
 
 - No custom exception type (e.g. `ConfigError`) is introduced.
 - No conversion of `ValidationError` to file:line:col — STY-0002.
 - No logging, no `warnings.warn`. Unknown keys raise via `extra="forbid"`.
+
+**STY-0002 update.** As of BUILD-0002, `load_config` now wraps every
+exception in §5's table as `ConfigError(ValueError)`. The two-layer test
+strategy (BUILD-0002 §6) means `__cause__` is asserted alongside
+`isinstance(exc, ConfigError)` in all STY-0001 tests so the underlying
+exception identity remains a hard contract. See
+[BUILD-0002-ARCH](0002-architecture-decision.md).
 
 ---
 

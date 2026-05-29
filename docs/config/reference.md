@@ -268,11 +268,12 @@ for name, group in cfg.group.items():
     print(name, group.hooks, group.parallel)
 ```
 
-The package exposes exactly five public symbols, all re-exported from `gatecheck.config`:
+The package exposes exactly six public symbols, all re-exported from `gatecheck.config`:
 
 | Symbol | Kind | Source module |
 |---|---|---|
 | `load_config` | function | `gatecheck.config.loader` |
+| `ConfigError` | exception | `gatecheck.config.config_error` |
 | `GatecheckConfig` | pydantic model | `gatecheck.config.gatecheck_config` |
 | `HookDef` | pydantic model | `gatecheck.config.hook_def` |
 | `SourceSpec` | pydantic model | `gatecheck.config.source_spec` |
@@ -280,14 +281,54 @@ The package exposes exactly five public symbols, all re-exported from `gatecheck
 
 ### Error handling
 
-`load_config` does not wrap or translate exceptions; errors propagate as-is for the caller to handle.
+`load_config` raises `gatecheck.config.ConfigError` for any config-shape problem — malformed TOML or a schema violation. `ConfigError` subclasses `ValueError`, so existing `except ValueError:` callers continue to work without changes.
+
+#### `ConfigError` format
+
+`str(exc)` is one line per error in the IDE-parseable form `path:line:col: message`, with multiple errors joined by `\n`. This matches the convention used by compilers, `ruff`, `mypy`, and similar tools, so the output works directly with IDE error matchers, vim's quickfix list, and grep/sed pipelines.
+
+A full line looks like:
+
+```
+check.toml:5:3: Field required (field: hook.0.id)
+```
+
+#### Example
+
+```python
+from pathlib import Path
+from gatecheck.config import ConfigError, load_config
+
+try:
+    cfg = load_config(Path("check.toml"))
+except ConfigError as exc:
+    for line in str(exc).splitlines():
+        print(line)
+```
+
+#### Underlying exception identity
+
+`ConfigError` is raised with PEP 3134 exception chaining, so `exc.__cause__` is the original `tomllib.TOMLDecodeError` (malformed TOML) or `pydantic.ValidationError` (schema violation). Callers that need programmatic access to the raw exception — for example, `pydantic.ValidationError.errors()` for structured error data — can read it directly off `__cause__`:
+
+```python
+import pydantic
+from gatecheck.config import ConfigError, load_config
+
+try:
+    cfg = load_config(Path("check.toml"))
+except ConfigError as exc:
+    if isinstance(exc.__cause__, pydantic.ValidationError):
+        for err in exc.__cause__.errors():
+            ...  # structured handling
+```
+
+#### Errors that are NOT wrapped
+
+Errors raised before TOML parsing propagate as their native exception types and are NOT wrapped in `ConfigError`:
 
 - `FileNotFoundError` — `path` does not exist.
 - `PermissionError` — `path` exists but cannot be opened for reading.
-- `tomllib.TOMLDecodeError` — file contents are not valid TOML.
-- `pydantic.ValidationError` — TOML parses but violates the schema (missing required field, wrong type, unknown key, disallowed `Literal` value).
-
-Richer file:line:col error contexts are planned for a later release; in this version the raw `ValidationError` key path is the most precise location available.
+- `OSError` — `path` is not a regular file, or exceeds the 1 MiB size cap.
 
 ### TOML aliases
 
