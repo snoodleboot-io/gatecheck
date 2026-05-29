@@ -51,7 +51,3 @@ Thumbs.db
 .secrets.baseline
 *.log
 scratch/
-
-# ── Prompticorn session + transient run state ─────────────────
-.prompticorn/sessions/
-.prompticorn/run/

@@ -7,27 +7,28 @@ spec:
     type: backend
     subtype: cli
     language: python
-    runtime: '3.14'
+    runtime: '3.11'
     package_manager: uv
     test_framework: pytest
     linter: ruff
     linters:
       - ruff
+      - mypy
     formatter: ruff
-    coverage: standard
-    python_runtime: '3.14'
+    coverage:
+      line: 85
+      branch: 80
+      function: 90
+      statement: 85
+      mutation: 80
+      path: 60
+    python_version: '3.11'
     python_package_manager: uv
-    python_test_framework: hybrid
-    python_test_runner: pytest
+    python_test_framework: pytest
     python_linter:
       - ruff
-    python_formatter:
-      - ruff
-    python_abstract_class_style: interface
-    mocking_library:
-      - unittest.mock
-    coverage_tool: pytest-cov
-    mutation_tool: mutmut
+      - mypy
+    python_formatter: ruff
   - folder: gatecheck-rs
     type: backend
     subtype: library
@@ -46,7 +47,7 @@ spec:
       statement: 85
       mutation: 80
       path: 60
-    rust_version: '1.76'
+    rust_version: '1.75'
     rust_package_manager: Cargo
     rust_linter:
       - clippy
@@ -55,8 +56,6 @@ spec:
 variant: verbose
 active_personas:
   - backend_software_engineer
-  - frontend_software_engineer
-  - fullstack_software_engineer
   - software_engineer
   - architect
   - qa_tester
