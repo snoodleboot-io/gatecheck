@@ -1,5 +1,8 @@
-# Minimal fixture for the config loader tests.
-# Mirrors the smallest valid shape from docs/config/reference.md.
+# Fixture for the config loader tests.
+# Exercises every field and shape from BUILD-0001 architecture sketch §3:
+#   - SourceSpec.default-registry
+#   - HookDef: id, from, run, files, pass-files, depends-on, when (env-not, on-ci)
+#   - GroupDef: hooks, parallel, fail-fast, on-event ("commit" and "push")
 
 [sources]
 default-registry = "https://pypi.org/simple"
@@ -10,7 +13,34 @@ from  = "pypi:ruff>=0.4"
 run   = "ruff check --fix {files}"
 files = "*.py"
 
+[[hook]]
+id         = "ruff-format"
+from       = "pypi:ruff>=0.4"
+run        = "ruff format {files}"
+files      = "*.py"
+depends-on = ["ruff"]
+
+[[hook]]
+id         = "mypy"
+from       = "project"
+run        = "mypy src/gatecheck"
+pass-files = false
+when       = { env-not = "SKIP_MYPY" }
+
+[[hook]]
+id         = "check-secrets"
+from       = "pypi:detect-secrets"
+run        = "detect-secrets audit .secrets.baseline"
+pass-files = false
+when       = { on-ci = true }
+
 [group.lint]
 hooks    = ["ruff"]
 parallel = true
 on-event = "commit"
+
+[group.full]
+hooks     = ["ruff", "ruff-format", "mypy", "check-secrets"]
+parallel  = true
+fail-fast = false
+on-event  = "push"
