@@ -26,17 +26,13 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-import pytest
-
 from gatecheck.config import (
     GatecheckConfig,
     GroupDef,
     HookDef,
-    SourceSpec,
     dump_config,
     load_config,
 )
-from gatecheck.config.hook_def import HookWhen
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 FIXTURE_DIR: Path = Path(__file__).resolve().parents[1] / "fixtures"

@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import re
 import tomllib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 import tomlkit
+
+from gatecheck.sources import SourceSpecError, parse_source
+
+if TYPE_CHECKING:
+    from gatecheck.config.gatecheck_config import GatecheckConfig
 
 
 def _parse_toml_error(err: tomllib.TOMLDecodeError) -> tuple[int, int, str]:
@@ -59,6 +64,32 @@ def _locate_validation_errors(
             line, col = field_pos if field_pos is not None else (anchor_line, 1)
 
         results.append((line, col, formatted))
+    return results
+
+
+def _locate_source_spec_errors(
+    config: GatecheckConfig,
+    source: str,
+) -> list[tuple[int, int, str]]:
+    """Return ``(line, col, msg)`` for each hook whose ``from_`` fails parse_source.
+
+    Algorithm (BUILD-0004-ARCH §6): parse each validated hook's ``from_``; on
+    ``SourceSpecError`` anchor the diagnostic at that hook's ``from`` key in
+    ``source``. The validated ``config.hook`` list preserves source order, so the
+    list index is the array-of-tables index. Falls back to ``(anchor, 1)`` if the
+    field scan cannot pinpoint the key. ``UnsupportedSource`` results are valid and
+    add no error.
+    """
+    results: list[tuple[int, int, str]] = []
+    for index, hook in enumerate(config.hook):
+        try:
+            parse_source(hook.from_)
+        except SourceSpecError as exc:
+            anchor = _nth_aot_header_line(source, "hook", index)
+            pos = _scan_field(source, anchor, "from", hook.from_)
+            line, col = pos if pos is not None else (anchor, 1)
+            msg = f"{exc} (hook: {hook.id})"
+            results.append((line, col, msg))
     return results
 
 

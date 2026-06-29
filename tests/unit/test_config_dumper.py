@@ -28,7 +28,6 @@ import pytest
 from gatecheck.config import GatecheckConfig, GroupDef, HookDef, SourceSpec, load_config
 from gatecheck.config.hook_def import HookWhen
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
