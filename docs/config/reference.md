@@ -190,6 +190,57 @@ The `from` field accepts a URI-style source spec:
 
 See [Source Types](sources.md) for detailed documentation on each source type.
 
+### Parsed source model
+
+For tools that need to classify a hook's `from` spec, `gatecheck.sources.parse_source` turns the raw string into a typed, validated model. It performs **pure parsing only** — no filesystem, network, or subprocess access — and is the entry point the resolver and runner use to `match` on a source's kind without re-parsing the raw string.
+
+```python
+from gatecheck.sources import parse_source
+
+parse_source("pypi:ruff>=0.4,<1")
+# PyPISource(kind='pypi', requirement='ruff>=0.4,<1', registry=None)
+
+parse_source("pypi+internal:org-linter==2.1.0")
+# PyPISource(kind='pypi', requirement='org-linter==2.1.0', registry='internal')
+
+parse_source("project")   # ProjectSource(kind='project')
+parse_source("system")    # SystemSource(kind='system')
+```
+
+`parse_source` returns one of four frozen models, unified by the `ParsedSource` union and discriminated by a `kind` literal:
+
+| Model | `kind` | Fields | Returned for |
+|---|---|---|---|
+| `PyPISource` | `"pypi"` | `requirement: str`, `registry: str \| None` | `pypi:<req>`, `pypi+<alias>:<req>` |
+| `ProjectSource` | `"project"` | (none) | `project` |
+| `SystemSource` | `"system"` | (none) | `system` |
+| `UnsupportedSource` | `"unsupported"` | `scheme: "local" \| "git" \| "docker"` | `local:…`, `git:…`, `docker:…` |
+
+The `requirement` string is carried through **verbatim** — it is not PEP 508 / version-range validated here (that is resolution's concern). `registry` is the `[sources]` alias name, or `None` for the default registry; it is not resolved against `[sources]` at parse time.
+
+Because `ParsedSource` is a `kind`-discriminated union, callers can branch with structural pattern matching:
+
+```python
+from gatecheck.sources import (
+    parse_source, PyPISource, ProjectSource, SystemSource, UnsupportedSource,
+)
+
+match parse_source(spec):
+    case PyPISource(requirement=req, registry=reg): ...
+    case ProjectSource(): ...
+    case SystemSource(): ...
+    case UnsupportedSource(scheme=scheme): ...
+```
+
+#### Unsupported vs. invalid
+
+These are distinct outcomes:
+
+- **Unsupported (recognized).** `local:`, `git:`, and `docker:` are recognized schemes that FEAT-0002 does not yet resolve. `parse_source` returns an `UnsupportedSource` for them — it does **not** raise — so the caller can emit a "not yet supported" message rather than "unknown source". A hook with such a `from` therefore loads cleanly through `load_config`.
+- **Invalid.** A syntactically malformed spec raises `SourceSpecError` (a `ValueError` subclass) with the message form `invalid source spec '<spec>': <reason>`. Invalid cases include an empty/whitespace spec, a bare word other than `project`/`system` (e.g. `ruff`), an unknown scheme (e.g. `bogus:thing`, and also `project:x` / `system:x` since those keywords take no payload), an empty `pypi:` requirement, and a malformed `pypi+<alias>:` spec (missing colon, empty alias, alias not matching `[A-Za-z0-9_-]+`, or empty requirement).
+
+When the spec came from a loaded `check.toml`, `load_config` catches the `SourceSpecError` and re-raises it as a `ConfigError` with `check.toml:LINE:COL:` context anchored at the offending hook's `from` key, naming both the bad spec and the hook id. `parse_source` itself stays location- and I/O-free; only the translation lives in the config layer.
+
 ---
 
 ## Complete example

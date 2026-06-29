@@ -10,6 +10,7 @@ import pydantic
 import tomlkit
 
 from gatecheck.config._error_translator import (
+    _locate_source_spec_errors,
     _locate_validation_errors,
     _parse_toml_error,
 )
@@ -31,7 +32,11 @@ def load_config(path: Path) -> GatecheckConfig:
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(path, [_parse_toml_error(e)]) from e
     try:
-        return GatecheckConfig.model_validate(data)
+        config = GatecheckConfig.model_validate(data)
     except pydantic.ValidationError as e:
         toml_doc = tomlkit.parse(source)
         raise ConfigError(path, _locate_validation_errors(e, source, toml_doc)) from e
+    spec_errors = _locate_source_spec_errors(config, source)
+    if spec_errors:
+        raise ConfigError(path, spec_errors)
+    return config
