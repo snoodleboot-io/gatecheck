@@ -30,9 +30,7 @@ from gatecheck.config import ConfigError, load_config
 IDE_PREFIX_RE: re.Pattern[str] = re.compile(r"^check\.toml:\d+:\d+:")
 
 
-def _write_and_chdir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str
-) -> Path:
+def _write_and_chdir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str) -> Path:
     """Write ``check.toml`` into ``tmp_path``, chdir there, and return the
     *relative* path ``Path("check.toml")``.
 
@@ -66,10 +64,7 @@ def test_bad_from_unknown_scheme_raises_config_error_with_location(
     cfg = _write_and_chdir(
         tmp_path,
         monkeypatch,
-        '[[hook]]\n'
-        'id   = "lint"\n'
-        'from = "bogus:thing"\n'
-        'run  = "lint"\n',
+        '[[hook]]\nid   = "lint"\nfrom = "bogus:thing"\nrun  = "lint"\n',
     )
 
     # Act
@@ -98,10 +93,7 @@ def test_bad_from_empty_requirement_raises_config_error(
     cfg = _write_and_chdir(
         tmp_path,
         monkeypatch,
-        '[[hook]]\n'
-        'id   = "lint"\n'
-        'from = "pypi:"\n'
-        'run  = "lint"\n',
+        '[[hook]]\nid   = "lint"\nfrom = "pypi:"\nrun  = "lint"\n',
     )
 
     # Act
@@ -125,12 +117,12 @@ def test_config_error_line_points_at_offending_hook_from(
     """
     # Arrange — first hook valid; bad `from` is on line 8.
     body = (
-        '[[hook]]\n'  # line 1
+        "[[hook]]\n"  # line 1
         'id   = "ruff"\n'  # line 2
         'from = "pypi:ruff"\n'  # line 3
         'run  = "ruff check"\n'  # line 4
-        '\n'  # line 5
-        '[[hook]]\n'  # line 6
+        "\n"  # line 5
+        "[[hook]]\n"  # line 6
         'id   = "lint"\n'  # line 7
         'from = "bogus:thing"\n'  # line 8  <-- offending
         'run  = "lint"\n'  # line 9
@@ -163,12 +155,12 @@ def test_multiple_bad_from_specs_surface_together(
     """
     # Arrange
     body = (
-        '[[hook]]\n'
+        "[[hook]]\n"
         'id   = "a"\n'
         'from = "bogus:thing"\n'
         'run  = "a"\n'
-        '\n'
-        '[[hook]]\n'
+        "\n"
+        "[[hook]]\n"
         'id   = "b"\n'
         'from = "ruff"\n'
         'run  = "b"\n'
@@ -181,9 +173,9 @@ def test_multiple_bad_from_specs_surface_together(
 
     # Assert
     rendered = str(exc_info.value)
-    assert all(
-        line.startswith("check.toml:") for line in rendered.splitlines()
-    ), f"every error line should start with literal check.toml: in {rendered!r}"
+    assert all(line.startswith("check.toml:") for line in rendered.splitlines()), (
+        f"every error line should start with literal check.toml: in {rendered!r}"
+    )
     assert "unknown source scheme 'bogus'" in rendered
     assert "expected one of: project, system" in rendered
     assert rendered.count("\n") >= 1, f"expected >= 2 lines, got {rendered!r}"
@@ -194,9 +186,7 @@ def test_multiple_bad_from_specs_surface_together(
 # ---------------------------------------------------------------------------
 
 
-def test_valid_from_values_load_cleanly(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_valid_from_values_load_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Given a check.toml with assorted VALID `from` values,
     When load_config runs,
     Then no ConfigError is raised (guards against false positives).
@@ -205,33 +195,33 @@ def test_valid_from_values_load_cleanly(
     """
     # Arrange — project, system, pypi:, pypi+alias:, and recognized-unsupported.
     body = (
-        '[[hook]]\n'
+        "[[hook]]\n"
         'id   = "ruff"\n'
         'from = "pypi:ruff>=0.4,<1"\n'
         'run  = "ruff check"\n'
-        '\n'
-        '[[hook]]\n'
+        "\n"
+        "[[hook]]\n"
         'id   = "internal"\n'
         'from = "pypi+internal:org-linter==2.1.0"\n'
         'run  = "org-linter"\n'
-        '\n'
-        '[[hook]]\n'
+        "\n"
+        "[[hook]]\n"
         'id        = "mypy"\n'
         'from      = "project"\n'
         'run       = "mypy"\n'
-        'pass-files = false\n'
-        '\n'
-        '[[hook]]\n'
+        "pass-files = false\n"
+        "\n"
+        "[[hook]]\n"
         'id        = "fmt"\n'
         'from      = "system"\n'
         'run       = "cargo fmt"\n'
-        'pass-files = false\n'
-        '\n'
-        '[[hook]]\n'
+        "pass-files = false\n"
+        "\n"
+        "[[hook]]\n"
         'id        = "local-lint"\n'
         'from      = "local:scripts/lint.py"\n'
         'run       = "lint"\n'
-        'pass-files = false\n'
+        "pass-files = false\n"
     )
     cfg = _write_and_chdir(tmp_path, monkeypatch, body)
 

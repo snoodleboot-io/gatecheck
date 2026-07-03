@@ -33,7 +33,9 @@ from gatecheck.config.hook_def import HookWhen
 # ---------------------------------------------------------------------------
 
 
-def _minimal_hook(hook_id: str = "lint", from_: str = "pypi:ruff", run: str = "ruff check") -> HookDef:
+def _minimal_hook(
+    hook_id: str = "lint", from_: str = "pypi:ruff", run: str = "ruff check"
+) -> HookDef:
     """Return a minimal valid HookDef."""
     return HookDef(id=hook_id, **{"from": from_, "run": run})
 

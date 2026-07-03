@@ -8,7 +8,7 @@ place to mock during tests that don't need the runner.
 from __future__ import annotations
 
 try:
-    import gatecheck_core as _core  # type: ignore[import-not-found]
+    import gatecheck_core as _core
 except ImportError as exc:  # pragma: no cover — only hit in broken installs
     raise ImportError(
         "gatecheck_core (the Rust extension) is not installed. "
