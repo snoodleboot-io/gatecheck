@@ -53,7 +53,7 @@ jobs:
       - name: Build and install the native core (gatecheck_core)
         run: |
           uv pip install --python .venv/bin/python maturin
-          .venv/bin/maturin build --release --manifest-path gatecheck-rs/Cargo.toml --out dist
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
           uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
 
       - name: Install gatecheck + dev dependencies
