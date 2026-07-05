@@ -386,6 +386,65 @@ cannot resolve '<requirement>' against <index>: <reason>
 
 Like `SourceResolutionError`, a `RegistryError` is a **runtime/environment** condition (network / index state), never a `check.toml` syntax error — it does **not** map to `ConfigError` and is **not** raised from `load_config`. Loading a `pypi:` hook succeeds; network resolution runs only when `resolve_pypi_source` is called.
 
+### Environments — resolving a hook to an executable
+
+Where `parse_source` classifies a `from` spec and `resolve_source` locates the two non-network kinds, `gatecheck.env.EnvManager` turns a whole `HookDef` into an **executable environment**. It derives the tool name from the hook's `run`, dispatches on the source kind, and returns a `ResolvedEnv`. This is the **non-venv path**: `project` / `system` reuse an already-existing binary; it performs no network, no subprocess, no venv creation, and no filesystem writes.
+
+```python
+from gatecheck.env import EnvManager, ResolvedEnv
+
+EnvManager().resolve(hook)  # hook.from_ == "system", hook.run == "ruff check ."
+# ResolvedEnv(bin_dir=PosixPath('/usr/bin'), cache_key='…64 hex chars…')
+```
+
+```python
+class EnvManager:
+    def __init__(
+        self,
+        workspace_root: Path | None = None,
+        environ: Mapping[str, str] | None = None,
+    ) -> None: ...
+
+    def resolve(self, hook: HookDef) -> ResolvedEnv: ...
+```
+
+`workspace_root` / `environ` are stored as-is (including `None`) and forwarded verbatim to `resolve_source`, which resolves the defaults (`Path.cwd()` / `os.environ`) lazily — so an `EnvManager` stays a deterministic, hermetically testable function of its injected inputs.
+
+`resolve` returns a `ResolvedEnv` — a frozen `dataclass`:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `bin_dir` | `Path` | The directory containing the hook's executable — the parent of the resolved executable (`ResolvedTool.executable.parent`). An already-existing absolute directory; **never created**. |
+| `cache_key` | `str` | A 64-char lowercase SHA-256 hex digest that deterministically identifies this environment. |
+
+#### Tool-name rule
+
+The tool to locate is the **first shell token of `run`**: `shlex.split(hook.run)[0]` (POSIX tokenization, so quoted / escaped program names are handled correctly). There is no `tool` field in `check.toml`. A `run` that yields no tokens (whitespace-only) or cannot be tokenized (unbalanced quotes) raises `EnvError`.
+
+#### Dispatch by source kind
+
+| `from` kind | Behavior |
+|---|---|
+| `system` / `project` | `resolve_source` locates the tool (see [Resolving `project` / `system` sources](#resolving-project--system-sources)); `bin_dir` is the resolved executable's parent, and `cache_key` is derived over `("env-v1", origin, executable path)`. Because `origin` (`"project"` vs `"system"`) is part of the key material, the same binary reached two ways keys distinctly. |
+| `pypi:` / `pypi+alias:` | Deferred to venv-backed creation (STY-0008) — raises `EnvError` before any resolution. |
+| `local:` / `git:` / `docker:` | Unsupported — raises `EnvError`. |
+
+#### `EnvError` and propagated errors
+
+`EnvManager` raises `gatecheck.env.EnvError` (a `ValueError` subclass) for the env-domain cases above. It carries structured `hook_id` / `reason` fields with the message form:
+
+```
+cannot resolve environment for hook '<id>': <reason>
+```
+
+| Case | `reason` |
+|---|---|
+| `run` yields no tool name (empty / whitespace-only) or unbalanced quotes | `cannot derive a tool name from run = '<run>'` |
+| `pypi:` / `pypi+alias:` source | `environment creation for pypi sources is deferred to STY-0008` |
+| `local:` / `git:` / `docker:` source | `'<scheme>' sources are not supported` |
+
+Errors raised by the underlying source layer are **not** re-wrapped — they propagate unchanged so their structured fields survive: a `SourceSpecError` (malformed `from`, from `parse_source`) and a `SourceResolutionError` (tool absent, from `resolve_source`). Like those errors, an `EnvError` is a **runtime/environment** condition, not a `check.toml` syntax error — it does **not** map to `ConfigError` and is **not** raised from `load_config`.
+
 ---
 
 ## Complete example
