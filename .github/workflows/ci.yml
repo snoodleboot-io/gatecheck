@@ -1,15 +1,15 @@
 # CI — runs on every PR and push to main.
-# This is a stub. Fill in once the test suites have real tests; tune later.
 #
-# Intended jobs (see CONTRIBUTING.md § "Running checks locally"):
-#   - python-checks   : ruff + mypy + pytest on Python 3.11 and 3.12
-#   - rust-checks     : cargo fmt --check + clippy -D warnings + cargo test
-#   - build-wheels    : maturin build on linux/macos/windows (smoke build only)
-#   - docs-build      : mkdocs build --strict
+# Gating jobs (per CONTRIBUTING.md § "Running checks locally"):
+#   - python-checks : ruff (lint + format) + mypy + pytest on Python 3.11 and 3.12
+#   - rust-checks   : cargo fmt --check + clippy -D warnings + cargo test
 #
-# Real implementation lands as a follow-up; do not enable required-status-checks
-# in GitHub branch protection until at least python-checks and rust-checks are
-# green on this file.
+# The Python package depends on the `gatecheck-core` native extension, which is
+# NOT published to PyPI — CI builds it from gatecheck-rs/ with maturin and
+# installs the resulting wheel before installing gatecheck itself.
+#
+# Follow-ups (not yet gating): docs-build (mkdocs build --strict) and
+# cross-platform build-wheels smoke tests.
 
 name: ci
 
@@ -18,9 +18,80 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  placeholder:
+  python-checks:
+    name: python (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gatecheck-rs
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create virtualenv
+        run: uv venv --python ${{ matrix.python-version }} .venv
+
+      - name: Build and install the native core (gatecheck_core)
+        run: |
+          uv pip install --python .venv/bin/python maturin
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+
+      - name: Install gatecheck + dev dependencies
+        run: uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Ruff (lint)
+        run: .venv/bin/ruff check src tests
+
+      - name: Ruff (format check)
+        run: .venv/bin/ruff format --check src tests
+
+      - name: Mypy
+        run: .venv/bin/mypy
+
+      - name: Pytest
+        run: .venv/bin/pytest
+
+  rust-checks:
+    name: rust
     runs-on: ubuntu-latest
     steps:
-      - name: stub
-        run: echo "CI scaffolding only — replace with real jobs."
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gatecheck-rs
+
+      - name: Cargo fmt
+        run: cargo fmt --check --manifest-path gatecheck-rs/Cargo.toml
+
+      - name: Cargo clippy
+        run: cargo clippy --manifest-path gatecheck-rs/Cargo.toml --all-targets -- -D warnings
+
+      - name: Cargo test
+        run: cargo test --manifest-path gatecheck-rs/Cargo.toml

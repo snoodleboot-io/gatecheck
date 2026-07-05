@@ -138,9 +138,7 @@ def test_parse_requirement_with_colon_keeps_remainder_after_first_colon() -> Non
     result = parse_source(spec)
 
     # Assert
-    assert result == PyPISource(
-        requirement="pkg ; python_version >= '3.10'", registry=None
-    )
+    assert result == PyPISource(requirement="pkg ; python_version >= '3.10'", registry=None)
 
 
 # ---------------------------------------------------------------------------
@@ -160,9 +158,7 @@ def test_parse_requirement_with_colon_keeps_remainder_after_first_colon() -> Non
         ),
     ],
 )
-def test_parse_trims_surrounding_whitespace(
-    spec: str, expected: ParsedSource
-) -> None:
+def test_parse_trims_surrounding_whitespace(spec: str, expected: ParsedSource) -> None:
     # Arrange / Act
     result = parse_source(spec)
 
@@ -183,9 +179,7 @@ def test_parse_trims_surrounding_whitespace(
         ("docker:img:tag", "docker"),
     ],
 )
-def test_parse_unsupported_scheme_returns_unsupported_source(
-    spec: str, scheme: str
-) -> None:
+def test_parse_unsupported_scheme_returns_unsupported_source(spec: str, scheme: str) -> None:
     # Arrange / Act
     result = parse_source(spec)
 
@@ -242,9 +236,7 @@ def test_parse_unsupported_scheme_does_not_raise(spec: str) -> None:
         ("ruff", "expected one of: project, system, pypi:<req>, pypi+<alias>:<req>"),
     ],
 )
-def test_parse_invalid_spec_raises_with_locked_reason(
-    spec: str, reason: str
-) -> None:
+def test_parse_invalid_spec_raises_with_locked_reason(spec: str, reason: str) -> None:
     # AC-5: each invalid branch raises SourceSpecError.
     # Arrange / Act / Assert — match against the exact LOCKED reason substring.
     with pytest.raises(SourceSpecError, match=re.escape(reason)):
