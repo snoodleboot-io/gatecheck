@@ -69,7 +69,9 @@ jobs:
         run: .venv/bin/mypy
 
       - name: Pytest
-        run: .venv/bin/pytest
+        # Deselect @pytest.mark.network tests — CI must not depend on a live PyPI /
+        # external index. Run network-marked tests separately (local / scheduled).
+        run: .venv/bin/pytest -m "not network"
 
   rust-checks:
     name: rust
