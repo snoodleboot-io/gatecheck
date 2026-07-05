@@ -26,15 +26,20 @@ gatecheck searches upward from the current directory for:
 ```toml
 [sources]
 default-registry = "https://pypi.org/simple"  # default
-extra-registries = [
-  { internal = "https://pkg.example.com/simple" },
-]
+extra-registries = { internal = "https://pkg.example.com/simple" }
+```
+
+The equivalent sub-table form is also accepted:
+
+```toml
+[sources.extra-registries]
+internal = "https://pkg.example.com/simple"
 ```
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `default-registry` | string | PyPI | Index URL for `pypi:` sources |
-| `extra-registries` | list of `{alias = url}` | `[]` | Named private indexes |
+| `extra-registries` | dict of `alias → url` | `{}` | Named private indexes. Each alias must match `[A-Za-z0-9_-]+` and map to a non-empty index URL. A `pypi+<alias>:` source resolves against `extra-registries[<alias>]`. |
 
 ---
 
@@ -308,6 +313,79 @@ cannot resolve '<tool>' from <kind> source: <reason>
 
 Unlike `SourceSpecError` — a *syntax* error in `check.toml`, knowable at load time and re-raised by `load_config` as a `ConfigError` with `path:line:col` context — a `SourceResolutionError` is a **runtime/environment** condition: the `from` and `run` are syntactically valid, but the tool is absent on this machine right now. It has no `check.toml:line:col` meaning, so it does **not** map to `ConfigError` and is **not** raised from `load_config`. Loading a config whose tool happens to be absent still succeeds; the error surfaces only when `resolve_source` is called (typically caught by the runner, which reports the failing hook).
 
+### Resolving `pypi:` / `pypi+alias:` sources
+
+Where `resolve_source` handles the two non-network kinds, `gatecheck.registry.resolve_pypi_source` handles the network kind: it turns a `PyPISource` into a **pinned distribution descriptor** by querying the registry's [PEP 503](https://peps.python.org/pep-0503/) simple index (with [PEP 691](https://peps.python.org/pep-0691/) JSON content negotiation and an HTML fallback). It resolves the requirement to a single exact version against a known index URL; it does **not** create a venv, download an artifact, or install anything — that is the Environments feature's job.
+
+```python
+from gatecheck.registry import resolve_pypi_source
+from gatecheck.sources import parse_source
+
+resolve_pypi_source(parse_source("pypi:ruff>=0.4,<1"), cfg.sources)
+# ResolvedPyPISource(kind='pypi', requirement='ruff>=0.4,<1', name='ruff',
+#                    version='0.4.9', index_url='https://pypi.org/simple',
+#                    registry=None, sha256=..., url=..., filename=...)
+```
+
+```python
+def resolve_pypi_source(
+    source: PyPISource,
+    sources: SourceSpec | None,
+    *,
+    client: RegistryClient | None = None,
+    allow_prereleases: bool = False,
+) -> ResolvedPyPISource: ...
+```
+
+| Argument | Default | Description |
+|---|---|---|
+| `source` | required | The `PyPISource` from `parse_source(hook.from_)` — its verbatim `requirement` and optional registry alias (`registry`). |
+| `sources` | required | The parsed `[sources]` table (`GatecheckConfig.sources`, may be `None`). Supplies `default-registry` and `extra-registries`. |
+| `client` | `UrllibRegistryClient()` | The injectable network seam (a `RegistryClient` Protocol). Tests pass a fake to stay hermetic; auth/proxy config plugs in here later. |
+| `allow_prereleases` | `False` | Caller override for pre-release selection. The specifier itself can still opt in per PEP 440. |
+
+It returns a frozen `ResolvedPyPISource` (`model_config = ConfigDict(frozen=True, extra="forbid")`):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `kind` | `Literal["pypi"]` | Discriminator, consistent with `PyPISource`. |
+| `requirement` | `str` | The original requirement text, echoed back. |
+| `name` | `str` | The **canonicalized** project name. |
+| `version` | `str` | The **selected** exact version, e.g. `"0.4.9"`. |
+| `index_url` | `str` | The resolved index URL the version was pinned against. |
+| `registry` | `str \| None` | The `[sources]` alias used, or `None` for the default. |
+| `sha256` / `url` / `filename` | `str \| None` | *(best-effort)* the selected version's chosen file (wheel preferred over sdist); `None` when unavailable. |
+
+The **load-bearing contract is `name` + `version` + `index_url`** — enough to install `name==version --index-url <index_url>` deterministically. The optional artifact fields are advisory metadata for hash-pinning and cache/explainability, not authoritative wheel selection.
+
+#### Index and version selection rules
+
+- **Alias → URL.** `registry=None` resolves to `sources.default-registry` (or the built-in `https://pypi.org/simple` when unset). `registry="internal"` resolves to `sources.extra-registries["internal"]`.
+- **Version selection.** The requirement's [PEP 440](https://peps.python.org/pep-0440/) specifier is applied to the versions the index lists; the **highest satisfying** version wins. A bare name selects the latest non-pre-release.
+- **Pre-releases** are excluded unless the specifier opts in, `allow_prereleases=True`, or only pre-releases satisfy the specifier.
+- **Yanked releases** ([PEP 592](https://peps.python.org/pep-0592/)) are excluded from range matches but selectable when pinned exactly (`==<yanked>`) and no non-yanked version matches.
+- **Markers / extras** in a requirement are **rejected** with a clear `RegistryError`, not silently ignored.
+
+#### Registry failures are runtime, not config, errors
+
+Every failure raises `gatecheck.registry.RegistryError` (a `ValueError` subclass) with structured `requirement` / `index_url` / `reason` fields and the message form:
+
+```
+cannot resolve '<requirement>' against <index>: <reason>
+```
+
+| When | `index_url` | `reason` |
+|---|---|---|
+| Undeclared registry alias | `None` (`<unresolved index>` in the message) | `unknown registry alias '<alias>' (not declared in [sources].extra-registries)` |
+| Invalid PEP 508 requirement | resolved URL | `invalid requirement: <detail>` |
+| Markers / extras present | resolved URL | `requirement markers/extras are not supported` |
+| Package not found (index 404) | resolved URL | `package '<name>' not found on index` |
+| No version satisfies the specifier | resolved URL | `no version of '<name>' satisfies '<specifier>'` |
+| Network / timeout | resolved URL | `network error querying index: <detail>` (chained via `raise … from`) |
+| Malformed index response | resolved URL | `malformed index response from <url>` |
+
+Like `SourceResolutionError`, a `RegistryError` is a **runtime/environment** condition (network / index state), never a `check.toml` syntax error — it does **not** map to `ConfigError` and is **not** raised from `load_config`. Loading a `pypi:` hook succeeds; network resolution runs only when `resolve_pypi_source` is called.
+
 ---
 
 ## Complete example
@@ -315,9 +393,7 @@ Unlike `SourceSpecError` — a *syntax* error in `check.toml`, knowable at load 
 ```toml
 [sources]
 default-registry = "https://pypi.org/simple"
-extra-registries = [
-  { internal = "https://pkg.example.com/simple" },
-]
+extra-registries = { internal = "https://pkg.example.com/simple" }
 
 [[hook]]
 id   = "ruff"

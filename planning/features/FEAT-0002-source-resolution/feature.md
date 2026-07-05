@@ -47,7 +47,7 @@ A vertical-slice breakdown: parse first (pure, no I/O), then resolve the two non
 
 - [ ] [STY-0004 — Parse and classify a hook's source spec into a typed, validated model](stories/STY-0004-parse-classify-source-specs.md)
 - [ ] [STY-0005 — Resolve `from = "project"` and `from = "system"` to concrete executables](stories/STY-0005-resolve-project-system-sources.md)
-- [ ] STY-0006 — Resolve `pypi:` / `pypi+alias:` specs against a registry (network; overlaps Environments — defines the boundary) (not yet written)
+- [ ] [STY-0006 — Resolve `pypi:` / `pypi+alias:` specs against a registry to a pinned distribution (network; overlaps Environments — defines the boundary)](stories/STY-0006-resolve-pypi-registry-specs.md)
 
 ## Acceptance
 
