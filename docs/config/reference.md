@@ -241,6 +241,73 @@ These are distinct outcomes:
 
 When the spec came from a loaded `check.toml`, `load_config` catches the `SourceSpecError` and re-raises it as a `ConfigError` with `check.toml:LINE:COL:` context anchored at the offending hook's `from` key, naming both the bad spec and the hook id. `parse_source` itself stays location- and I/O-free; only the translation lives in the config layer.
 
+### Resolving `project` / `system` sources
+
+Where `parse_source` gives a `from` spec *meaning*, `gatecheck.sources.resolve_source` gives the two non-network kinds *location* — it turns a `SystemSource` or `ProjectSource` into a concrete, absolute executable on this machine. It is a **filesystem lookup only**: no network, no venv creation, no subprocess execution. It resolves what already exists; it never builds an environment.
+
+```python
+from gatecheck.sources import parse_source, resolve_source
+
+resolve_source(parse_source("system"), "ruff")
+# ResolvedTool(tool='ruff', executable=PosixPath('/usr/bin/ruff'), origin='system')
+
+resolve_source(parse_source("project"), "mypy", workspace_root=Path("/repo"))
+# ResolvedTool(tool='mypy', executable=PosixPath('/repo/.venv/bin/mypy'), origin='project')
+```
+
+```python
+def resolve_source(
+    source: ParsedSource,
+    tool: str,
+    *,
+    workspace_root: Path | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> ResolvedTool: ...
+```
+
+| Argument | Default | Description |
+|---|---|---|
+| `source` | required | The classified `ParsedSource` from `parse_source(hook.from_)`. Only `SystemSource` / `ProjectSource` resolve. |
+| `tool` | required | The bare command name to locate (e.g. `"ruff"`) — the first shell token of `HookDef.run`. `resolve_source` does not tokenize `run` itself. |
+| `workspace_root` | `Path.cwd()` | Project root under which `.venv` is discovered for a `ProjectSource`. Real workspace discovery is out of scope. |
+| `environ` | `os.environ` | Environment mapping read for `PATH` (system) and `VIRTUAL_ENV` (project). Injectable so callers and tests stay hermetic. |
+
+It returns a `ResolvedTool` — a frozen pydantic model (`model_config = ConfigDict(frozen=True, extra="forbid")`) mirroring the source models:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `tool` | `str` | The requested command name, echoed back. |
+| `executable` | `Path` | The **absolute** path to the resolved executable (always `Path(...).resolve()`-d). |
+| `origin` | `"project"` \| `"system"` | Which rule produced the result, for runner/cache explainability. |
+
+#### Discovery rules
+
+- **`system`** — `tool` is located on `PATH` via `shutil.which(tool, path=environ.get("PATH"))` (standard `which` semantics: first `PATH` directory with an executable match wins), then absolutized. `origin="system"`.
+- **`project`** — `tool` is located in the project's own already-existing environment, in this precedence order (first qualifying candidate wins):
+  1. **Active venv** — if `VIRTUAL_ENV` is set and non-empty: `<VIRTUAL_ENV>/bin/<tool>`.
+  2. **Discovered project venv** — `<workspace_root>/.venv/bin/<tool>`.
+
+  A candidate qualifies only if it exists, is a regular file (following symlinks), and is executable (`os.access(path, os.X_OK)`). The result is absolutized with `origin="project"`. Only the POSIX `bin/` layout is probed in v1 (the Windows `Scripts\` layout is a documented fast-follower). A missing `.venv` is a not-found error — **never** a trigger to create one.
+
+Given the same `(source, tool, PATH, VIRTUAL_ENV, workspace_root, filesystem state)`, `resolve_source` returns an equal `ResolvedTool` (or raises the same error) on every call — it performs no network, no subprocess, and no filesystem writes.
+
+#### Resolution errors are runtime, not config, errors
+
+When a tool cannot be located — or when `source` is a `PyPISource` (delegated to the Environments feature) or an `UnsupportedSource` — `resolve_source` raises `SourceResolutionError` (a `ValueError` subclass) carrying structured `tool` / `kind` / `reason` fields, with the message form:
+
+```
+cannot resolve '<tool>' from <kind> source: <reason>
+```
+
+| `kind` | When | `reason` |
+|---|---|---|
+| `system` | tool absent from `PATH` | `not found on PATH` |
+| `project` | tool in neither venv location | `not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)` |
+| `pypi` | a `pypi:` source | `pypi source resolution is delegated to Environments (STY-0006), not handled here` |
+| `unsupported` | a `local:` / `git:` / `docker:` source | `'<scheme>' sources are not supported` |
+
+Unlike `SourceSpecError` — a *syntax* error in `check.toml`, knowable at load time and re-raised by `load_config` as a `ConfigError` with `path:line:col` context — a `SourceResolutionError` is a **runtime/environment** condition: the `from` and `run` are syntactically valid, but the tool is absent on this machine right now. It has no `check.toml:line:col` meaning, so it does **not** map to `ConfigError` and is **not** raised from `load_config`. Loading a config whose tool happens to be absent still succeeds; the error surfaces only when `resolve_source` is called (typically caught by the runner, which reports the failing hook).
+
 ---
 
 ## Complete example
