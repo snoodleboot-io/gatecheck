@@ -1,23 +1,24 @@
-"""Acceptance tests for EnvManager.resolve (STY-0007 / TSK-008).
+"""Acceptance tests for EnvManager.resolve (STY-0007 + STY-0008).
 
 Hermetic end-to-end coverage built from ``HookDef`` fixtures, exercising the
-non-venv path (``project`` / ``system`` -> ``ResolvedEnv``) and the deferred
-``pypi`` branch. A module-wide subprocess spy asserts that resolving an
-environment spawns NOTHING (AC-13): the whole slice is pure filesystem lookup,
-no ``uv``, no network. Contract is LOCKED by
-``planning/build-plans/0007-architecture-decision.md``.
+non-venv path (``project`` / ``system`` -> ``ResolvedEnv``) and the pypi branch's
+pre-build failure path (an unknown alias fails at pinning). A module-wide
+subprocess spy asserts these resolutions spawn NOTHING: the non-venv path is pure
+filesystem lookup, and the unknown-alias pypi case errors before any ``uv`` /
+network work. Happy-path uv builds are covered in ``tests/unit/test_env_manager_pypi.py``
+and the opt-in ``tests/integration/test_uv_venv_build.py``.
 """
 
 from __future__ import annotations
 
-import re
 import subprocess
 from pathlib import Path
 
 import pytest
 
 from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvError, EnvManager, ResolvedEnv
+from gatecheck.env import EnvManager, ResolvedEnv
+from gatecheck.registry import RegistryError
 
 
 @pytest.fixture(autouse=True)
@@ -73,13 +74,13 @@ def test_project_hook_resolves_via_dot_venv(tmp_path: Path) -> None:
     assert (env.bin_dir / "ruff").exists()
 
 
-def test_pypi_hook_raises_env_error_mentioning_sty_0008(tmp_path: Path) -> None:
-    # AC-7 / AC-13: pypi is deferred; no subprocess (guarded by the fixture).
+def test_pypi_hook_unknown_alias_propagates_registry_error() -> None:
+    # pypi is built via uv (STY-0008); an unknown alias fails at pinning with a
+    # RegistryError, before any subprocess/network — so the module's no-subprocess
+    # guarantee still holds. The RegistryError propagates unwrapped (not EnvError).
     # Arrange
-    reason = "environment creation for pypi sources is deferred to STY-0008"
     manager = EnvManager(environ={"PATH": "/nonexistent"})
 
     # Act / Assert
-    with pytest.raises(EnvError, match=re.escape(reason)) as exc_info:
-        manager.resolve(_hook("fmt", "pypi:ruff>=0.4", "ruff format"))
-    assert exc_info.value.hook_id == "fmt"
+    with pytest.raises(RegistryError):
+        manager.resolve(_hook("fmt", "pypi+internal:x==1", "ruff format"))

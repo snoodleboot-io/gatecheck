@@ -426,7 +426,7 @@ The tool to locate is the **first shell token of `run`**: `shlex.split(hook.run)
 | `from` kind | Behavior |
 |---|---|
 | `system` / `project` | `resolve_source` locates the tool (see [Resolving `project` / `system` sources](#resolving-project--system-sources)); `bin_dir` is the resolved executable's parent, and `cache_key` is derived over `("env-v1", origin, executable path)`. Because `origin` (`"project"` vs `"system"`) is part of the key material, the same binary reached two ways keys distinctly. |
-| `pypi:` / `pypi+alias:` | Deferred to venv-backed creation (STY-0008) — raises `EnvError` before any resolution. |
+| `pypi:` / `pypi+alias:` | Pinned via `resolve_pypi_source`, then built (or reused from cache) as a **uv-backed venv** — see [uv-backed `pypi` environments](#uv-backed-pypi-environments) below. `bin_dir` is the cached venv's `bin/`. |
 | `local:` / `git:` / `docker:` | Unsupported — raises `EnvError`. |
 
 #### `EnvError` and propagated errors
@@ -440,10 +440,26 @@ cannot resolve environment for hook '<id>': <reason>
 | Case | `reason` |
 |---|---|
 | `run` yields no tool name (empty / whitespace-only) or unbalanced quotes | `cannot derive a tool name from run = '<run>'` |
-| `pypi:` / `pypi+alias:` source | `environment creation for pypi sources is deferred to STY-0008` |
+| `pypi:` — `uv` binary not found on the host | `uv is required to build pypi environments but was not found (set GATECHECK_UV or install uv; auto-bootstrap is STY-0010)` |
+| `pypi:` — `uv` failed to build the venv (non-zero exit) | `uv failed to build the environment for '<name>==<version>': <detail>` |
+| `pypi:` — built venv lacks the tool named by `run` | `tool '<tool>' is not present in the built environment for '<name>==<version>'` |
 | `local:` / `git:` / `docker:` source | `'<scheme>' sources are not supported` |
 
-Errors raised by the underlying source layer are **not** re-wrapped — they propagate unchanged so their structured fields survive: a `SourceSpecError` (malformed `from`, from `parse_source`) and a `SourceResolutionError` (tool absent, from `resolve_source`). Like those errors, an `EnvError` is a **runtime/environment** condition, not a `check.toml` syntax error — it does **not** map to `ConfigError` and is **not** raised from `load_config`.
+Errors raised by the underlying source / registry layers are **not** re-wrapped — they propagate unchanged so their structured fields survive: a `SourceSpecError` (malformed `from`, from `parse_source`), a `SourceResolutionError` (tool absent, from `resolve_source`), and a `RegistryError` (a `pypi:` requirement that cannot be pinned — network / index state, from `resolve_pypi_source`). Like those errors, an `EnvError` is a **runtime/environment** condition, not a `check.toml` syntax error — it does **not** map to `ConfigError` and is **not** raised from `load_config`.
+
+#### uv-backed `pypi` environments
+
+A `from = "pypi:<req>"` / `pypi+<alias>:<req>` hook resolves to an isolated,
+content-addressed virtualenv built by [uv](https://docs.astral.sh/uv/):
+
+1. The requirement is pinned to an exact distribution by `resolve_pypi_source` (see [Resolving `pypi:` / `pypi+alias:` sources](#resolving-pypi--pypialias-sources)).
+2. A **cache key** is derived as a SHA-256 over `("env-v1", "pypi", name, version, index_url)` — content-addressed on the pinned distribution, so the same `name==version` from the same index is built **once** and reused across hooks, runs, and projects.
+3. On a cache **miss**, `uv venv` + `uv pip install <name>==<version> --index-url <url>` build the venv in a temp directory that is atomically published into the cache slot (a failed build never leaves a partial environment). When the registry supplied a `sha256`, the install uses `--require-hashes`.
+4. `bin_dir` is the cached venv's `bin/` directory.
+
+The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/gatecheck/env-v1/<key>/` (falling back to `~/.cache/gatecheck/env-v1/<key>/`).
+
+**`uv` is an external prerequisite.** It is a host binary discovered at run time (via the `GATECHECK_UV` override, else `PATH`), **not** a Python dependency in `pyproject.toml`. If it is absent, `EnvManager` raises `EnvError`; automatic provisioning of `uv` is planned (STY-0010).
 
 ---
 
