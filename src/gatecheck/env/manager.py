@@ -19,7 +19,8 @@ from pathlib import Path
 
 from gatecheck.config import SourceSpec
 from gatecheck.config.hook_def import HookDef
-from gatecheck.env.env_cache import default_cache_root, publish_atomically
+from gatecheck.env.cache_explanation import CacheExplanation
+from gatecheck.env.env_cache import default_cache_root, is_healthy, publish_atomically, venv_slot
 from gatecheck.env.env_error import EnvError
 from gatecheck.env.uv_runner import SubprocessUvRunner, UvBuildError, UvNotFound, UvRunner
 from gatecheck.registry import RegistryClient, ResolvedPyPISource, resolve_pypi_source
@@ -90,6 +91,70 @@ class EnvManager:
                 )
             case PyPISource():
                 return self._resolve_pypi(hook, source, tool)
+            case UnsupportedSource(scheme=scheme):
+                raise EnvError(hook.id, f"'{scheme}' sources are not supported")
+
+    def explain(self, hook: HookDef) -> CacheExplanation:
+        """Explain ``hook``'s cache state without building anything (read-only).
+
+        Derives the same ``cache_key`` as ``resolve`` and inspects the cache, but
+        never creates or mutates a directory and never spawns ``uv``. For ``pypi``
+        it pins the requirement (which may query the registry) to derive the key;
+        the status is ``hit`` when the venv slot already exists, else ``miss``. For
+        ``system`` / ``project`` no environment is cached, so the status is
+        ``not-applicable``. ``SourceSpecError`` / ``SourceResolutionError`` /
+        ``RegistryError`` propagate unwrapped; ``UnsupportedSource`` raises ``EnvError``.
+        """
+        source = parse_source(hook.from_)
+        tool = self._derive_tool(hook)
+        match source:
+            case SystemSource() | ProjectSource():
+                resolved = resolve_source(
+                    source,
+                    tool,
+                    workspace_root=self._workspace_root,
+                    environ=self._environ,
+                )
+                return CacheExplanation(
+                    hook_id=hook.id,
+                    source_kind=resolved.origin,
+                    source_summary=f"{resolved.origin} tool '{tool}' at {resolved.executable}",
+                    cache_key=self._cache_key(resolved),
+                    key_material=(_CACHE_KEY_SCHEME, resolved.origin, str(resolved.executable)),
+                    cache_dir=str(resolved.executable.parent),
+                    status="not-applicable",
+                    reason="project/system sources reuse an existing binary; no environment is cached",
+                )
+            case PyPISource():
+                pinned = resolve_pypi_source(source, self._sources, client=self._client)
+                key = self._pypi_cache_key(pinned)
+                cache_root = (
+                    self._cache_root
+                    if self._cache_root is not None
+                    else default_cache_root(self._environ)
+                )
+                slot = venv_slot(cache_root, key)
+                hit = is_healthy(slot)
+                return CacheExplanation(
+                    hook_id=hook.id,
+                    source_kind="pypi",
+                    source_summary=f"pypi {pinned.name}=={pinned.version} @ {pinned.index_url}",
+                    cache_key=key,
+                    key_material=(
+                        _CACHE_KEY_SCHEME,
+                        "pypi",
+                        pinned.name,
+                        pinned.version,
+                        pinned.index_url,
+                    ),
+                    cache_dir=str(slot),
+                    status="hit" if hit else "miss",
+                    reason=(
+                        "cached venv present — reused on the next run"
+                        if hit
+                        else "no cached venv yet — built on the next run"
+                    ),
+                )
             case UnsupportedSource(scheme=scheme):
                 raise EnvError(hook.id, f"'{scheme}' sources are not supported")
 
