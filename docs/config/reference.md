@@ -461,6 +461,27 @@ The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/gatechec
 
 **`uv` is an external prerequisite.** It is a host binary discovered at run time (via the `GATECHECK_UV` override, else `PATH`), **not** a Python dependency in `pyproject.toml`. If it is absent, `EnvManager` raises `EnvError`; automatic provisioning of `uv` is planned (STY-0010).
 
+### Cache — explaining a hook's environment
+
+`gatecheck cache why <hook>` explains, for a single hook in `check.toml`, how its cache key is derived and whether its environment is already cached — **read-only**: it never builds a venv or writes to the cache.
+
+```console
+$ gatecheck cache why ruff
+hook:      ruff
+source:    pypi ruff==0.4.2 @ https://pypi.org/simple  (pypi)
+status:    miss — no cached venv yet — built on the next run
+cache key: 3f9a…(64 hex chars)
+  hashed:  sha256('env-v1' + 'pypi' + 'ruff' + '0.4.2' + 'https://pypi.org/simple')
+cache dir: /home/you/.cache/gatecheck/env-v1/3f9a…
+```
+
+- **`status`** is `hit` when the content-addressed venv slot already exists, `miss` when it would be built on the next run, or `not-applicable` for `project` / `system` hooks (which reuse an existing binary and cache no environment).
+- The **`hashed:`** line lists the exact material behind the `cache key`, so the digest is reproducible by hand.
+- For a `pypi:` hook this pins the requirement, which **may query the registry** (network); it never builds the venv.
+- `--json` emits the same fields as a JSON object for tooling. `--config` points at a non-default `check.toml`. An unknown `<hook>` exits non-zero and lists the available hook ids.
+
+> Cache eviction (`gatecheck cache clear`) is not yet implemented.
+
 ---
 
 ## Complete example
