@@ -33,6 +33,7 @@ import pytest
 
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvError, EnvManager, ResolvedEnv
+from gatecheck.registry import RegistryError
 from gatecheck.sources import SourceResolutionError, SourceSpecError
 
 _CACHE_KEY_SCHEME = "env-v1"
@@ -217,30 +218,27 @@ def test_same_executable_via_project_vs_system_keys_differently(tmp_path: Path) 
 
 
 # ---------------------------------------------------------------------------
-# AC-7 — pypi deferred to STY-0008 (no resolve_source, no subprocess, no network).
+# pypi is built via uv (STY-0008); it no longer defers. Full build/cache coverage
+# lives in test_env_manager_pypi.py. Here we assert only that the pypi branch
+# delegates to the registry resolver (bypassing resolve_source) and that a
+# RegistryError propagates UNWRAPPED — hermetically, via an unknown alias whose
+# error is raised before any network call.
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("from_spec", ["pypi:ruff>=0.4", "pypi+internal:x==1"])
-def test_pypi_source_raises_deferred_env_error(from_spec: str) -> None:
-    # AC-7: both pypi: and pypi+alias: defer with the exact locked reason.
-    # Arrange
-    reason = "environment creation for pypi sources is deferred to STY-0008"
+def test_pypi_unknown_alias_propagates_registry_error() -> None:
+    # Arrange — an unknown alias fails at pinning, before any network/uv work.
     manager = EnvManager(environ={"PATH": "/nonexistent"})
-    hook = _hook("fmt", from_spec, "ruff format")
+    hook = _hook("fmt", "pypi+internal:x==1", "ruff format")
 
-    # Act / Assert
-    with pytest.raises(EnvError, match=re.escape(reason)) as exc_info:
+    # Act / Assert — the RegistryError is NOT re-wrapped as EnvError.
+    with pytest.raises(RegistryError):
         manager.resolve(hook)
-    err = exc_info.value
-    assert err.reason == reason
-    assert err.hook_id == "fmt"
-    assert str(err) == f"cannot resolve environment for hook 'fmt': {reason}"
 
 
 def test_pypi_source_does_not_reach_resolve_source(monkeypatch: pytest.MonkeyPatch) -> None:
-    # AC-7: the pypi branch raises BEFORE any resolve_source lookup. Spy on the
-    # name resolve() calls (imported into gatecheck.env.manager per BUILD-0007 §7).
+    # The pypi branch delegates to resolve_pypi_source, never resolve_source. Spy on
+    # the name resolve_source() imported into gatecheck.env.manager.
     # Arrange
     import gatecheck.env.manager as manager_mod
 
@@ -253,9 +251,9 @@ def test_pypi_source_does_not_reach_resolve_source(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(manager_mod, "resolve_source", _spy, raising=False)
     manager = EnvManager(environ={"PATH": "/nonexistent"})
 
-    # Act / Assert
-    with pytest.raises(EnvError):
-        manager.resolve(_hook("fmt", "pypi:ruff>=0.4", "ruff format"))
+    # Act / Assert — unknown alias raises RegistryError before any network call.
+    with pytest.raises(RegistryError):
+        manager.resolve(_hook("fmt", "pypi+internal:x==1", "ruff format"))
     assert calls == []
 
 

@@ -1,12 +1,15 @@
-"""Public facade for gatecheck.env (BUILD-0007-ARCH §2)."""
+"""Public facade for gatecheck.env (STY-0007 + STY-0008)."""
 
 from __future__ import annotations
 
 from gatecheck.env.env_error import EnvError
 from gatecheck.env.manager import EnvManager, ResolvedEnv
+from gatecheck.env.uv_runner import SubprocessUvRunner, UvRunner
 
 __all__ = [
     "EnvError",
     "EnvManager",
     "ResolvedEnv",
+    "SubprocessUvRunner",
+    "UvRunner",
 ]
