@@ -4,9 +4,9 @@ The only module that discovers and shells out to the external ``uv`` binary.
 ``UvRunner`` is a single injectable ``typing.Protocol`` (mirroring the
 ``RegistryClient`` seam in ``gatecheck.registry``) so ``EnvManager``'s pypi branch
 is unit-testable against a fake — no real ``uv``, no ``subprocess`` monkeypatching.
-``SubprocessUvRunner`` is the default impl; it raises ``UvNotFound`` when the binary
-is absent (the seam STY-0010 fills with auto-bootstrap) and ``UvBuildError`` on a
-non-zero ``uv`` exit.
+``SubprocessUvRunner`` is the default impl; when ``uv`` is absent it auto-bootstraps
+a pinned, checksum-verified copy (``uv_bootstrap``) unless disabled, and it raises
+``UvBuildError`` on a non-zero ``uv`` exit.
 """
 
 from __future__ import annotations
@@ -15,10 +15,12 @@ import os
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Protocol
 
+from gatecheck.env.env_cache import default_cache_root
+from gatecheck.env.uv_bootstrap import bootstrap_uv
 from gatecheck.registry import ResolvedPyPISource
 
 _STDERR_TAIL = 2000  # bytes of uv stderr kept in a UvBuildError message
@@ -41,8 +43,18 @@ class UvRunner(Protocol):
 class SubprocessUvRunner:
     """Default ``UvRunner`` — discovers ``uv`` and shells out to ``uv venv`` / ``uv pip install``."""
 
-    def __init__(self, environ: Mapping[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        environ: Mapping[str, str] | None = None,
+        *,
+        cache_root: Path | None = None,
+        bootstrapper: Callable[[Path], Path] | None = None,
+        allow_bootstrap: bool = True,
+    ) -> None:
         self._environ = environ  # None → os.environ, resolved lazily in _find_uv
+        self._cache_root = cache_root  # None → default_cache_root(environ)
+        self._bootstrapper = bootstrapper  # injectable seam (tests); None → bootstrap_uv
+        self._allow_bootstrap = allow_bootstrap
 
     def build_venv(self, pinned: ResolvedPyPISource, dest: Path) -> None:
         """Create a venv at ``dest`` and install ``pinned`` into it.
@@ -84,10 +96,12 @@ class SubprocessUvRunner:
         return argv
 
     def _find_uv(self) -> str:
-        """Locate ``uv`` via ``GATECHECK_UV`` override, else ``shutil.which`` on the injected PATH.
+        """Locate ``uv``: ``GATECHECK_UV`` override → ``PATH`` → auto-bootstrap a pinned uv.
 
-        Raises ``UvNotFound`` (naming the override and the STY-0010 bootstrap) when
-        no usable ``uv`` binary is found.
+        When ``uv`` is absent and bootstrapping is enabled (default), download a
+        pinned, checksum-verified uv into the cache and return it (``UvBootstrapError``
+        on failure). Bootstrapping is skipped — raising ``UvNotFound`` as before — when
+        ``allow_bootstrap`` is false or ``GATECHECK_NO_BOOTSTRAP`` is set.
         """
         env = os.environ if self._environ is None else self._environ
         override = env.get("GATECHECK_UV")
@@ -97,11 +111,16 @@ class SubprocessUvRunner:
                 return str(candidate)
             raise UvNotFound(f"GATECHECK_UV={override!r} is not an executable file")
         located = shutil.which("uv", path=env.get("PATH", os.defpath))
-        if located is None:
+        if located is not None:
+            return located
+        if not self._allow_bootstrap or env.get("GATECHECK_NO_BOOTSTRAP"):
             raise UvNotFound(
-                "uv not found on PATH (set GATECHECK_UV or install uv; auto-bootstrap is STY-0010)"
+                "uv not found on PATH (set GATECHECK_UV, install uv, or allow "
+                "auto-bootstrap by unsetting GATECHECK_NO_BOOTSTRAP)"
             )
-        return located
+        bootstrap = self._bootstrapper if self._bootstrapper is not None else bootstrap_uv
+        cache_root = self._cache_root if self._cache_root is not None else default_cache_root(env)
+        return str(bootstrap(cache_root))
 
     def _run(self, argv: list[str]) -> None:
         """Run ``argv`` to completion; raise ``UvBuildError`` on non-zero exit."""

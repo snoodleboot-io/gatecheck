@@ -124,12 +124,38 @@ def test_find_uv_override_must_be_executable(tmp_path: Path) -> None:
         runner._find_uv()
 
 
-def test_find_uv_absent_on_path_raises(tmp_path: Path) -> None:
-    # Arrange — an empty PATH dir with no uv, no override
-    runner = SubprocessUvRunner({"PATH": str(tmp_path)})
+def test_find_uv_absent_raises_when_bootstrap_disabled(tmp_path: Path) -> None:
+    # Arrange — no uv on PATH, bootstrap turned off
+    runner = SubprocessUvRunner({"PATH": str(tmp_path)}, allow_bootstrap=False)
     # Act / Assert
-    with pytest.raises(UvNotFound, match="STY-0010"):
+    with pytest.raises(UvNotFound, match="uv not found"):
         runner._find_uv()
+
+
+def test_find_uv_absent_raises_when_no_bootstrap_env_set(tmp_path: Path) -> None:
+    # Arrange — GATECHECK_NO_BOOTSTRAP disables auto-download even with allow_bootstrap
+    runner = SubprocessUvRunner({"PATH": str(tmp_path), "GATECHECK_NO_BOOTSTRAP": "1"})
+    # Act / Assert
+    with pytest.raises(UvNotFound):
+        runner._find_uv()
+
+
+def test_find_uv_bootstraps_when_absent(tmp_path: Path) -> None:
+    # Arrange — no uv on PATH; inject a fake bootstrapper (no network)
+    def fake_bootstrapper(cache_root: Path) -> Path:
+        uv = cache_root / "bin" / "uv"
+        uv.parent.mkdir(parents=True, exist_ok=True)
+        uv.write_text("#!/bin/sh\n", encoding="utf-8")
+        uv.chmod(0o755)
+        return uv
+
+    runner = SubprocessUvRunner(
+        {"PATH": "/nonexistent"}, cache_root=tmp_path, bootstrapper=fake_bootstrapper
+    )
+    # Act
+    located = runner._find_uv()
+    # Assert
+    assert located == str(tmp_path / "bin" / "uv")
 
 
 # ── _run exit-code mapping ────────────────────────────────────────

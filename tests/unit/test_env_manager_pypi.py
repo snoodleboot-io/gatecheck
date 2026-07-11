@@ -18,6 +18,7 @@ import pytest
 from gatecheck.config import SourceSpec
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvError, EnvManager, ResolvedEnv
+from gatecheck.env.uv_bootstrap import UvBootstrapError
 from gatecheck.env.uv_runner import UvBuildError, UvNotFound
 from gatecheck.registry import ProjectFile, ProjectPage, RegistryError, ResolvedPyPISource
 
@@ -154,9 +155,21 @@ def test_uv_not_found_maps_to_env_error(tmp_path: Path) -> None:
         uv_runner=RaisingUvRunner(UvNotFound("no uv")),
     )
     # Act / Assert
-    with pytest.raises(EnvError, match="STY-0010") as exc_info:
+    with pytest.raises(EnvError, match="unavailable") as exc_info:
         manager.resolve(_hook("pypi:ruff==0.4.0"))
     assert exc_info.value.hook_id == "lint"
+
+
+def test_uv_bootstrap_error_maps_to_env_error(tmp_path: Path) -> None:
+    # Arrange — the runner's bootstrap fails (e.g. checksum mismatch)
+    manager = EnvManager(
+        cache_root=tmp_path,
+        client=FakeRegistryClient(_ruff_page()),
+        uv_runner=RaisingUvRunner(UvBootstrapError("checksum mismatch")),
+    )
+    # Act / Assert
+    with pytest.raises(EnvError, match="auto-bootstrap uv"):
+        manager.resolve(_hook("pypi:ruff==0.4.0"))
 
 
 def test_uv_build_error_maps_to_env_error(tmp_path: Path) -> None:
