@@ -501,6 +501,14 @@ The git query is the only side effect and sits behind an injectable seam, so res
 - **`when` filter:** hooks excluded by their `when` conditions (`env-not`, `on-ci`) are set aside as **skipped, with a reason**, not dropped silently. CI is detected via the `CI` or `GITHUB_ACTIONS` environment variables.
 - **`depends-on` DAG:** dependencies are resolved into a directed graph and topologically sorted into **levels** — hooks in the same level have no dependency between them and may run concurrently; later levels wait for earlier ones. A dependency that isn't running (skipped or outside the group) drops its edge; a dependency on a hook that doesn't exist, or a dependency cycle, is a `PlanError`.
 
+### Runner — executing a hook
+
+`gatecheck.runner.run_hook` runs one hook and returns a `HookResult`:
+
+- **Command:** `run` is tokenized (`shlex`); a standalone **`{files}`** token expands to the hook's files in place, otherwise the files are appended after the command. The files are the ones routed to that hook by the changeset step, so `pass-files = false` simply yields no file arguments.
+- **Environment:** the hook's `ResolvedEnv` (from the Environments layer) contributes its `bin/` directory to the front of `PATH`, so the hook's own tool is found first.
+- **Result:** `HookResult(hook_id, status, exit_code, output, duration)` — `status` is `passed` (exit 0), `failed` (non-zero exit), or `error` (the environment couldn't be resolved or the command couldn't be spawned). Combined stdout+stderr is captured. The subprocess sits behind an injectable seam, so execution is testable without spawning anything.
+
 ---
 
 ## Complete example
