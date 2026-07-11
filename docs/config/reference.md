@@ -509,6 +509,14 @@ The git query is the only side effect and sits behind an injectable seam, so res
 - **Environment:** the hook's `ResolvedEnv` (from the Environments layer) contributes its `bin/` directory to the front of `PATH`, so the hook's own tool is found first.
 - **Result:** `HookResult(hook_id, status, exit_code, output, duration)` — `status` is `passed` (exit 0), `failed` (non-zero exit), or `error` (the environment couldn't be resolved or the command couldn't be spawned). Combined stdout+stderr is captured. The subprocess sits behind an injectable seam, so execution is testable without spawning anything.
 
+### Runner — parallel execution engine
+
+`gatecheck.runner.run_plan` executes an `ExecutionPlan` through the native **`gatecheck_core`** (Rust) scheduler:
+
+- The plan's dependency **levels become waves**. Hooks within a wave run **concurrently** (rayon); each wave waits for the previous one. Because a hook's environment work and subprocess wait release the GIL, the hooks in a wave genuinely overlap.
+- **Fail-fast** (a group setting) is wave-granular: after a wave in which any hook did not pass, no further wave is started (the current wave finishes).
+- The Rust core owns scheduling and parallelism; each hook is still executed by the Python `run_hook` (which owns environment resolution and the subprocess), called back per node. `run_plan` returns the `HookResult`s in execution order.
+
 ---
 
 ## Complete example
