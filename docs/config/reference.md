@@ -459,7 +459,9 @@ content-addressed virtualenv built by [uv](https://docs.astral.sh/uv/):
 
 The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/gatecheck/env-v1/<key>/` (falling back to `~/.cache/gatecheck/env-v1/<key>/`).
 
-**`uv` is an external prerequisite.** It is a host binary discovered at run time (via the `GATECHECK_UV` override, else `PATH`), **not** a Python dependency in `pyproject.toml`. If it is absent, `EnvManager` raises `EnvError`; automatic provisioning of `uv` is planned (STY-0010).
+**`uv` is discovered or auto-bootstrapped.** `uv` is a host binary, **not** a Python dependency in `pyproject.toml`. It is located at run time via the `GATECHECK_UV` override, else `PATH`. If it is not found, gatecheck **auto-bootstraps** a pinned, checksum-verified `uv` into the user cache (`$XDG_CACHE_HOME/gatecheck/bin/uv`) and reuses it thereafter — a one-time network download from the Astral GitHub releases, verified against a hardcoded SHA-256. Auto-bootstrap supports Linux and macOS (x86_64 / aarch64); on other platforms, or when disabled, `EnvManager` raises `EnvError`.
+
+Set **`GATECHECK_NO_BOOTSTRAP`** (any non-empty value) to disable auto-bootstrap — useful for air-gapped or CI environments that must provide their own `uv`; a missing `uv` then errors instead of downloading.
 
 ### Cache — explaining a hook's environment
 

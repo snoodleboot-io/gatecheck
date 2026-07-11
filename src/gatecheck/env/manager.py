@@ -22,6 +22,7 @@ from gatecheck.config.hook_def import HookDef
 from gatecheck.env.cache_explanation import CacheExplanation
 from gatecheck.env.env_cache import default_cache_root, is_healthy, publish_atomically, venv_slot
 from gatecheck.env.env_error import EnvError
+from gatecheck.env.uv_bootstrap import UvBootstrapError
 from gatecheck.env.uv_runner import SubprocessUvRunner, UvBuildError, UvNotFound, UvRunner
 from gatecheck.registry import RegistryClient, ResolvedPyPISource, resolve_pypi_source
 from gatecheck.sources import (
@@ -171,15 +172,23 @@ class EnvManager:
             self._cache_root if self._cache_root is not None else default_cache_root(self._environ)
         )
         runner = (
-            self._uv_runner if self._uv_runner is not None else SubprocessUvRunner(self._environ)
+            self._uv_runner
+            if self._uv_runner is not None
+            else SubprocessUvRunner(self._environ, cache_root=cache_root)
         )
         try:
             slot = publish_atomically(lambda dest: runner.build_venv(pinned, dest), cache_root, key)
         except UvNotFound as exc:
             raise EnvError(
                 hook.id,
-                "uv is required to build pypi environments but was not found "
-                "(set GATECHECK_UV or install uv; auto-bootstrap is STY-0010)",
+                "uv is required to build pypi environments but is unavailable "
+                "(set GATECHECK_UV, install uv, or allow auto-bootstrap)",
+            ) from exc
+        except UvBootstrapError as exc:
+            raise EnvError(
+                hook.id,
+                f"could not auto-bootstrap uv to build the environment for "
+                f"'{pinned.name}=={pinned.version}': {exc}",
             ) from exc
         except UvBuildError as exc:
             raise EnvError(
