@@ -1,0 +1,54 @@
+"""Changeset resolution — the files each hook runs against (STY-0011 / GAT-13).
+
+Determines the run's file set (staged by default, all tracked with ``all_files``)
+and the per-hook subset each hook receives after applying its ``files`` glob and
+``pass_files``. Pure over the injected ``GitClient`` + the hooks — no argv assembly,
+no subprocess of its own beyond the git query behind the seam.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+from collections.abc import Sequence
+from dataclasses import dataclass
+from pathlib import Path
+
+from gatecheck.config.hook_def import HookDef
+from gatecheck.runner.git_client import GitClient, SubprocessGitClient
+
+
+@dataclass(frozen=True)
+class Changeset:
+    """The resolved changeset and the files routed to each hook."""
+
+    files: tuple[Path, ...]
+    files_by_hook: dict[str, tuple[Path, ...]]
+
+
+def resolve_changeset(
+    hooks: Sequence[HookDef],
+    *,
+    all_files: bool = False,
+    git: GitClient | None = None,
+) -> Changeset:
+    """Resolve the changeset and route files to each hook.
+
+    The base file set is every tracked file (``all_files=True``) or the staged files
+    (default), queried via ``git`` (raises ``GitError`` on failure). Each hook then
+    receives no files when ``pass_files`` is false, the whole changeset when its
+    ``files`` glob is unset, or the glob-matching subset otherwise.
+    """
+    client = SubprocessGitClient() if git is None else git
+    raw = client.tracked_files() if all_files else client.staged_files()
+    files = tuple(Path(path) for path in raw)
+    files_by_hook = {hook.id: _files_for_hook(hook, files) for hook in hooks}
+    return Changeset(files=files, files_by_hook=files_by_hook)
+
+
+def _files_for_hook(hook: HookDef, files: tuple[Path, ...]) -> tuple[Path, ...]:
+    """Select the files ``hook`` receives (``pass_files`` + ``files`` glob)."""
+    if not hook.pass_files:
+        return ()
+    if hook.files is None:
+        return files
+    return tuple(f for f in files if fnmatch.fnmatchcase(f.as_posix(), hook.files))

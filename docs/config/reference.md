@@ -484,6 +484,15 @@ cache dir: /home/you/.cache/gatecheck/env-v1/3f9a…
 
 > Cache eviction (`gatecheck cache clear`) is not yet implemented.
 
+### Runner — resolving the changeset
+
+Before running hooks, `gatecheck.runner.resolve_changeset` determines **which files each hook runs against**:
+
+- The base file set is the **staged** files by default (`git diff --cached`), or **every tracked** file with `--all-files` (`git ls-files`). Deleted files are excluded (you can't lint a file that's gone).
+- Each hook then receives: **no files** when `pass-files = false`; the **whole changeset** when it has no `files` glob; otherwise only the files matching its **`files`** glob. Matching is `fnmatch`-style and case-sensitive, so `files = "*.py"` matches `.py` files at any depth.
+
+The git query is the only side effect and sits behind an injectable seam, so resolution is deterministic and testable offline. A `run`'s `{files}` placeholder substitution and the actual execution happen in the runner's later stages, not here.
+
 ---
 
 ## Complete example
