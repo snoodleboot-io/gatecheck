@@ -493,6 +493,14 @@ Before running hooks, `gatecheck.runner.resolve_changeset` determines **which fi
 
 The git query is the only side effect and sits behind an injectable seam, so resolution is deterministic and testable offline. A `run`'s `{files}` placeholder substitution and the actual execution happen in the runner's later stages, not here.
 
+### Runner — the execution plan
+
+`gatecheck.runner.build_plan` turns the config into a dependency-ordered `ExecutionPlan` (no execution):
+
+- **Selection:** a named `[group.<name>]` (hooks in the group's order) or every hook (declared order) when no group is given.
+- **`when` filter:** hooks excluded by their `when` conditions (`env-not`, `on-ci`) are set aside as **skipped, with a reason**, not dropped silently. CI is detected via the `CI` or `GITHUB_ACTIONS` environment variables.
+- **`depends-on` DAG:** dependencies are resolved into a directed graph and topologically sorted into **levels** — hooks in the same level have no dependency between them and may run concurrently; later levels wait for earlier ones. A dependency that isn't running (skipped or outside the group) drops its edge; a dependency on a hook that doesn't exist, or a dependency cycle, is a `PlanError`.
+
 ---
 
 ## Complete example
