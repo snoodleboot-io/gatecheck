@@ -9,11 +9,11 @@ become an ``error`` ``HookResult`` rather than an exception.
 from __future__ import annotations
 
 import os
-import shlex
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from gatecheck.command import tokenize
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvError, EnvManager
 from gatecheck.registry import RegistryError
@@ -71,7 +71,7 @@ def _assemble_argv(run: str, files: Sequence[Path]) -> list[str]:
     file_args = [str(f) for f in files]
     argv: list[str] = []
     substituted = False
-    for token in shlex.split(run):
+    for token in tokenize(run):
         if token == _FILES_TOKEN:
             argv.extend(file_args)
             substituted = True

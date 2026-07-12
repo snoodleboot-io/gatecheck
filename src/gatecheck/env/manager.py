@@ -12,12 +12,12 @@ content-addressed cache — a uv-backed venv (STY-0008). ``UnsupportedSource`` r
 from __future__ import annotations
 
 import hashlib
-import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from gatecheck import venv
+from gatecheck.command import tokenize
 from gatecheck.config import SourceSpec
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env.cache_explanation import CacheExplanation
@@ -211,7 +211,7 @@ class EnvManager:
         cannot be tokenized (unbalanced quotes).
         """
         try:
-            tokens = shlex.split(hook.run)
+            tokens = tokenize(hook.run)
         except ValueError:  # unbalanced quotes, etc.
             raise EnvError(hook.id, f"cannot derive a tool name from run = '{hook.run}'") from None
         if not tokens:
