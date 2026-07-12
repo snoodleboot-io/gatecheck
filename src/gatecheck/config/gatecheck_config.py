@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from gatecheck.config.group_def import GroupDef
 from gatecheck.config.hook_def import HookDef
+from gatecheck.config.package_spec import PackageSpec
 from gatecheck.config.source_spec import SourceSpec
+from gatecheck.config.workspace_spec import WorkspaceSpec
 
 
 class GatecheckConfig(BaseModel):
@@ -17,3 +19,5 @@ class GatecheckConfig(BaseModel):
     hook: list[HookDef] = Field(default_factory=list)
     group: dict[str, GroupDef] = Field(default_factory=dict)
     sources: SourceSpec | None = Field(default=None)
+    workspace: WorkspaceSpec | None = Field(default=None)
+    package: PackageSpec | None = Field(default=None)
