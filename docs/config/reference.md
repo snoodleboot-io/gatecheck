@@ -463,6 +463,8 @@ The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/gatechec
 
 Set **`GATECHECK_NO_BOOTSTRAP`** (any non-empty value) to disable auto-bootstrap — useful for air-gapped or CI environments that must provide their own `uv`; a missing `uv` then errors instead of downloading.
 
+Run **`gatecheck sync`** to pre-create (or verify) every hook's environment ahead of time — it reports each hook as `built` (a new uv venv), `cached` (already present), `ready` (a `project` / `system` binary that needs no environment), or `error`, and exits non-zero if any could not be resolved.
+
 ### Cache — explaining a hook's environment
 
 `gatecheck cache why <hook>` explains, for a single hook in `check.toml`, how its cache key is derived and whether its environment is already cached — **read-only**: it never builds a venv or writes to the cache.
