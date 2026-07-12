@@ -14,8 +14,9 @@ import tempfile
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+from gatecheck import venv
+
 _SCHEME_DIR = "env-v1"  # dir-level namespace; matches the cache_key scheme tag
-_VENV_BIN = "bin"  # POSIX venv bin dir (Windows Scripts/ is out of scope for now)
 
 
 def default_cache_root(environ: Mapping[str, str] | None = None) -> Path:
@@ -36,8 +37,8 @@ def venv_slot(cache_root: Path, key: str) -> Path:
 
 
 def is_healthy(slot: Path) -> bool:
-    """True when ``slot`` holds a usable venv (its ``bin`` dir exists)."""
-    return (slot / _VENV_BIN).is_dir()
+    """True when ``slot`` holds a usable venv (its executables dir exists)."""
+    return venv.bin_dir(slot).is_dir()
 
 
 def publish_atomically(build: Callable[[Path], None], cache_root: Path, key: str) -> Path:

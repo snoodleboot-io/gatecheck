@@ -13,6 +13,7 @@ import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
+from gatecheck import venv
 from gatecheck.sources.parsed_source import ParsedSource
 from gatecheck.sources.project_source import ProjectSource
 from gatecheck.sources.pypi_source import PyPISource
@@ -72,20 +73,27 @@ def _resolve_system(tool: str, environ: Mapping[str, str]) -> ResolvedTool:
 
 
 def _resolve_project(tool: str, root: Path, environ: Mapping[str, str]) -> ResolvedTool:
-    """Locate ``tool`` in the project's existing venv (active VIRTUAL_ENV, then <root>/.venv)."""
-    candidates: list[Path] = []
+    """Locate ``tool`` in the project's existing venv (active VIRTUAL_ENV, then <root>/.venv).
+
+    Honors the platform venv layout: ``bin`` on POSIX, ``Scripts`` on Windows, and
+    the ``.exe`` / ``.bat`` / ``.cmd`` executable variants on Windows.
+    """
+    bases: list[Path] = []
     virtual_env = environ.get("VIRTUAL_ENV")
     if virtual_env:
-        candidates.append(Path(virtual_env) / "bin" / tool)
-    candidates.append(root / ".venv" / "bin" / tool)
+        bases.append(venv.bin_dir(Path(virtual_env)))
+    bases.append(venv.bin_dir(root / ".venv"))
 
-    for candidate in candidates:
-        if candidate.is_file() and os.access(candidate, os.X_OK):
-            return ResolvedTool(tool=tool, executable=candidate.resolve(), origin="project")
+    for base in bases:
+        for name in venv.executable_candidates(tool):
+            candidate = base / name
+            if venv.is_executable(candidate):
+                return ResolvedTool(tool=tool, executable=candidate.resolve(), origin="project")
 
+    checked = venv.bin_dir_name()
     raise SourceResolutionError(
         tool,
         "project",
-        "not found in project environment "
-        "(checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)",
+        f"not found in project environment "
+        f"(checked $VIRTUAL_ENV/{checked} and <workspace_root>/.venv/{checked})",
     )

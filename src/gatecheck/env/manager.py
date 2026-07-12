@@ -17,6 +17,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from gatecheck import venv
 from gatecheck.config import SourceSpec
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env.cache_explanation import CacheExplanation
@@ -36,7 +37,6 @@ from gatecheck.sources import (
 )
 
 _CACHE_KEY_SCHEME = "env-v1"
-_VENV_BIN = "bin"
 
 
 @dataclass(frozen=True)
@@ -195,8 +195,8 @@ class EnvManager:
                 hook.id,
                 f"uv failed to build the environment for '{pinned.name}=={pinned.version}': {exc}",
             ) from exc
-        bin_dir = slot / _VENV_BIN
-        if not (bin_dir / tool).exists():
+        bin_dir = venv.bin_dir(slot)
+        if not any((bin_dir / name).exists() for name in venv.executable_candidates(tool)):
             raise EnvError(
                 hook.id,
                 f"tool '{tool}' is not present in the built environment for "
