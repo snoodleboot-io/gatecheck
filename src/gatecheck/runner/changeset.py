@@ -41,8 +41,13 @@ def resolve_changeset(
     client = SubprocessGitClient() if git is None else git
     raw = client.tracked_files() if all_files else client.staged_files()
     files = tuple(Path(path) for path in raw)
-    files_by_hook = {hook.id: _files_for_hook(hook, files) for hook in hooks}
-    return Changeset(files=files, files_by_hook=files_by_hook)
+    return Changeset(files=files, files_by_hook=route_files(hooks, files))
+
+
+def route_files(hooks: Sequence[HookDef], files: Sequence[Path]) -> dict[str, tuple[Path, ...]]:
+    """Route ``files`` to each hook by ``pass_files`` + the ``files`` glob (pure, no git)."""
+    materialized = tuple(files)
+    return {hook.id: _files_for_hook(hook, materialized) for hook in hooks}
 
 
 def _files_for_hook(hook: HookDef, files: tuple[Path, ...]) -> tuple[Path, ...]:

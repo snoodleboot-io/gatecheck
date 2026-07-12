@@ -10,11 +10,13 @@ from gatecheck.config import ConfigError, GatecheckConfig, load_config
 from gatecheck.runner import (
     GitError,
     PlanError,
+    RunReport,
     build_plan,
     build_report,
     resolve_changeset,
     run_plan,
 )
+from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
 
 
 @click.command(help="Run a hook group (or all hooks) against the current changeset.")
@@ -39,9 +41,8 @@ def run(
 ) -> None:
     """Resolve the changeset, plan the hooks, execute them, and report."""
     if affected:
-        raise click.ClickException(
-            "--affected is not yet supported (requires the workspace feature)"
-        )
+        _run_affected(ctx, config_path, all_files)
+        return
 
     try:
         config = load_config(config_path)
@@ -73,3 +74,25 @@ def _fail_fast(config: GatecheckConfig, group: str | None) -> bool:
         return False
     group_def = config.group.get(group)
     return bool(group_def.fail_fast) if group_def is not None else False
+
+
+def _run_affected(ctx: click.Context, config_path: Path, all_files: bool) -> None:
+    """Run only the hooks of packages affected by the changeset (monorepo mode)."""
+    try:
+        workspace = discover_workspace(config_path)
+    except ConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        changeset = resolve_changeset([], all_files=all_files)
+    except GitError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        results = run_affected(workspace, changeset.files)
+    except (WorkspaceError, PlanError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    report = RunReport(results=results, skipped=(), not_run=())
+    click.echo(report.render())
+    ctx.exit(report.exit_code)

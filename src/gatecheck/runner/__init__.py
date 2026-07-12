@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from gatecheck.runner.changeset import Changeset, resolve_changeset
+from gatecheck.runner.changeset import Changeset, resolve_changeset, route_files
 from gatecheck.runner.engine import run_plan
 from gatecheck.runner.executor import run_hook
 from gatecheck.runner.git_client import GitClient, GitError, SubprocessGitClient
@@ -28,6 +28,7 @@ __all__ = [
     "build_plan",
     "build_report",
     "resolve_changeset",
+    "route_files",
     "run_hook",
     "run_plan",
 ]

@@ -80,17 +80,3 @@ def test_run_unknown_group_errors() -> None:
         # Assert
         assert result.exit_code != 0
         assert "unknown group 'ghost'" in result.output
-
-
-@_skip
-def test_run_affected_is_not_supported() -> None:
-    # Arrange
-    runner = CliRunner()
-    with runner.isolated_filesystem():
-        _init_repo()
-        _write("check.toml", '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\n')
-        # Act
-        result = runner.invoke(main, ["run", "--affected"])
-        # Assert
-        assert result.exit_code != 0
-        assert "not yet supported" in result.output
