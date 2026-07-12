@@ -34,6 +34,7 @@ dependencies = [
     "pydantic>=2",
     "tomlkit>=0.13",
     "packaging>=24",           # PEP 440/508 version + requirement handling (registry resolver)
+    "pyyaml>=6",               # parsing .pre-commit-config.yaml (migrate)
     "gatecheck-core>=0.1.0",   # the Rust extension wheel
 ]
 
@@ -46,6 +47,7 @@ dev = [
     "ruff>=0.4",
     "maturin>=1.5",
     "pyyaml>=6",                # for gatecheck migrate
+    "types-PyYAML>=6",          # yaml stubs for mypy
 ]
 docs = [
     "mkdocs-material>=9.5",
