@@ -19,6 +19,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Protocol
 
+from gatecheck import venv
 from gatecheck.env.env_cache import default_cache_root
 from gatecheck.env.uv_bootstrap import bootstrap_uv
 from gatecheck.registry import ResolvedPyPISource
@@ -65,7 +66,7 @@ class SubprocessUvRunner:
         """
         uv = self._find_uv()
         self._run([uv, "venv", str(dest)])
-        self._install(uv, pinned, dest / "bin" / "python")
+        self._install(uv, pinned, venv.python_executable(dest))
 
     def _install(self, uv: str, pinned: ResolvedPyPISource, python: Path) -> None:
         """Install ``pinned`` into the venv at ``python``, using ``--require-hashes`` when known."""
