@@ -20,9 +20,12 @@ import platform
 import tarfile
 import tempfile
 import urllib.request
+import zipfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol
+
+from gatecheck import venv
 
 _UV_VERSION = "0.11.28"
 _RELEASE_BASE = "https://github.com/astral-sh/uv/releases/download"
@@ -47,9 +50,17 @@ _ASSETS: dict[tuple[str, str], tuple[str, str]] = {
         "uv-aarch64-apple-darwin.tar.gz",
         "33540eb7c883ab857eff79bd5ac2aa31fe27b595abecb4a9c003a2c998447232",
     ),
+    ("windows", "x86_64"): (
+        "uv-x86_64-pc-windows-msvc.zip",
+        "0a23463216d09c6a72ff80ef5dc5a795f07dc1575cb84d24596c2f124a441b7b",
+    ),
+    ("windows", "aarch64"): (
+        "uv-aarch64-pc-windows-msvc.zip",
+        "3248109afad3ec59baad299d324ff53de17e2d9a3b3e21580ffd26744b11e036",
+    ),
 }
 
-_OS_ALIASES = {"linux": "linux", "darwin": "darwin"}
+_OS_ALIASES = {"linux": "linux", "darwin": "darwin", "windows": "windows"}
 _ARCH_ALIASES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}
 
 
@@ -110,8 +121,8 @@ def bootstrap_uv(
     and atomically publish it (chmod +x). Raises ``UvBootstrapError`` on an
     unsupported platform, checksum mismatch, or an archive missing ``uv``.
     """
-    dest = cache_root / "bin" / "uv"
-    if dest.is_file() and os.access(dest, os.X_OK):
+    dest = cache_root / "bin" / _uv_binary_name()
+    if venv.is_executable(dest):
         return dest
 
     url, expected_sha = asset if asset is not None else select_asset()
@@ -127,20 +138,42 @@ def bootstrap_uv(
     return dest
 
 
-def _extract_uv_binary(payload: bytes) -> bytes:
-    """Return the bytes of the ``uv`` binary from a ``.tar.gz`` payload.
+def _uv_binary_name() -> str:
+    """The bootstrapped uv filename: ``uv.exe`` on Windows, else ``uv``."""
+    return "uv.exe" if venv.is_windows() else "uv"
 
-    Reads a single member (no ``extractall`` — no path-traversal surface). Raises
+
+def _extract_uv_binary(payload: bytes) -> bytes:
+    """Return the ``uv`` binary bytes from a ``.zip`` (Windows) or ``.tar.gz`` payload.
+
+    Reads a single member (no bulk extract — no path-traversal surface). Raises
     ``UvBootstrapError`` if the archive is unreadable or has no ``uv`` executable.
     """
+    if zipfile.is_zipfile(io.BytesIO(payload)):
+        return _extract_from_zip(payload)
+    return _extract_from_tar(payload)
+
+
+def _extract_from_tar(payload: bytes) -> bytes:
     try:
         with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tar:
             for member in tar.getmembers():
-                if member.isfile() and Path(member.name).name == "uv":
+                if member.isfile() and Path(member.name).name in ("uv", "uv.exe"):
                     handle = tar.extractfile(member)
                     if handle is not None:
                         return handle.read()
     except tarfile.TarError as exc:
+        raise UvBootstrapError(f"could not read the uv archive: {exc}") from exc
+    raise UvBootstrapError("no 'uv' binary found in the downloaded archive")
+
+
+def _extract_from_zip(payload: bytes) -> bytes:
+    try:
+        with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+            for name in archive.namelist():
+                if Path(name).name in ("uv", "uv.exe"):
+                    return archive.read(name)
+    except zipfile.BadZipFile as exc:
         raise UvBootstrapError(f"could not read the uv archive: {exc}") from exc
     raise UvBootstrapError("no 'uv' binary found in the downloaded archive")
 

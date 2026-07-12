@@ -15,6 +15,11 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
+def is_windows() -> bool:
+    """True on Windows. The shared platform check for venv + uv-bootstrap layout."""
+    return _is_windows()
+
+
 def bin_dir_name() -> str:
     """The venv's executables sub-directory: ``Scripts`` on Windows, else ``bin``."""
     return "Scripts" if _is_windows() else "bin"
