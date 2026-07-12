@@ -1,5 +1,11 @@
-"""Monorepo discovery and the `--affected` package set."""
+"""Public facade for gatecheck.workspace — monorepo discovery (STY-0016)."""
 
-from gatecheck.workspace.loader import Workspace
+from __future__ import annotations
 
-__all__ = ["Workspace"]
+from gatecheck.workspace.loader import DiscoveredPackage, Workspace, discover_workspace
+
+__all__ = [
+    "DiscoveredPackage",
+    "Workspace",
+    "discover_workspace",
+]

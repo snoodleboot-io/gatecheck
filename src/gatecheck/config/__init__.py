@@ -8,14 +8,18 @@ from gatecheck.config.gatecheck_config import GatecheckConfig
 from gatecheck.config.group_def import GroupDef
 from gatecheck.config.hook_def import HookDef
 from gatecheck.config.loader import load_config
+from gatecheck.config.package_spec import PackageSpec
 from gatecheck.config.source_spec import SourceSpec
+from gatecheck.config.workspace_spec import WorkspaceSpec
 
 __all__ = [
     "ConfigError",
     "GatecheckConfig",
     "GroupDef",
     "HookDef",
+    "PackageSpec",
     "SourceSpec",
+    "WorkspaceSpec",
     "dump_config",
     "load_config",
 ]
