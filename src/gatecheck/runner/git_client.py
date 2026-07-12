@@ -41,6 +41,25 @@ class SubprocessGitClient:
         """Return every tracked path (for ``--all-files``)."""
         return self._run(["git", "ls-files", "-z"])
 
+    def hooks_dir(self) -> Path:
+        """Return the repository's git hooks directory (``git rev-parse --git-path hooks``)."""
+        try:
+            completed = subprocess.run(
+                ["git", "rev-parse", "--git-path", "hooks"],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=self._cwd,
+            )
+        except FileNotFoundError as exc:
+            raise GitError(f"git executable not found: {exc}") from exc
+        if completed.returncode != 0:
+            raise GitError(f"not a git repository: {completed.stderr.strip()}")
+        hooks = completed.stdout.strip()
+        base = self._cwd if self._cwd is not None else Path.cwd()
+        path = Path(hooks)
+        return path if path.is_absolute() else base / path
+
     def _run(self, argv: list[str]) -> tuple[str, ...]:
         """Run ``argv`` and split its NUL-delimited stdout; raise ``GitError`` on failure."""
         try:
