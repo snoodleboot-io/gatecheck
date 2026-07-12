@@ -10,6 +10,7 @@ from gatecheck.runner.hook_result import HookResult, HookStatus
 from gatecheck.runner.plan import ExecutionPlan, SkippedHook, build_plan
 from gatecheck.runner.plan_error import PlanError
 from gatecheck.runner.process_runner import ProcessRunner, SubprocessProcessRunner
+from gatecheck.runner.report import RunReport, build_report
 
 __all__ = [
     "Changeset",
@@ -20,10 +21,12 @@ __all__ = [
     "HookStatus",
     "PlanError",
     "ProcessRunner",
+    "RunReport",
     "SkippedHook",
     "SubprocessGitClient",
     "SubprocessProcessRunner",
     "build_plan",
+    "build_report",
     "resolve_changeset",
     "run_hook",
     "run_plan",
