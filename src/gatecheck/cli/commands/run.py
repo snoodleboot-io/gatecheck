@@ -1,13 +1,75 @@
-"""`gatecheck run` — execute one or more hook groups."""
+"""`gatecheck run` — execute one or more hook groups against the changeset."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import click
 
+from gatecheck.config import ConfigError, GatecheckConfig, load_config
+from gatecheck.runner import (
+    GitError,
+    PlanError,
+    build_plan,
+    build_report,
+    resolve_changeset,
+    run_plan,
+)
 
-@click.command(help="Run a hook group (or all groups) against the current changeset.")
+
+@click.command(help="Run a hook group (or all hooks) against the current changeset.")
 @click.argument("group", required=False)
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("check.toml"),
+    show_default=True,
+    help="Path to check.toml.",
+)
 @click.option("--all-files", is_flag=True, help="Run against every tracked file, not just staged.")
 @click.option("--affected", is_flag=True, help="Run only on packages affected by the changeset.")
-def run(group: str | None, all_files: bool, affected: bool) -> None:
-    raise NotImplementedError("gatecheck run — scaffolding only")
+@click.pass_context
+def run(
+    ctx: click.Context,
+    group: str | None,
+    config_path: Path,
+    all_files: bool,
+    affected: bool,
+) -> None:
+    """Resolve the changeset, plan the hooks, execute them, and report."""
+    if affected:
+        raise click.ClickException(
+            "--affected is not yet supported (requires the workspace feature)"
+        )
+
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        plan = build_plan(config, group=group)
+    except PlanError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    running = [hook for level in plan.levels for hook in level]
+    try:
+        changeset = resolve_changeset(running, all_files=all_files)
+    except GitError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    fail_fast = _fail_fast(config, group)
+    results = run_plan(plan, changeset.files_by_hook, fail_fast=fail_fast)
+
+    report = build_report(plan, results)
+    click.echo(report.render())
+    ctx.exit(report.exit_code)
+
+
+def _fail_fast(config: GatecheckConfig, group: str | None) -> bool:
+    """The group's ``fail-fast`` setting; ``False`` for an all-hooks run."""
+    if group is None:
+        return False
+    group_def = config.group.get(group)
+    return bool(group_def.fail_fast) if group_def is not None else False
