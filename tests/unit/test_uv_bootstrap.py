@@ -13,10 +13,12 @@ import hashlib
 import io
 import os
 import tarfile
+import zipfile
 from pathlib import Path
 
 import pytest
 
+from gatecheck import venv
 from gatecheck.env.uv_bootstrap import (
     UvBootstrapError,
     bootstrap_uv,
@@ -34,6 +36,14 @@ def _tarball(member: str = "uv-x86_64-unknown-linux-gnu/uv", body: bytes = _UV_B
         info.size = len(body)
         info.mode = 0o755
         tar.addfile(info, io.BytesIO(body))
+    return buf.getvalue()
+
+
+def _zipball(member: str = "uv-x86_64-pc-windows-msvc/uv.exe", body: bytes = _UV_BODY) -> bytes:
+    """Build an in-memory .zip containing one file ``member`` with ``body``."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as archive:
+        archive.writestr(member, body)
     return buf.getvalue()
 
 
@@ -68,10 +78,18 @@ def test_select_asset_macos_arm64_alias() -> None:
     assert len(sha) == 64
 
 
+def test_select_asset_windows_x86_64() -> None:
+    # Act — Windows AMD64 → the msvc zip
+    url, sha = select_asset("Windows", "AMD64")
+    # Assert
+    assert url.endswith("uv-x86_64-pc-windows-msvc.zip")
+    assert sha == "0a23463216d09c6a72ff80ef5dc5a795f07dc1575cb84d24596c2f124a441b7b"
+
+
 def test_select_asset_unsupported_platform_raises() -> None:
-    # Act / Assert
+    # Act / Assert — an arch with no pinned target
     with pytest.raises(UvBootstrapError, match="not supported"):
-        select_asset("Windows", "AMD64")
+        select_asset("Linux", "mips64")
 
 
 # ── bootstrap_uv ──────────────────────────────────────────────────
@@ -89,6 +107,31 @@ def test_bootstrap_downloads_verifies_and_publishes(tmp_path: Path) -> None:
     assert uv.is_file() and os.access(uv, os.X_OK)
     assert uv.read_bytes() == _UV_BODY
     assert downloader.calls == ["https://x/uv.tar.gz"]
+
+
+def test_bootstrap_extracts_uv_exe_from_zip(tmp_path: Path) -> None:
+    # Arrange — a Windows-style .zip payload
+    payload = _zipball()
+    sha = hashlib.sha256(payload).hexdigest()
+    downloader = FakeDownloader(payload)
+    # Act
+    uv = bootstrap_uv(tmp_path, downloader=downloader, asset=("https://x/uv.zip", sha))
+    # Assert
+    assert uv.read_bytes() == _UV_BODY
+
+
+def test_bootstrap_names_binary_uv_exe_on_windows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange — simulate Windows (patch the shared platform check, not os.name)
+    monkeypatch.setattr(venv, "_is_windows", lambda: True)
+    payload = _zipball()
+    sha = hashlib.sha256(payload).hexdigest()
+    # Act
+    uv = bootstrap_uv(tmp_path, downloader=FakeDownloader(payload), asset=("https://x/uv.zip", sha))
+    # Assert
+    assert uv == tmp_path / "bin" / "uv.exe"
+    assert uv.is_file()
 
 
 def test_bootstrap_checksum_mismatch_raises(tmp_path: Path) -> None:
