@@ -1,0 +1,57 @@
+# Nightly network lane — exercises the paths that the PR CI deliberately skips.
+#
+# The PR workflow runs `pytest -m "not network"` so a live PyPI / uv outage never
+# blocks a merge. That leaves the real network paths (pypi resolution, uv download +
+# bootstrap, uv venv build) unguarded. This scheduled lane runs exactly those
+# `@pytest.mark.network` tests against live PyPI and the pinned uv release, so a
+# PyPI-schema change, a broken uv release URL, or a checksum drift surfaces here
+# (via the Actions dashboard) rather than silently.
+#
+# Not triggered on pull_request/push — external flakiness must not gate PRs.
+
+name: nightly-network
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 06:00 UTC daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  network-tests:
+    name: network (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gatecheck-rs
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create virtualenv
+        run: uv venv --python ${{ matrix.python-version }} .venv
+
+      - name: Build and install the native core (gatecheck_core)
+        run: |
+          uv pip install --python .venv/bin/python maturin
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+
+      - name: Install gatecheck + dev dependencies
+        run: uv pip install --python .venv/bin/python -e ".[dev]"
+
+      - name: Pytest (network — real PyPI + uv download/build)
+        run: .venv/bin/pytest -m network -v
