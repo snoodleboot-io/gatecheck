@@ -6,6 +6,9 @@ from pathlib import Path
 
 import click
 
+from gatecheck.config import dump_config
+from gatecheck.migration import MigrationError, map_precommit, parse_precommit_config
+
 
 @click.command(help="Read .pre-commit-config.yaml and write a check.toml.")
 @click.option(
@@ -23,4 +26,15 @@ import click
     show_default=True,
 )
 def migrate(input_path: Path, output_path: Path) -> None:
-    raise NotImplementedError("gatecheck migrate — scaffolding only")
+    """Translate a pre-commit config into a gatecheck check.toml (best-effort)."""
+    try:
+        precommit = parse_precommit_config(input_path)
+    except MigrationError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    config, warnings = map_precommit(precommit)
+    dump_config(config, output_path)
+
+    click.echo(f"Wrote {len(config.hook)} hook(s) to {output_path}")
+    for warning in warnings:
+        click.echo(f"warning: {warning}")
