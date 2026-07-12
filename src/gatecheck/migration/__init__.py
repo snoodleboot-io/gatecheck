@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from gatecheck.migration.mapper import map_precommit
 from gatecheck.migration.migration_error import MigrationError
 from gatecheck.migration.parser import parse_precommit_config
 from gatecheck.migration.precommit_config import PreCommitConfig, PreCommitHook, PreCommitRepo
@@ -11,5 +12,6 @@ __all__ = [
     "PreCommitConfig",
     "PreCommitHook",
     "PreCommitRepo",
+    "map_precommit",
     "parse_precommit_config",
 ]
