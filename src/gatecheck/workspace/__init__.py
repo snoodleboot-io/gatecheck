@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from gatecheck.workspace.inheritance import effective_config
 from gatecheck.workspace.loader import DiscoveredPackage, Workspace, discover_workspace
 
 __all__ = [
     "DiscoveredPackage",
     "Workspace",
     "discover_workspace",
+    "effective_config",
 ]
