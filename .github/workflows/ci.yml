@@ -73,10 +73,51 @@ jobs:
         # external index. Run network-marked tests separately (local / scheduled).
         run: .venv/bin/pytest -m "not network"
 
-  # A windows-latest lane is intentionally deferred to GAT-38: the maturin build
-  # works on Windows, but the env/sources/uv test *fakes* are POSIX-coupled, so
-  # the lane cannot be green until the suite is made cross-platform. The
-  # `posix_only` marker + tests/conftest.py collection hook are the groundwork.
+  windows-checks:
+    name: windows (${{ matrix.python-version }})
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gatecheck-rs
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create virtualenv
+        run: uv venv --python ${{ matrix.python-version }} .venv
+
+      - name: Build and install the native core (gatecheck_core)
+        run: |
+          uv pip install --python .venv/Scripts/python.exe maturin
+          .venv/Scripts/maturin.exe build --release --interpreter .venv/Scripts/python.exe --manifest-path gatecheck-rs/Cargo.toml --out dist
+          uv pip install --python .venv/Scripts/python.exe "$(ls dist/gatecheck_core-*.whl)"
+
+      - name: Install gatecheck + dev dependencies
+        run: uv pip install --python .venv/Scripts/python.exe -e ".[dev]"
+
+      - name: Ruff (lint)
+        run: .venv/Scripts/python.exe -m ruff check src tests
+
+      - name: Mypy
+        run: .venv/Scripts/python.exe -m mypy
+
+      - name: Pytest
+        # Same non-network suite as Linux — the fakes are now cross-platform.
+        run: .venv/Scripts/python.exe -m pytest -m "not network"
 
   rust-checks:
     name: rust

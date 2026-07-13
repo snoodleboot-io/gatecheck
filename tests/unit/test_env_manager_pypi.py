@@ -21,6 +21,7 @@ from gatecheck.env import EnvError, EnvManager, ResolvedEnv
 from gatecheck.env.uv_bootstrap import UvBootstrapError
 from gatecheck.env.uv_runner import UvBuildError, UvNotFound
 from gatecheck.registry import ProjectFile, ProjectPage, RegistryError, ResolvedPyPISource
+from gatecheck.venv import bin_dir_name
 
 DEFAULT_INDEX = "https://pypi.org/simple"
 
@@ -52,7 +53,7 @@ class FakeUvRunner:
 
     def build_venv(self, pinned: ResolvedPyPISource, dest: Path) -> None:
         self.calls.append((pinned, dest))
-        bin_dir = dest / "bin"
+        bin_dir = dest / bin_dir_name()
         bin_dir.mkdir(parents=True)
         (bin_dir / "python").write_text("", encoding="utf-8")
         for tool in self._tools:
@@ -98,7 +99,7 @@ def test_pypi_builds_venv_and_returns_resolved_env(tmp_path: Path) -> None:
     # Assert
     assert isinstance(env, ResolvedEnv)
     assert env.cache_key == _expected_pypi_key()
-    assert env.bin_dir == tmp_path / "env-v1" / env.cache_key / "bin"
+    assert env.bin_dir == tmp_path / "env-v1" / env.cache_key / bin_dir_name()
     assert (env.bin_dir / "ruff").exists()
     assert len(runner.calls) == 1
 

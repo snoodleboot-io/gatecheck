@@ -9,6 +9,7 @@ Windows. AAA throughout.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -45,6 +46,9 @@ def test_windows_layout(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "ruff.exe" in venv.executable_candidates("ruff")
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_is_executable_posix_needs_exec_bit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

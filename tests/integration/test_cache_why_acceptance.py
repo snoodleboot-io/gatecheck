@@ -14,6 +14,7 @@ import pytest
 
 from gatecheck.config import load_config
 from gatecheck.env import EnvManager
+from gatecheck.venv import bin_dir_name
 
 _CONFIG = """
 [[hook]]
@@ -35,7 +36,7 @@ def _no_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_explain_project_hook_from_loaded_config(tmp_path: Path) -> None:
     # Arrange — a real check.toml + a fake project venv executable
     (tmp_path / "check.toml").write_text(_CONFIG, encoding="utf-8")
-    exe = tmp_path / ".venv" / "bin" / "ruff"
+    exe = tmp_path / ".venv" / bin_dir_name() / "ruff"
     exe.parent.mkdir(parents=True)
     exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     exe.chmod(0o755)

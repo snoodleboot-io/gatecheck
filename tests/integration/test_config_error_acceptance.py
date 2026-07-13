@@ -27,7 +27,8 @@ import pytest
 
 from gatecheck.config import ConfigError, load_config
 
-IDE_PREFIX_RE: re.Pattern[str] = re.compile(r"^[^:]+:\d+:\d+:\s+")
+# Allow an optional Windows drive prefix (C:\...) before the path:line:col: form.
+IDE_PREFIX_RE: re.Pattern[str] = re.compile(r"^(?:[A-Za-z]:)?[^:]+:\d+:\d+:\s+")
 
 
 def test_malformed_toml_raises_config_error_with_ide_format(tmp_path: Path) -> None:

@@ -18,11 +18,12 @@ from gatecheck.env.env_cache import (
     publish_atomically,
     venv_slot,
 )
+from gatecheck.venv import bin_dir_name
 
 
 def _make_venv(dest: Path) -> None:
     """A minimal 'build': create the venv's ``bin`` dir so the slot reads healthy."""
-    (dest / "bin").mkdir(parents=True)
+    (dest / bin_dir_name()).mkdir(parents=True)
 
 
 # ── default_cache_root ────────────────────────────────────────────
@@ -63,7 +64,7 @@ def test_is_healthy_true_only_when_bin_present(tmp_path: Path) -> None:
     # Assert — no bin yet
     assert is_healthy(slot) is False
     # Arrange — add bin
-    (slot / "bin").mkdir()
+    (slot / bin_dir_name()).mkdir()
     # Assert
     assert is_healthy(slot) is True
 
@@ -90,7 +91,7 @@ def test_publish_builds_on_miss_and_returns_healthy_slot(tmp_path: Path) -> None
 def test_publish_is_a_cache_hit_when_slot_already_healthy(tmp_path: Path) -> None:
     # Arrange — pre-populate a healthy slot
     slot = venv_slot(tmp_path, "key2")
-    (slot / "bin").mkdir(parents=True)
+    (slot / bin_dir_name()).mkdir(parents=True)
     built = False
 
     def build(dest: Path) -> None:
@@ -108,7 +109,7 @@ def test_publish_is_a_cache_hit_when_slot_already_healthy(tmp_path: Path) -> Non
 def test_publish_leaves_no_partial_slot_when_build_fails(tmp_path: Path) -> None:
     # Arrange
     def build(dest: Path) -> None:
-        (dest / "bin").mkdir()  # partial work that must be discarded
+        (dest / bin_dir_name()).mkdir()  # partial work that must be discarded
         raise RuntimeError("boom")
 
     # Act / Assert
@@ -126,7 +127,7 @@ def test_publish_discards_temp_when_slot_won_by_a_peer(tmp_path: Path) -> None:
 
     def build(dest: Path) -> None:
         _make_venv(dest)
-        (slot / "bin").mkdir(parents=True)  # peer wins the race
+        (slot / bin_dir_name()).mkdir(parents=True)  # peer wins the race
 
     # Act
     result = publish_atomically(build, tmp_path, "key4")

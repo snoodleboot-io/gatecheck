@@ -14,6 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from gatecheck import venv
 from gatecheck.env import uv_runner as uv_runner_module
 from gatecheck.env.uv_runner import (
     SubprocessUvRunner,
@@ -94,7 +95,7 @@ def test_build_venv_runs_uv_venv_then_install(
         "pip",
         "install",
         "--python",
-        str(dest / "bin" / "python"),
+        str(venv.python_executable(dest)),
     ]
 
 

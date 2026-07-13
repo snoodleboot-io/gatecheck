@@ -11,6 +11,7 @@ and the opt-in ``tests/integration/test_uv_venv_build.py``.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -19,6 +20,7 @@ import pytest
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvManager, ResolvedEnv
 from gatecheck.registry import RegistryError
+from gatecheck.venv import bin_dir_name
 
 
 @pytest.fixture(autouse=True)
@@ -34,8 +36,12 @@ def _no_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _make_executable(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    path.chmod(0o755)
+    if os.name == "nt":
+        path = path.with_suffix(".bat")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
     return path
 
 
@@ -46,7 +52,7 @@ def _hook(hook_id: str, from_spec: str, run: str) -> HookDef:
 def test_system_hook_resolves_to_env_whose_bin_dir_holds_executable(tmp_path: Path) -> None:
     # AC-1 / AC-13
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 
@@ -56,14 +62,14 @@ def test_system_hook_resolves_to_env_whose_bin_dir_holds_executable(tmp_path: Pa
     # Assert
     assert isinstance(env, ResolvedEnv)
     assert env.bin_dir == exe.resolve().parent
-    assert (env.bin_dir / "ruff").exists()
+    assert exe.exists()
 
 
 def test_project_hook_resolves_via_dot_venv(tmp_path: Path) -> None:
     # AC-2 / AC-13
     # Arrange
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
     manager = EnvManager(workspace_root=root, environ={"PATH": "/nonexistent"})
 
     # Act
@@ -71,7 +77,7 @@ def test_project_hook_resolves_via_dot_venv(tmp_path: Path) -> None:
 
     # Assert
     assert env.bin_dir == exe.resolve().parent
-    assert (env.bin_dir / "ruff").exists()
+    assert exe.exists()
 
 
 def test_pypi_hook_unknown_alias_propagates_registry_error() -> None:
