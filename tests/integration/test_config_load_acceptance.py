@@ -15,6 +15,7 @@ artifacts (the repo's own ``check.toml``, the real ``mypy`` and
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -147,6 +148,10 @@ def test_no_runtime_dependency_on_gatecheck_core() -> None:
 
 @pytest.mark.integration
 @pytest.mark.slow
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="POSIX-only tests skip on Windows, lowering measured coverage; Linux enforces the gate",
+)
 def test_unit_test_coverage_meets_ninety_percent() -> None:
     """Given the unit tests for the config package,
     When pytest is run with --cov-fail-under=90 against gatecheck.config,

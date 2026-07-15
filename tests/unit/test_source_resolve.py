@@ -271,13 +271,14 @@ def test_project_source_empty_virtualenv_falls_back_to_dot_venv(tmp_path: Path) 
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_project_source_non_executable_candidate_skipped(tmp_path: Path) -> None:
     # Arrange — <root>/.venv/bin/ruff exists but is NOT executable.
     root = tmp_path / "workspace"
     _make_non_executable(root / ".venv" / bin_dir_name() / "ruff")
-    reason = (
-        "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
-    )
+    reason = _PROJECT_ABSENT_REASON
 
     # Act / Assert — falls through to not-found rather than returning it.
     with pytest.raises(SourceResolutionError, match=re.escape(reason)):
@@ -289,6 +290,9 @@ def test_project_source_non_executable_candidate_skipped(tmp_path: Path) -> None
         )
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_project_source_non_executable_in_virtualenv_falls_through(tmp_path: Path) -> None:
     # AC-7: a non-executable $VIRTUAL_ENV candidate does not short-circuit; the
     # executable .venv candidate is used instead.
@@ -315,7 +319,8 @@ def test_project_source_non_executable_in_virtualenv_falls_through(tmp_path: Pat
 # ---------------------------------------------------------------------------
 
 _PROJECT_ABSENT_REASON = (
-    "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
+    f"not found in project environment "
+    f"(checked $VIRTUAL_ENV/{bin_dir_name()} and <workspace_root>/.venv/{bin_dir_name()})"
 )
 
 
@@ -359,9 +364,7 @@ def test_project_source_absent_raises_literal_reason(tmp_path: Path) -> None:
     # Arrange — neither $VIRTUAL_ENV/bin nor <root>/.venv/bin has the tool.
     root = tmp_path / "workspace"
     root.mkdir()
-    reason = (
-        "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
-    )
+    reason = _PROJECT_ABSENT_REASON
 
     # Act
     with pytest.raises(SourceResolutionError) as exc_info:
@@ -527,7 +530,7 @@ def test_resolved_executable_is_always_absolute(
     # Arrange — resolve via a genuinely RELATIVE workspace_root (cwd-relative) to
     # prove the resolver absolutises it, not just that tmp_path is already absolute.
     monkeypatch.chdir(tmp_path)
-    _make_executable(tmp_path / "workspace" / ".venv" / bin_dir_name() / "ruff")
+    exe = _make_executable(tmp_path / "workspace" / ".venv" / bin_dir_name() / "ruff")
     relative_root = Path("workspace")
     assert not relative_root.is_absolute()
 
@@ -541,9 +544,7 @@ def test_resolved_executable_is_always_absolute(
 
     # Assert
     assert result.executable.is_absolute()
-    assert (
-        result.executable == (tmp_path / "workspace" / ".venv" / bin_dir_name() / "ruff").resolve()
-    )
+    assert result.executable == exe.resolve()
 
 
 # ---------------------------------------------------------------------------

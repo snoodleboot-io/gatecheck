@@ -327,6 +327,9 @@ def test_unbalanced_quote_run_raises_env_error() -> None:
     assert exc_info.value.reason == reason
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX shlex quoting; Windows tokenization keeps quotes"
+)
 def test_quoted_run_uses_shlex_token_with_space_as_tool(tmp_path: Path) -> None:
     # AC-3: shlex semantics — a quoted program name with a space is one token.
     # Arrange — a fake executable literally named "my tool".

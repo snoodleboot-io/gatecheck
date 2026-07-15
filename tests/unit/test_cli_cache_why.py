@@ -15,6 +15,7 @@ import pytest
 from click.testing import CliRunner
 
 from gatecheck.cli.main import main
+from gatecheck.venv import bin_dir_name
 
 _CONFIG = """
 [[hook]]
@@ -27,7 +28,7 @@ run = "mytool check"
 def _seed_workspace() -> None:
     """Write check.toml and a fake project venv executable into the cwd."""
     Path("check.toml").write_text(_CONFIG, encoding="utf-8")
-    tool = Path(".venv") / "bin" / "mytool"
+    tool = Path(".venv") / bin_dir_name() / "mytool"
     tool.parent.mkdir(parents=True, exist_ok=True)
     tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     tool.chmod(0o755)

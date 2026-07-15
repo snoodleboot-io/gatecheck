@@ -9,6 +9,7 @@ paths. Covers uv discovery (``GATECHECK_UV`` override + PATH), the ``uv venv`` /
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -57,7 +58,7 @@ def test_install_argv_no_hash() -> None:
         "pip",
         "install",
         "--python",
-        "/v/bin/python",
+        str(Path("/v/bin/python")),
         "ruff==0.4.0",
         "--index-url",
         INDEX,
@@ -115,6 +116,9 @@ def test_build_venv_passes_require_hashes_when_sha_present(
 # ── _find_uv ──────────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_find_uv_override_must_be_executable(tmp_path: Path) -> None:
     # Arrange — a non-executable override target
     plain = tmp_path / "not-uv"
