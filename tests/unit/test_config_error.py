@@ -125,8 +125,8 @@ def test_config_error_str_includes_path_with_directory_components() -> None:
     # Act
     rendered = str(exc)
 
-    # Assert
-    assert rendered.startswith("a/b/check.toml:1:1: ")
+    # Assert — the path renders with the platform separator (a\b on Windows)
+    assert rendered.startswith(f"{Path('a/b/check.toml')}:1:1: ")
 
 
 # ──────────────────────────────────────────────────────────────────────────

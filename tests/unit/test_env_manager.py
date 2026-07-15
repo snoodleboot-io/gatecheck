@@ -25,6 +25,7 @@ real machine's tools. AAA structure throughout. Mirrors
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -35,6 +36,7 @@ from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvError, EnvManager, ResolvedEnv
 from gatecheck.registry import RegistryError
 from gatecheck.sources import SourceResolutionError, SourceSpecError
+from gatecheck.venv import bin_dir_name
 
 _CACHE_KEY_SCHEME = "env-v1"
 
@@ -50,8 +52,12 @@ def _make_executable(path: Path) -> Path:
     resolver's file+executable check. Returns the same path for inlining.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    path.chmod(0o755)
+    if os.name == "nt":
+        path = path.with_suffix(".bat")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
     return path
 
 
@@ -72,7 +78,7 @@ def _expected_cache_key(origin: str, executable: Path) -> str:
 
 def test_system_resolve_returns_resolved_env_with_bin_dir_parent(tmp_path: Path) -> None:
     # Arrange — an executable `ruff` on an injected PATH.
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 
@@ -90,7 +96,7 @@ def test_system_resolve_returns_resolved_env_with_bin_dir_parent(tmp_path: Path)
 def test_system_resolve_ignores_extra_argv_tokens(tmp_path: Path) -> None:
     # AC-3: only the first shlex token names the tool; extra argv is ignored.
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 
@@ -109,7 +115,7 @@ def test_system_resolve_ignores_extra_argv_tokens(tmp_path: Path) -> None:
 def test_project_resolve_via_dot_venv_returns_bin_dir(tmp_path: Path) -> None:
     # Arrange — an executable in <root>/.venv/bin, no VIRTUAL_ENV.
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
     manager = EnvManager(workspace_root=root, environ={"PATH": "/nonexistent"})
 
     # Act
@@ -124,7 +130,7 @@ def test_project_resolve_via_virtualenv_returns_bin_dir(tmp_path: Path) -> None:
     # AC-2: from = "project" also resolves via an injected $VIRTUAL_ENV/bin.
     # Arrange
     venv = tmp_path / "venv"
-    exe = _make_executable(venv / "bin" / "ruff")
+    exe = _make_executable(venv / bin_dir_name() / "ruff")
     root = tmp_path / "workspace"
     root.mkdir()
     manager = EnvManager(
@@ -147,7 +153,7 @@ def test_project_resolve_via_virtualenv_returns_bin_dir(tmp_path: Path) -> None:
 def test_cache_key_matches_locked_formula(tmp_path: Path) -> None:
     # AC-4: sha256("env-v1\n<origin>\n<absolute executable path>").
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 
@@ -162,7 +168,7 @@ def test_cache_key_matches_locked_formula(tmp_path: Path) -> None:
 def test_cache_key_is_deterministic_and_resolved_env_equal(tmp_path: Path) -> None:
     # AC-5: two resolves with identical inputs yield equal cache_key + ResolvedEnv.
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
     hook = _hook("lint", "system", "ruff check")
@@ -201,7 +207,7 @@ def test_same_executable_via_project_vs_system_keys_differently(tmp_path: Path) 
     # via project vs system produces different cache_keys.
     # Arrange — <root>/.venv/bin is BOTH the project venv AND on PATH.
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
     bin_dir = exe.parent
 
     system_manager = EnvManager(environ={"PATH": str(bin_dir)})
@@ -321,10 +327,13 @@ def test_unbalanced_quote_run_raises_env_error() -> None:
     assert exc_info.value.reason == reason
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX shlex quoting; Windows tokenization keeps quotes"
+)
 def test_quoted_run_uses_shlex_token_with_space_as_tool(tmp_path: Path) -> None:
     # AC-3: shlex semantics — a quoted program name with a space is one token.
     # Arrange — a fake executable literally named "my tool".
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "my tool")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 
@@ -427,7 +436,7 @@ def test_successful_resolve_spawns_no_subprocess(
 
     monkeypatch.setattr(subprocess, "run", _boom)
     monkeypatch.setattr(subprocess, "Popen", _boom)
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_executable(bin_dir / "ruff")
     manager = EnvManager(environ={"PATH": str(bin_dir)})
 

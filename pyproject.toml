@@ -131,7 +131,6 @@ markers = [
     "slow: marks tests as slow (deselect with '-m not slow')",
     "integration: marks tests that require external tools (git, uv)",
     "network: tests that hit a real network/PyPI (deselected by default)",
-    "posix_only: POSIX-coupled fakes; deselected on the Windows CI lane (see GAT-38)",
 ]
 
 [tool.coverage.run]

@@ -11,6 +11,7 @@ subprocess. AAA structure throughout.
 from __future__ import annotations
 
 import hashlib
+import os
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from gatecheck.config.hook_def import HookDef
 from gatecheck.env import CacheExplanation, EnvManager
 from gatecheck.env.env_cache import venv_slot
 from gatecheck.registry import ProjectFile, ProjectPage
+from gatecheck.venv import bin_dir_name
 
 DEFAULT_INDEX = "https://pypi.org/simple"
 
@@ -58,8 +60,12 @@ def _hook(from_spec: str, run: str = "ruff check", hook_id: str = "lint") -> Hoo
 
 def _make_executable(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    path.chmod(0o755)
+    if os.name == "nt":
+        path = path.with_suffix(".bat")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
     return path
 
 
@@ -72,8 +78,8 @@ def _digest(*material: str) -> str:
 
 def test_explain_system_is_not_applicable_with_reproducible_key(tmp_path: Path) -> None:
     # Arrange
-    exe = _make_executable(tmp_path / "bin" / "ruff")
-    manager = EnvManager(environ={"PATH": str(tmp_path / "bin")})
+    exe = _make_executable(tmp_path / bin_dir_name() / "ruff")
+    manager = EnvManager(environ={"PATH": str(tmp_path / bin_dir_name())})
     # Act
     ex = manager.explain(_hook("system"))
     # Assert
@@ -87,7 +93,7 @@ def test_explain_system_is_not_applicable_with_reproducible_key(tmp_path: Path) 
 
 def test_explain_project_reports_venv_bin_dir(tmp_path: Path) -> None:
     # Arrange
-    exe = _make_executable(tmp_path / ".venv" / "bin" / "ruff")
+    exe = _make_executable(tmp_path / ".venv" / bin_dir_name() / "ruff")
     manager = EnvManager(workspace_root=tmp_path, environ={"PATH": "/nonexistent"})
     # Act
     ex = manager.explain(_hook("project"))
@@ -117,7 +123,7 @@ def test_explain_pypi_hit_when_slot_present(tmp_path: Path) -> None:
     # Arrange — pre-create a healthy venv slot for the pinned key
     manager = EnvManager(cache_root=tmp_path, client=FakeRegistryClient(_ruff_page()))
     key = _digest("env-v1", "pypi", "ruff", "0.4.0", DEFAULT_INDEX)
-    (venv_slot(tmp_path, key) / "bin").mkdir(parents=True)
+    (venv_slot(tmp_path, key) / bin_dir_name()).mkdir(parents=True)
     # Act
     ex = manager.explain(_hook("pypi:ruff==0.4.0"))
     # Assert

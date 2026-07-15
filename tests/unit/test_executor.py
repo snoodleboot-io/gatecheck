@@ -8,6 +8,7 @@ env resolution and no real process. Covers passed/failed status, argv assembly
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from gatecheck.config.hook_def import HookDef
@@ -131,7 +132,7 @@ def test_bin_dir_is_prepended_to_path() -> None:
     )
     # Assert
     assert runner.env is not None
-    assert runner.env["PATH"].split(":")[0] == str(bin_dir)
+    assert runner.env["PATH"].split(os.pathsep)[0] == str(bin_dir)
 
 
 # ── error results ─────────────────────────────────────────────────

@@ -26,6 +26,7 @@ from gatecheck.env.uv_bootstrap import (
 )
 
 _UV_BODY = b"#!/bin/sh\necho uv 0.11.28\n"
+_UV_NAME = "uv.exe" if venv.is_windows() else "uv"
 
 
 def _tarball(member: str = "uv-x86_64-unknown-linux-gnu/uv", body: bytes = _UV_BODY) -> bytes:
@@ -103,7 +104,7 @@ def test_bootstrap_downloads_verifies_and_publishes(tmp_path: Path) -> None:
     # Act
     uv = bootstrap_uv(tmp_path, downloader=downloader, asset=("https://x/uv.tar.gz", sha))
     # Assert
-    assert uv == tmp_path / "bin" / "uv"
+    assert uv == tmp_path / "bin" / _UV_NAME
     assert uv.is_file() and os.access(uv, os.X_OK)
     assert uv.read_bytes() == _UV_BODY
     assert downloader.calls == ["https://x/uv.tar.gz"]
@@ -140,12 +141,12 @@ def test_bootstrap_checksum_mismatch_raises(tmp_path: Path) -> None:
     # Act / Assert
     with pytest.raises(UvBootstrapError, match="checksum mismatch"):
         bootstrap_uv(tmp_path, downloader=downloader, asset=("https://x/uv.tar.gz", "00" * 32))
-    assert not (tmp_path / "bin" / "uv").exists()
+    assert not (tmp_path / "bin" / _UV_NAME).exists()
 
 
 def test_bootstrap_cache_hit_skips_download(tmp_path: Path) -> None:
     # Arrange — a previously bootstrapped uv
-    dest = tmp_path / "bin" / "uv"
+    dest = tmp_path / "bin" / _UV_NAME
     dest.parent.mkdir(parents=True)
     dest.write_text("#!/bin/sh\n", encoding="utf-8")
     dest.chmod(0o755)

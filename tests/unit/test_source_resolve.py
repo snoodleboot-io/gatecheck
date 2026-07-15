@@ -21,6 +21,7 @@ structure throughout.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -35,6 +36,7 @@ from gatecheck.sources import (
     UnsupportedSource,
     resolve_source,
 )
+from gatecheck.venv import bin_dir_name
 
 # ---------------------------------------------------------------------------
 # Helpers — build hermetic fake executables under tmp_path.
@@ -48,8 +50,12 @@ def _make_executable(path: Path) -> Path:
     will be True, so it qualifies under the resolver's file+executable check.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    path.chmod(0o755)
+    if os.name == "nt":
+        path = path.with_suffix(".bat")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
     return path
 
 
@@ -68,7 +74,7 @@ def _make_non_executable(path: Path) -> Path:
 
 def test_system_source_found_returns_absolute_executable(tmp_path: Path) -> None:
     # Arrange — a fake `bin/` on an injected PATH holding an executable `tool`.
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     exe = _make_executable(bin_dir / "tool")
 
     # Act
@@ -87,7 +93,7 @@ def test_system_source_result_matches_shutil_which_resolved(tmp_path: Path) -> N
     # Arrange
     import shutil
 
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_executable(bin_dir / "widget")
     path_value = str(bin_dir)
 
@@ -142,7 +148,7 @@ def test_system_source_absent_full_message_and_fields(tmp_path: Path) -> None:
 
 def test_system_source_non_executable_on_path_is_not_found(tmp_path: Path) -> None:
     # Arrange — file exists on PATH but lacks the executable bit.
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_non_executable(bin_dir / "tool")
 
     # Act / Assert — shutil.which requires X_OK, so this is not-found.
@@ -158,7 +164,7 @@ def test_system_source_non_executable_on_path_is_not_found(tmp_path: Path) -> No
 def test_project_source_via_virtualenv_resolves(tmp_path: Path) -> None:
     # Arrange — an executable inside $VIRTUAL_ENV/bin.
     venv = tmp_path / "venv"
-    exe = _make_executable(venv / "bin" / "ruff")
+    exe = _make_executable(venv / bin_dir_name() / "ruff")
     root = tmp_path / "workspace"  # no .venv here
     root.mkdir()
 
@@ -185,7 +191,7 @@ def test_project_source_via_virtualenv_resolves(tmp_path: Path) -> None:
 def test_project_source_via_dot_venv_resolves(tmp_path: Path) -> None:
     # Arrange — executable in <root>/.venv/bin, no VIRTUAL_ENV in environ.
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
 
     # Act
     result = resolve_source(
@@ -206,7 +212,7 @@ def test_project_source_defaults_workspace_root_to_cwd(
 ) -> None:
     # AC-4 (default): workspace_root=None -> Path.cwd() resolved inside the call.
     # Arrange
-    exe = _make_executable(tmp_path / ".venv" / "bin" / "ruff")
+    exe = _make_executable(tmp_path / ".venv" / bin_dir_name() / "ruff")
     monkeypatch.chdir(tmp_path)
 
     # Act — no workspace_root passed; environ has no VIRTUAL_ENV.
@@ -225,9 +231,9 @@ def test_project_source_defaults_workspace_root_to_cwd(
 def test_project_source_precedence_virtualenv_wins_over_dot_venv(tmp_path: Path) -> None:
     # Arrange — the tool exists in BOTH locations.
     venv = tmp_path / "active-venv"
-    venv_exe = _make_executable(venv / "bin" / "ruff")
+    venv_exe = _make_executable(venv / bin_dir_name() / "ruff")
     root = tmp_path / "workspace"
-    _make_executable(root / ".venv" / "bin" / "ruff")
+    _make_executable(root / ".venv" / bin_dir_name() / "ruff")
 
     # Act
     result = resolve_source(
@@ -239,14 +245,14 @@ def test_project_source_precedence_virtualenv_wins_over_dot_venv(tmp_path: Path)
 
     # Assert — the VIRTUAL_ENV candidate is chosen.
     assert result.executable == venv_exe.resolve()
-    assert result.executable != (root / ".venv" / "bin" / "ruff").resolve()
+    assert result.executable != (root / ".venv" / bin_dir_name() / "ruff").resolve()
 
 
 def test_project_source_empty_virtualenv_falls_back_to_dot_venv(tmp_path: Path) -> None:
     # §4: VIRTUAL_ENV qualifies only if set AND non-empty; "" -> skip to .venv.
     # Arrange
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
 
     # Act
     result = resolve_source(
@@ -265,13 +271,14 @@ def test_project_source_empty_virtualenv_falls_back_to_dot_venv(tmp_path: Path) 
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_project_source_non_executable_candidate_skipped(tmp_path: Path) -> None:
     # Arrange — <root>/.venv/bin/ruff exists but is NOT executable.
     root = tmp_path / "workspace"
-    _make_non_executable(root / ".venv" / "bin" / "ruff")
-    reason = (
-        "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
-    )
+    _make_non_executable(root / ".venv" / bin_dir_name() / "ruff")
+    reason = _PROJECT_ABSENT_REASON
 
     # Act / Assert — falls through to not-found rather than returning it.
     with pytest.raises(SourceResolutionError, match=re.escape(reason)):
@@ -283,14 +290,17 @@ def test_project_source_non_executable_candidate_skipped(tmp_path: Path) -> None
         )
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="POSIX exec-bit; os.access(X_OK) is always True on Windows"
+)
 def test_project_source_non_executable_in_virtualenv_falls_through(tmp_path: Path) -> None:
     # AC-7: a non-executable $VIRTUAL_ENV candidate does not short-circuit; the
     # executable .venv candidate is used instead.
     # Arrange
     venv = tmp_path / "active-venv"
-    _make_non_executable(venv / "bin" / "ruff")
+    _make_non_executable(venv / bin_dir_name() / "ruff")
     root = tmp_path / "workspace"
-    exe = _make_executable(root / ".venv" / "bin" / "ruff")
+    exe = _make_executable(root / ".venv" / bin_dir_name() / "ruff")
 
     # Act
     result = resolve_source(
@@ -309,7 +319,8 @@ def test_project_source_non_executable_in_virtualenv_falls_through(tmp_path: Pat
 # ---------------------------------------------------------------------------
 
 _PROJECT_ABSENT_REASON = (
-    "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
+    f"not found in project environment "
+    f"(checked $VIRTUAL_ENV/{bin_dir_name()} and <workspace_root>/.venv/{bin_dir_name()})"
 )
 
 
@@ -318,7 +329,7 @@ def test_project_source_directory_named_like_tool_is_skipped(tmp_path: Path) -> 
     # `is_file()` check is False for a directory, so resolution falls through.
     # Arrange
     root = tmp_path / "workspace"
-    (root / ".venv" / "bin" / "ruff").mkdir(parents=True)
+    (root / ".venv" / bin_dir_name() / "ruff").mkdir(parents=True)
 
     # Act / Assert
     with pytest.raises(SourceResolutionError, match=re.escape(_PROJECT_ABSENT_REASON)):
@@ -327,12 +338,13 @@ def test_project_source_directory_named_like_tool_is_skipped(tmp_path: Path) -> 
         )
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation needs privileges on Windows")
 def test_project_source_broken_symlink_candidate_is_skipped(tmp_path: Path) -> None:
     # A broken symlink at the candidate path must not qualify: `is_file()` follows
     # the link and returns False for a dangling target.
     # Arrange
     root = tmp_path / "workspace"
-    bin_dir = root / ".venv" / "bin"
+    bin_dir = root / ".venv" / bin_dir_name()
     bin_dir.mkdir(parents=True)
     (bin_dir / "ruff").symlink_to(tmp_path / "does-not-exist")
 
@@ -352,9 +364,7 @@ def test_project_source_absent_raises_literal_reason(tmp_path: Path) -> None:
     # Arrange — neither $VIRTUAL_ENV/bin nor <root>/.venv/bin has the tool.
     root = tmp_path / "workspace"
     root.mkdir()
-    reason = (
-        "not found in project environment (checked $VIRTUAL_ENV/bin and <workspace_root>/.venv/bin)"
-    )
+    reason = _PROJECT_ABSENT_REASON
 
     # Act
     with pytest.raises(SourceResolutionError) as exc_info:
@@ -371,8 +381,8 @@ def test_project_source_absent_raises_literal_reason(tmp_path: Path) -> None:
     assert err.kind == "project"
     assert str(err) == f"cannot resolve 'ruff' from project source: {reason}"
     # The literal placeholders must survive verbatim (no path interpolation).
-    assert "$VIRTUAL_ENV/bin" in str(err)
-    assert "<workspace_root>/.venv/bin" in str(err)
+    assert f"$VIRTUAL_ENV/{bin_dir_name()}" in str(err)
+    assert f"<workspace_root>/.venv/{bin_dir_name()}" in str(err)
     assert str(root) not in str(err)
 
 
@@ -458,7 +468,7 @@ def test_non_resolvable_sources_raise_with_locked_reason(
 def test_resolution_is_deterministic_for_success(tmp_path: Path) -> None:
     # Arrange
     root = tmp_path / "workspace"
-    _make_executable(root / ".venv" / "bin" / "ruff")
+    _make_executable(root / ".venv" / bin_dir_name() / "ruff")
     environ = {"PATH": "/nonexistent"}
 
     # Act
@@ -500,7 +510,7 @@ def test_system_source_ignores_ambient_path_when_environ_lacks_path(
     # os.defpath), never the ambient process env. Put a tool on the REAL PATH, then
     # resolve with an environ that has NO PATH key -> it must NOT find it.
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_executable(bin_dir / "gc-uniquetool")
     monkeypatch.setenv("PATH", str(bin_dir))  # ambient PATH now contains the tool
 
@@ -520,7 +530,7 @@ def test_resolved_executable_is_always_absolute(
     # Arrange — resolve via a genuinely RELATIVE workspace_root (cwd-relative) to
     # prove the resolver absolutises it, not just that tmp_path is already absolute.
     monkeypatch.chdir(tmp_path)
-    _make_executable(tmp_path / "workspace" / ".venv" / "bin" / "ruff")
+    exe = _make_executable(tmp_path / "workspace" / ".venv" / bin_dir_name() / "ruff")
     relative_root = Path("workspace")
     assert not relative_root.is_absolute()
 
@@ -534,7 +544,7 @@ def test_resolved_executable_is_always_absolute(
 
     # Assert
     assert result.executable.is_absolute()
-    assert result.executable == (tmp_path / "workspace" / ".venv" / "bin" / "ruff").resolve()
+    assert result.executable == exe.resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -601,7 +611,7 @@ def test_source_resolution_error_message_form(
 def test_result_origin_is_matchable(tmp_path: Path) -> None:
     # The output carries an `origin` discriminant for runner/cache explainability.
     # Arrange
-    bin_dir = tmp_path / "bin"
+    bin_dir = tmp_path / bin_dir_name()
     _make_executable(bin_dir / "tool")
 
     # Act

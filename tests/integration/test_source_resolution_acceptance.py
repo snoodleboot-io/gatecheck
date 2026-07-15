@@ -18,6 +18,7 @@ No mocks: fake executables are real files written to ``tmp_path`` (``chmod`` +x)
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -29,13 +30,18 @@ from gatecheck.sources import (
     SystemSource,
     resolve_source,
 )
+from gatecheck.venv import bin_dir_name
 
 
 def _make_executable(path: Path) -> Path:
     """Create ``path`` as a regular, executable file (a fake tool binary)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    path.chmod(0o755)
+    if os.name == "nt":
+        path = path.with_suffix(".bat")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        path.chmod(0o755)
     return path
 
 
@@ -58,7 +64,7 @@ def test_project_source_resolves_in_fake_venv_tree(tmp_path: Path) -> None:
         '[[hook]]\nid = "ruff"\nfrom = "project"\nrun = "ruff check"\n',
         encoding="utf-8",
     )
-    ruff = _make_executable(project / ".venv" / "bin" / "ruff")
+    ruff = _make_executable(project / ".venv" / bin_dir_name() / "ruff")
 
     # Act — no VIRTUAL_ENV; discovery falls to <root>/.venv.
     result = resolve_source(
