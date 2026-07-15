@@ -381,8 +381,8 @@ def test_project_source_absent_raises_literal_reason(tmp_path: Path) -> None:
     assert err.kind == "project"
     assert str(err) == f"cannot resolve 'ruff' from project source: {reason}"
     # The literal placeholders must survive verbatim (no path interpolation).
-    assert "$VIRTUAL_ENV/bin" in str(err)
-    assert "<workspace_root>/.venv/bin" in str(err)
+    assert f"$VIRTUAL_ENV/{bin_dir_name()}" in str(err)
+    assert f"<workspace_root>/.venv/{bin_dir_name()}" in str(err)
     assert str(root) not in str(err)
 
 
