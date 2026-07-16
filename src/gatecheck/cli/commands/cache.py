@@ -8,7 +8,8 @@ from pathlib import Path
 import click
 
 from gatecheck.config import ConfigError, load_config
-from gatecheck.env import EnvError, EnvManager
+from gatecheck.env import EnvError, EnvManager, clear_cache
+from gatecheck.env.env_cache import default_cache_root
 from gatecheck.registry import RegistryError
 
 
@@ -54,7 +55,37 @@ def why(hook: str, config_path: Path, as_json: bool) -> None:
         click.echo(explanation.render())
 
 
-@cache.command(help="Remove cached results.")
-@click.option("--all", "clear_all", is_flag=True, help="Clear every cache entry.")
-def clear(clear_all: bool) -> None:
-    raise NotImplementedError("gatecheck cache clear — scaffolding only")
+@cache.command(help="Remove cached hook environments.")
+@click.option(
+    "--all",
+    "clear_all",
+    is_flag=True,
+    help="Also remove the bootstrapped uv, not just cached environments.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Report what would be removed without deleting anything.",
+)
+def clear(clear_all: bool, dry_run: bool) -> None:
+    """Remove cached hook environments from the user cache."""
+    cache_root = default_cache_root()
+    outcome = clear_cache(cache_root, include_uv=clear_all, dry_run=dry_run)
+
+    verb = "Would remove" if dry_run else "Removed"
+    plural = "" if outcome.removed == 1 else "s"
+    click.echo(
+        f"{verb} {outcome.removed} cached environment{plural}, "
+        f"freeing {_human_bytes(outcome.freed_bytes)}."
+    )
+
+
+def _human_bytes(size: int) -> str:
+    """Render ``size`` bytes with a binary unit (e.g. ``1.5 MiB``)."""
+    value = float(size)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if value < 1024.0 or unit == "TiB":
+            precision = 0 if unit == "B" else 1
+            return f"{value:.{precision}f} {unit}"
+        value /= 1024.0
+    return f"{value:.1f} TiB"  # pragma: no cover — loop always returns first
