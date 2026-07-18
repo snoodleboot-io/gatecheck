@@ -23,6 +23,8 @@ from gatecheck.env.uv_runner import UvBuildError, UvNotFound
 from gatecheck.registry import ProjectFile, ProjectPage, RegistryError, ResolvedPyPISource
 from gatecheck.venv import bin_dir_name
 
+_OFFLINE = {"GATECHECK_OFFLINE": "1"}
+
 DEFAULT_INDEX = "https://pypi.org/simple"
 
 
@@ -195,3 +197,62 @@ def test_missing_tool_in_built_venv_maps_to_env_error(tmp_path: Path) -> None:
     # Act / Assert
     with pytest.raises(EnvError, match="tool 'ruff' is not present"):
         manager.resolve(_hook("pypi:ruff==0.4.0"))
+
+
+# ── offline mode (STY-0034) ───────────────────────────────────────
+
+
+def _seed_slot(cache_root: Path, key: str, tools: tuple[str, ...] = ("ruff",)) -> None:
+    """Materialize a healthy venv slot at ``key`` (as a warm-cache stand-in)."""
+    bin_dir = cache_root / "env-v1" / key / bin_dir_name()
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "python").write_text("", encoding="utf-8")
+    for tool in tools:
+        (bin_dir / tool).write_text("", encoding="utf-8")
+
+
+def test_offline_cache_hit_resolves_without_network_or_uv(tmp_path: Path) -> None:
+    # Arrange — warm the cache, then resolve offline; uv/registry would raise if used
+    key = _expected_pypi_key()
+    _seed_slot(tmp_path, key)
+    manager = EnvManager(
+        environ=_OFFLINE,
+        cache_root=tmp_path,
+        uv_runner=RaisingUvRunner(AssertionError("uv must not run offline")),
+    )
+    # Act
+    env = manager.resolve(_hook("pypi:ruff==0.4.0"))
+    # Assert — served entirely from the warm cache
+    assert env.cache_key == key
+    assert (env.bin_dir / "ruff").exists()
+
+
+def test_offline_cache_miss_is_a_clear_error(tmp_path: Path) -> None:
+    # Arrange — empty cache, offline
+    manager = EnvManager(
+        environ=_OFFLINE,
+        cache_root=tmp_path,
+        uv_runner=RaisingUvRunner(AssertionError("uv must not run offline")),
+    )
+    # Act / Assert — a clear offline error naming the hook, not a build attempt
+    with pytest.raises(EnvError, match="offline: no cached environment") as exc_info:
+        manager.resolve(_hook("pypi:ruff==0.4.0"))
+    assert exc_info.value.hook_id == "lint"
+
+
+def test_offline_non_exact_pin_errors(tmp_path: Path) -> None:
+    # Arrange
+    manager = EnvManager(environ=_OFFLINE, cache_root=tmp_path)
+    # Act / Assert — cannot resolve a range without the index
+    with pytest.raises(RegistryError, match="offline mode requires an exact pin"):
+        manager.resolve(_hook("pypi:ruff>=0.4"))
+
+
+def test_offline_explain_reports_miss_without_network(tmp_path: Path) -> None:
+    # Arrange — offline explain of an uncached exact pin
+    manager = EnvManager(environ=_OFFLINE, cache_root=tmp_path)
+    # Act
+    explanation = manager.explain(_hook("pypi:ruff==0.4.0"))
+    # Assert — a miss, derived locally
+    assert explanation.status == "miss"
+    assert explanation.cache_key == _expected_pypi_key()
