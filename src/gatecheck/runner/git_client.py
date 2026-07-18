@@ -26,6 +26,8 @@ class GitClient(Protocol):
 
     def tracked_files(self) -> tuple[str, ...]: ...
 
+    def current_branch(self) -> str: ...
+
 
 class SubprocessGitClient:
     """Default ``GitClient`` over the ``git`` CLI (NUL-delimited output)."""
@@ -40,6 +42,26 @@ class SubprocessGitClient:
     def tracked_files(self) -> tuple[str, ...]:
         """Return every tracked path (for ``--all-files``)."""
         return self._run(["git", "ls-files", "-z"])
+
+    def current_branch(self) -> str:
+        """Return the current branch name (empty when detached).
+
+        Uses ``git branch --show-current``, which succeeds on an unborn branch (a
+        repo with no commits yet) and returns the empty string on a detached HEAD.
+        """
+        try:
+            completed = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=self._cwd,
+            )
+        except FileNotFoundError as exc:
+            raise GitError(f"git executable not found: {exc}") from exc
+        if completed.returncode != 0:
+            raise GitError(f"cannot determine current branch: {completed.stderr.strip()}")
+        return completed.stdout.strip()
 
     def hooks_dir(self) -> Path:
         """Return the repository's git hooks directory (``git rev-parse --git-path hooks``)."""

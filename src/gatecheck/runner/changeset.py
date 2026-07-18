@@ -51,9 +51,13 @@ def route_files(hooks: Sequence[HookDef], files: Sequence[Path]) -> dict[str, tu
 
 
 def _files_for_hook(hook: HookDef, files: tuple[Path, ...]) -> tuple[Path, ...]:
-    """Select the files ``hook`` receives (``pass_files`` + ``files`` glob)."""
+    """Select the files ``hook`` receives (``pass_files`` + ``files``/``exclude`` globs)."""
     if not hook.pass_files:
         return ()
     if hook.files is None:
-        return files
-    return tuple(f for f in files if fnmatch.fnmatchcase(f.as_posix(), hook.files))
+        selected = files
+    else:
+        selected = tuple(f for f in files if fnmatch.fnmatchcase(f.as_posix(), hook.files))
+    if hook.exclude is not None:
+        selected = tuple(f for f in selected if not fnmatch.fnmatchcase(f.as_posix(), hook.exclude))
+    return selected

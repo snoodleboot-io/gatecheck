@@ -9,8 +9,9 @@ subprocess.
 
 from __future__ import annotations
 
+import fnmatch
 import os
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from gatecheck.config import GatecheckConfig, HookDef
@@ -44,11 +45,16 @@ def build_plan(
     *,
     group: str | None = None,
     environ: Mapping[str, str] | None = None,
+    branch: str | None = None,
+    changed_files: Sequence[str] | None = None,
 ) -> ExecutionPlan:
     """Build the execution plan for ``group`` (or all hooks) under ``environ``.
 
-    Raises ``PlanError`` for an unknown group, a group/`depends_on` reference to an
-    unknown hook, or a dependency cycle.
+    ``branch`` (the current git branch) and ``changed_files`` (the changeset,
+    repo-relative POSIX paths) enable the ``branch*`` and ``files-match`` ``when``
+    conditions; when a needed input is absent that condition is skipped (fail-open —
+    the hook runs). Raises ``PlanError`` for an unknown group, a group/`depends_on`
+    reference to an unknown hook, or a dependency cycle.
     """
     env = os.environ if environ is None else environ
     by_id = {hook.id: hook for hook in config.hook}
@@ -59,7 +65,7 @@ def build_plan(
     running: list[HookDef] = []
     skipped: list[SkippedHook] = []
     for hook in selected:
-        reason = _skip_reason(hook, env, is_ci=is_ci)
+        reason = _skip_reason(hook, env, is_ci=is_ci, branch=branch, changed_files=changed_files)
         if reason is None:
             running.append(hook)
         else:
@@ -92,17 +98,42 @@ def _select(
     return selected
 
 
-def _skip_reason(hook: HookDef, environ: Mapping[str, str], *, is_ci: bool) -> str | None:
-    """Return why ``hook`` is skipped by its ``when`` conditions, or ``None`` to run it."""
+def _skip_reason(
+    hook: HookDef,
+    environ: Mapping[str, str],
+    *,
+    is_ci: bool,
+    branch: str | None,
+    changed_files: Sequence[str] | None,
+) -> str | None:
+    """Return why ``hook`` is skipped by its ``when`` conditions, or ``None`` to run it.
+
+    Conditions are AND-ed and checked in declaration order; the first failing one wins.
+    """
     when = hook.when
     if when is None:
         return None
+    if when.env is not None and not environ.get(when.env):
+        return f"env {when.env} is not set"
     if when.env_not is not None and environ.get(when.env_not):
         return f"env {when.env_not} is set"
     if when.on_ci is True and not is_ci:
         return "requires CI (on-ci = true)"
     if when.on_ci is False and is_ci:
         return "disabled on CI (on-ci = false)"
+    if branch is not None:
+        if when.branch is not None and branch != when.branch:
+            return f"branch is '{branch}', not '{when.branch}'"
+        if when.branch_not is not None and fnmatch.fnmatchcase(branch, when.branch_not):
+            return f"branch '{branch}' matches branch-not '{when.branch_not}'"
+        if when.branch_matches is not None and not fnmatch.fnmatchcase(branch, when.branch_matches):
+            return f"branch '{branch}' does not match '{when.branch_matches}'"
+    if (
+        when.files_match is not None
+        and changed_files is not None
+        and not any(fnmatch.fnmatchcase(f, when.files_match) for f in changed_files)
+    ):
+        return f"no changed file matches '{when.files_match}'"
     return None
 
 

@@ -157,3 +157,113 @@ def test_on_ci_true_runs_on_ci_via_github_actions() -> None:
     # Assert — runs, nothing skipped
     assert _ids(plan) == [["a"]]
     assert plan.skipped == ()
+
+
+# ── when: env (positive) ──────────────────────────────────────────
+
+
+def test_env_runs_when_var_set() -> None:
+    # Arrange — run only when DEPLOY is set
+    config = _config([_hook("a", when={"env": "DEPLOY"})])
+    # Act
+    plan = build_plan(config, environ={"DEPLOY": "1"})
+    # Assert
+    assert _ids(plan) == [["a"]]
+
+
+def test_env_skips_when_var_absent_with_reason() -> None:
+    # Arrange
+    config = _config([_hook("a", when={"env": "DEPLOY"})])
+    # Act — DEPLOY unset
+    plan = build_plan(config, environ={})
+    # Assert
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "DEPLOY is not set" in plan.skipped[0].reason
+
+
+# ── when: branch ──────────────────────────────────────────────────
+
+
+def test_branch_runs_on_exact_match() -> None:
+    config = _config([_hook("a", when={"branch": "main"})])
+    plan = build_plan(config, environ={}, branch="main")
+    assert _ids(plan) == [["a"]]
+
+
+def test_branch_skips_off_branch_with_reason() -> None:
+    config = _config([_hook("a", when={"branch": "main"})])
+    plan = build_plan(config, environ={}, branch="feature/x")
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "not 'main'" in plan.skipped[0].reason
+
+
+def test_branch_not_skips_on_exact_match() -> None:
+    config = _config([_hook("a", when={"branch-not": "main"})])
+    plan = build_plan(config, environ={}, branch="main")
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "branch-not" in plan.skipped[0].reason
+
+
+def test_branch_not_is_glob_and_skips_release_branches() -> None:
+    # Arrange — skip on any release/* branch
+    config = _config([_hook("a", when={"branch-not": "release/*"})])
+    # Act / Assert — a release branch is skipped
+    off = build_plan(config, environ={}, branch="release/2.0")
+    assert [s.hook_id for s in off.skipped] == ["a"]
+    # Act / Assert — a non-release branch runs
+    assert _ids(build_plan(config, environ={}, branch="main")) == [["a"]]
+
+
+def test_branch_matches_glob_runs_and_skips() -> None:
+    # Arrange
+    config = _config([_hook("a", when={"branch-matches": "release/*"})])
+    # Act / Assert — matching branch runs
+    assert _ids(build_plan(config, environ={}, branch="release/1.2")) == [["a"]]
+    # Act / Assert — non-matching branch skips
+    off = build_plan(config, environ={}, branch="main")
+    assert [s.hook_id for s in off.skipped] == ["a"]
+    assert "does not match 'release/*'" in off.skipped[0].reason
+
+
+def test_branch_condition_is_fail_open_without_branch() -> None:
+    # Arrange — branch condition present but no branch context supplied
+    config = _config([_hook("a", when={"branch": "main"})])
+    # Act — branch defaults to None
+    plan = build_plan(config, environ={})
+    # Assert — hook runs (fail-open); the condition is not evaluated
+    assert _ids(plan) == [["a"]]
+
+
+# ── when: files-match ─────────────────────────────────────────────
+
+
+def test_files_match_runs_when_a_file_matches() -> None:
+    config = _config([_hook("a", when={"files-match": "*.py"})])
+    plan = build_plan(config, environ={}, changed_files=["src/app.py", "README.md"])
+    assert _ids(plan) == [["a"]]
+
+
+def test_files_match_skips_when_no_file_matches() -> None:
+    config = _config([_hook("a", when={"files-match": "*.py"})])
+    plan = build_plan(config, environ={}, changed_files=["README.md"])
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "*.py" in plan.skipped[0].reason
+
+
+def test_files_match_is_fail_open_without_changeset() -> None:
+    # Arrange — no changed_files supplied
+    config = _config([_hook("a", when={"files-match": "*.py"})])
+    # Act
+    plan = build_plan(config, environ={})
+    # Assert — runs (fail-open)
+    assert _ids(plan) == [["a"]]
+
+
+def test_conditions_are_anded_first_failure_wins() -> None:
+    # Arrange — env passes, but branch fails → skipped for the branch reason
+    config = _config([_hook("a", when={"env": "DEPLOY", "branch": "main"})])
+    # Act
+    plan = build_plan(config, environ={"DEPLOY": "1"}, branch="dev")
+    # Assert
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "not 'main'" in plan.skipped[0].reason
