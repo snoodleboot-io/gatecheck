@@ -267,3 +267,37 @@ def test_conditions_are_anded_first_failure_wins() -> None:
     # Assert
     assert [s.hook_id for s in plan.skipped] == ["a"]
     assert "not 'main'" in plan.skipped[0].reason
+
+
+# ── when: requires-network (offline) ──────────────────────────────
+
+
+def test_requires_network_skips_when_offline() -> None:
+    # Arrange
+    config = _config([_hook("a", when={"requires-network": True})])
+    # Act — offline
+    plan = build_plan(config, environ={"GATECHECK_OFFLINE": "1"})
+    # Assert — skipped, not run, with a distinct network reason
+    assert plan.levels == ()
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "offline" in plan.skipped[0].reason and "network" in plan.skipped[0].reason
+
+
+def test_requires_network_runs_when_online() -> None:
+    # Arrange
+    config = _config([_hook("a", when={"requires-network": True})])
+    # Act — no offline flag
+    plan = build_plan(config, environ={})
+    # Assert — runs; the marker is a no-op online
+    assert _ids(plan) == [["a"]]
+    assert plan.skipped == ()
+
+
+def test_requires_network_reason_takes_precedence_offline() -> None:
+    # Arrange — offline AND a branch that would also skip; network reason wins
+    config = _config([_hook("a", when={"requires-network": True, "branch": "main"})])
+    # Act
+    plan = build_plan(config, environ={"GATECHECK_OFFLINE": "1"}, branch="dev")
+    # Assert
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+    assert "network" in plan.skipped[0].reason

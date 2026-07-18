@@ -20,6 +20,7 @@ class HookWhen(BaseModel):
     branch_not: str | None = Field(default=None, alias="branch-not")
     branch_matches: str | None = Field(default=None, alias="branch-matches")
     files_match: str | None = Field(default=None, alias="files-match")
+    requires_network: StrictBool | None = Field(default=None, alias="requires-network")
 
 
 class HookDef(BaseModel):
