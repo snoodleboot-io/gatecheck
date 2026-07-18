@@ -15,6 +15,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from gatecheck.config import GatecheckConfig, HookDef
+from gatecheck.offline import is_offline
 from gatecheck.runner.plan_error import PlanError
 
 _CI_VARS = ("CI", "GITHUB_ACTIONS")
@@ -61,11 +62,14 @@ def build_plan(
 
     selected = _select(config, group, by_id)
     is_ci = any(env.get(var) for var in _CI_VARS)
+    offline = is_offline(env)
 
     running: list[HookDef] = []
     skipped: list[SkippedHook] = []
     for hook in selected:
-        reason = _skip_reason(hook, env, is_ci=is_ci, branch=branch, changed_files=changed_files)
+        reason = _skip_reason(
+            hook, env, is_ci=is_ci, offline=offline, branch=branch, changed_files=changed_files
+        )
         if reason is None:
             running.append(hook)
         else:
@@ -103,16 +107,20 @@ def _skip_reason(
     environ: Mapping[str, str],
     *,
     is_ci: bool,
+    offline: bool,
     branch: str | None,
     changed_files: Sequence[str] | None,
 ) -> str | None:
     """Return why ``hook`` is skipped by its ``when`` conditions, or ``None`` to run it.
 
     Conditions are AND-ed and checked in declaration order; the first failing one wins.
+    ``requires-network`` is checked first so an offline skip is the reported reason.
     """
     when = hook.when
     if when is None:
         return None
+    if when.requires_network is True and offline:
+        return "requires network — skipped in offline mode"
     if when.env is not None and not environ.get(when.env):
         return f"env {when.env} is not set"
     if when.env_not is not None and environ.get(when.env_not):

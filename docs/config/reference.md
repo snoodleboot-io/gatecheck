@@ -89,6 +89,7 @@ when = { env-not = "SKIP_MYPY", branch-not = "release/*" }
 | `env` | string | Run only if this env var is set |
 | `env-not` | string | Skip if this env var is set |
 | `on-ci` | bool | `true` = CI only, `false` = never on CI |
+| `requires-network` | bool | `true` = **skip** (not fail) when the run is offline (`GATECHECK_OFFLINE` / `run --offline`) |
 
 All glob patterns are `fnmatch`-style and case-sensitive (as with the `files` /
 `exclude` globs), so `/` is matched like any other character. CI is detected via the

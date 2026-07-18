@@ -393,6 +393,19 @@ def test_hook_when_env_not_alias() -> None:
     assert when.env_not == "SKIP_X"
 
 
+def test_hook_when_requires_network_alias() -> None:
+    """Given the hyphenated ``requires-network`` alias, When HookWhen is built, Then the
+    snake_case attribute is populated."""
+    # Arrange
+    payload = {"requires-network": True}
+
+    # Act
+    when = HookWhen(**payload)
+
+    # Assert
+    assert when.requires_network is True
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # GroupDef
 # ──────────────────────────────────────────────────────────────────────────

@@ -93,3 +93,18 @@ def test_skipped_hooks_are_reported() -> None:
     assert "skip  b" in rendered
     assert "1 passed, 1 skipped" in rendered
     assert report.exit_code == 0
+
+
+def test_network_skip_is_surfaced_and_not_a_failure() -> None:
+    # Arrange — a requires network but the run is offline → skipped, not failed
+    plan = build_plan(
+        _config([_hook("net", when={"requires-network": True})]),
+        environ={"GATECHECK_OFFLINE": "1"},
+    )
+    # Act
+    report = build_report(plan, [])
+    # Assert — the distinct reason is shown; exit code stays 0
+    rendered = report.render()
+    assert "skip  net" in rendered
+    assert "offline" in rendered and "network" in rendered
+    assert report.exit_code == 0

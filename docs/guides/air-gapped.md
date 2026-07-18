@@ -25,6 +25,31 @@ Offline mode is a single signal: the `GATECHECK_OFFLINE` environment variable (s
 - **`system:` / `project:` hooks** are unaffected — they reuse a binary already on the
   machine and never needed the network.
 
+## Hooks that need network at run time
+
+Some hooks reach the network when they *run* (a linter that phones home, a
+license-check that queries an API). These can't work offline, but they shouldn't fail
+the run either. Mark them so an offline run **skips** them with a clear reason instead:
+
+```toml
+[[hook]]
+id  = "license-audit"
+from = "pypi:my-audit==1.2.0"
+run = "my-audit"
+when = { requires-network = true }
+```
+
+Online, the hook runs normally. Offline (`GATECHECK_OFFLINE` / `run --offline`), it is
+skipped — not failed — and shown distinctly in the report:
+
+```
+skip  license-audit  (requires network — skipped in offline mode)
+
+1 passed, 1 skipped
+```
+
+The exit code stays `0`: a network-skip is a skip, not a failure.
+
 ```bash
 # Pin exactly so offline resolution is deterministic.
 # check.toml → from = "pypi:ruff==0.4.9"
