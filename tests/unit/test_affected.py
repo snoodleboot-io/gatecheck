@@ -90,11 +90,34 @@ def test_dependency_cycle_raises(tmp_path: Path) -> None:
         affected_packages(workspace, [Path("packages/a/x.py")])
 
 
-def test_no_changes_affects_nothing(tmp_path: Path) -> None:
+def test_empty_changeset_affects_nothing(tmp_path: Path) -> None:
     # Arrange
     _package(tmp_path, "a")
     workspace = _workspace(tmp_path)
-    # Act — a change outside any package
-    affected = affected_packages(workspace, [Path("README.md")])
+    # Act — genuinely no changed files
+    affected = affected_packages(workspace, [])
     # Assert
     assert affected == ()
+
+
+def test_root_change_affects_all_packages(tmp_path: Path) -> None:
+    # Arrange — three unrelated packages
+    _package(tmp_path, "a")
+    _package(tmp_path, "b")
+    _package(tmp_path, "c")
+    workspace = _workspace(tmp_path)
+    # Act — a shared/root file (under no package) changed
+    affected = affected_packages(workspace, [Path("check.toml")])
+    # Assert — every package, in declared order
+    assert _names(affected) == ["a", "b", "c"]
+
+
+def test_root_change_mixed_with_package_change_still_all(tmp_path: Path) -> None:
+    # Arrange
+    _package(tmp_path, "a")
+    _package(tmp_path, "b")
+    workspace = _workspace(tmp_path)
+    # Act — a package file AND a root lockfile changed
+    affected = affected_packages(workspace, [Path("packages/a/x.py"), Path("uv.lock")])
+    # Assert — root change dominates → all packages
+    assert _names(affected) == ["a", "b"]
