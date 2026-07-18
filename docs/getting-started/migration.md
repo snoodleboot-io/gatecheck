@@ -22,18 +22,26 @@ gatecheck migrate --source .pre-commit-config.yaml --output check.toml
 
 ### Remote repos → PyPI sources
 
-The migrator has a built-in map of well-known GitHub repos to their PyPI package names:
+The migrator has a built-in map of well-known GitHub repos to their gatecheck sources:
 
-| pre-commit repo | gatecheck source |
-|---|---|
-| `https://github.com/psf/black` | `pypi:black` |
-| `https://github.com/astral-sh/ruff-pre-commit` | `pypi:ruff` |
-| `https://github.com/pycqa/isort` | `pypi:isort` |
-| `https://github.com/pycqa/flake8` | `pypi:flake8` |
-| `https://github.com/pre-commit/mirrors-mypy` | `pypi:mypy` |
-| `https://github.com/Yelp/detect-secrets` | `pypi:detect-secrets` |
-| `https://github.com/pre-commit/pre-commit-hooks` | `pypi:pre-commit-hooks` |
-| Unknown repos | `git:<url>@<rev>` with a warning |
+| pre-commit repo | gatecheck source | run |
+|---|---|---|
+| `astral-sh/ruff-pre-commit` | `pypi:ruff` | `ruff check` / `ruff format` |
+| `psf/black` (and `black-pre-commit-mirror`) | `pypi:black` | `black` |
+| `pycqa/isort` | `pypi:isort` | `isort` |
+| `pycqa/flake8` | `pypi:flake8` | `flake8` |
+| `pycqa/bandit` | `pypi:bandit` | `bandit` |
+| `pycqa/pydocstyle` · `pycqa/autoflake` · `pycqa/docformatter` | `pypi:<tool>` | `<tool>` |
+| `pre-commit/mirrors-mypy` | `pypi:mypy` | `mypy` |
+| `pre-commit/pre-commit-hooks` | `pypi:pre-commit-hooks` | the hook id (each hook is its own script) |
+| `codespell-project/codespell` | `pypi:codespell` | `codespell` |
+| `Yelp/detect-secrets` | `pypi:detect-secrets` | `detect-secrets` |
+| `asottile/pyupgrade` · `asottile/add-trailing-comma` | `pypi:<tool>` | `<tool>` |
+| `shellcheck-py/shellcheck-py` | `pypi:shellcheck-py` | `shellcheck` |
+| `mirrors-prettier` · `mirrors-eslint` · `koalaman/shellcheck-precommit` | `system` (must be on `PATH`) + warning | `prettier` / `eslint` / `shellcheck` |
+| Unknown repos | `pypi:<guessed-name>` with a warning | the hook `entry`/id |
+
+Node/system tools (prettier, eslint, shellcheck-precommit) have no PyPI package, so they map to `from = "system"` and gatecheck expects them already on your `PATH` — the migrator emits a warning for each.
 
 ### Local hooks → `local:` source
 

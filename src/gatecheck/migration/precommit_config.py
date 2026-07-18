@@ -19,6 +19,7 @@ class PreCommitHook(BaseModel):
     entry: str | None = None
     language: str | None = None
     files: str | None = None
+    pass_filenames: bool | None = None
     args: list[str] = Field(default_factory=list)
     stages: list[str] = Field(default_factory=list)
     additional_dependencies: list[str] = Field(default_factory=list)
