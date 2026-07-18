@@ -138,6 +138,47 @@ def test_fail_fast_stops_downstream_but_not_in_flight_peer() -> None:
     assert next(r for r in results if r.hook_id == "b").status == "failed"
 
 
+class _ConcurrencyProbe:
+    """ProcessRunner that records the peak number of hooks running at once."""
+
+    def __init__(self, hold: float = 0.05) -> None:
+        self._hold = hold
+        self._lock = threading.Lock()
+        self._running = 0
+        self.peak = 0
+
+    def run(self, argv: list[str], *, env: object, cwd: object) -> tuple[int, str]:
+        with self._lock:
+            self._running += 1
+            self.peak = max(self.peak, self._running)
+        time.sleep(self._hold)
+        with self._lock:
+            self._running -= 1
+        return (0, "ok")
+
+
+def test_max_workers_one_serializes_independent_hooks() -> None:
+    # Arrange — four independent hooks, cap of 1
+    config = _config([_hook(x) for x in ("a", "b", "c", "d")])
+    probe = _ConcurrencyProbe()
+    # Act
+    results = _run(config, runner=probe, max_workers=1)
+    # Assert — never more than one at a time; all ran, in input order
+    assert probe.peak == 1
+    assert [r.hook_id for r in results] == ["a", "b", "c", "d"]
+
+
+def test_max_workers_caps_concurrency() -> None:
+    # Arrange — six independent hooks, cap of 2
+    config = _config([_hook(x) for x in ("a", "b", "c", "d", "e", "f")])
+    probe = _ConcurrencyProbe()
+    # Act
+    results = _run(config, runner=probe, max_workers=2)
+    # Assert — peak concurrency respected the cap; everything still ran
+    assert probe.peak <= 2
+    assert {r.hook_id for r in results} == {"a", "b", "c", "d", "e", "f"}
+
+
 def test_freed_hook_starts_before_slow_peer_finishes() -> None:
     """Dynamic property: with a→b and an independent slow s, b starts as soon as a
     finishes — it does NOT wait for s (which would be its wave-mate under the old

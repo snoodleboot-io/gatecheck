@@ -74,7 +74,8 @@ def run(
     files_by_hook = route_files(running, changeset.files)
 
     fail_fast = _fail_fast(config, group)
-    results = run_plan(plan, files_by_hook, fail_fast=fail_fast)
+    max_workers = _max_workers(config, group)
+    results = run_plan(plan, files_by_hook, fail_fast=fail_fast, max_workers=max_workers)
 
     report = build_report(plan, results)
     click.echo(report.render())
@@ -87,6 +88,23 @@ def _fail_fast(config: GatecheckConfig, group: str | None) -> bool:
         return False
     group_def = config.group.get(group)
     return bool(group_def.fail_fast) if group_def is not None else False
+
+
+def _max_workers(config: GatecheckConfig, group: str | None) -> int | None:
+    """The concurrency cap for this run.
+
+    An all-hooks run (no group) is unbounded (``None`` → rayon's global pool). A
+    group runs serially (``1``) unless ``parallel = true``, in which case it is capped
+    at the group's ``max-workers``.
+    """
+    if group is None:
+        return None
+    group_def = config.group.get(group)
+    if group_def is None:
+        return None
+    if not group_def.parallel:
+        return 1
+    return group_def.max_workers
 
 
 def _run_affected(ctx: click.Context, config_path: Path, all_files: bool) -> None:
