@@ -25,13 +25,19 @@ def affected_packages(
     """Return the packages a changeset affects, in workspace-declared order.
 
     A package is affected when its directory contains a changed file, or when it
-    (transitively) depends on such a package. Raises ``WorkspaceError`` for a
-    ``depends-on`` naming an unknown package or forming a cycle.
+    (transitively) depends on such a package. A changed file that lives under **no**
+    package directory is treated as a shared/root change (root ``check.toml``, a
+    top-level lockfile, CI config, …) and conservatively marks **every** package
+    affected. Raises ``WorkspaceError`` for a ``depends-on`` naming an unknown package
+    or forming a cycle.
     """
     by_name = {package.name: package for package in workspace.packages}
     deps = _validated_deps(workspace, by_name)
 
-    directly = _directly_changed(workspace, changed_files)
+    if _has_root_change(workspace, changed_files):
+        directly = set(by_name)  # a shared/root file affects all packages
+    else:
+        directly = _directly_changed(workspace, changed_files)
 
     dependents: dict[str, list[str]] = {name: [] for name in by_name}
     for name, dep_names in deps.items():
@@ -77,6 +83,12 @@ def _directly_changed(workspace: Workspace, changed_files: Sequence[Path]) -> se
         if any(_is_under(Path(f), package_rel) for f in changed_files):
             changed.add(package.name)
     return changed
+
+
+def _has_root_change(workspace: Workspace, changed_files: Sequence[Path]) -> bool:
+    """True when some changed file lives under no package directory (a shared/root file)."""
+    package_rels = [package.path.relative_to(workspace.root_dir) for package in workspace.packages]
+    return any(not any(_is_under(Path(f), rel) for rel in package_rels) for f in changed_files)
 
 
 def _validated_deps(

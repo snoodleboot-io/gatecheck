@@ -147,6 +147,14 @@ If `shared` changes → `api`, `frontend`, and `worker` are all affected.
 If `api` changes → `worker` is affected (but not `shared` or `frontend`).
 If `frontend` changes → only `frontend` is affected.
 
+### Root-level changes
+
+A changed file that lives under **no** package directory is treated as a shared/root
+change — the root `check.toml`, a top-level lockfile (`uv.lock`), CI config, or any
+shared tooling. Such a change conservatively marks **every** package affected, since a
+shared file can influence all of them. Over-running is safe; silently skipping a
+package that a root change actually broke is not.
+
 ## Environment sharing
 
 When 10 packages all declare `from = "pypi:ruff>=0.4"`, gatecheck resolves this to the same cache key and uses a single shared venv. The lockfile at the workspace root tracks this globally.
