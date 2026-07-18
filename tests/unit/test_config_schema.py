@@ -411,7 +411,25 @@ def test_group_def_minimal() -> None:
     assert group.hooks == ["a"]
     assert group.parallel is False
     assert group.fail_fast is False
+    assert group.max_workers == 4
     assert group.on_event is None
+
+
+def test_group_def_max_workers_alias_and_value() -> None:
+    """Given the hyphenated ``max-workers`` alias, When GroupDef is built, Then the
+    snake_case attribute carries the value."""
+    # Act
+    group = GroupDef(**{"hooks": ["a"], "max-workers": 8})
+    # Assert
+    assert group.max_workers == 8
+
+
+def test_group_def_rejects_zero_max_workers() -> None:
+    """Given ``max-workers = 0``, When GroupDef is built, Then ValidationError is
+    raised (a cap must be at least 1)."""
+    # Act / Assert
+    with pytest.raises(ValidationError):
+        GroupDef(**{"hooks": ["a"], "max-workers": 0})
 
 
 def test_group_def_requires_hooks() -> None:

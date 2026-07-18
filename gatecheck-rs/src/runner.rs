@@ -13,6 +13,7 @@
 //! thread draining a completion channel — the worker tasks only run one callback
 //! and report back, so no hook state is shared mutably across threads.
 
+use std::collections::VecDeque;
 use std::sync::mpsc;
 
 use pyo3::prelude::*;
@@ -26,17 +27,23 @@ use pyo3::prelude::*;
 /// status stops the scheduling of any not-yet-started node (in-flight nodes still
 /// finish), so a hook downstream of a failure never starts.
 ///
+/// `max_workers` caps the number of hooks in flight at once (a group's
+/// `max-workers`; `1` = serial). `None` runs unbounded on rayon's global pool.
+///
 /// Returns the ids that were executed, in `nodes` (input) order — deterministic
 /// regardless of completion timing.
 #[pyfunction]
+#[pyo3(signature = (nodes, deps, execute, fail_fast, max_workers=None))]
 fn run_graph(
     py: Python<'_>,
     nodes: Vec<String>,
     deps: Vec<Vec<usize>>,
     execute: PyObject,
     fail_fast: bool,
+    max_workers: Option<usize>,
 ) -> PyResult<Vec<String>> {
     let n = nodes.len();
+    let cap = max_workers.filter(|&w| w > 0).unwrap_or(usize::MAX);
 
     // in-degree per node + reverse edges (who becomes eligible when i finishes).
     let mut indegree: Vec<usize> = vec![0; n];
@@ -61,6 +68,7 @@ fn run_graph(
             let mut executed = vec![false; n];
             let mut first_error: Option<PyErr> = None;
             let mut indegree = indegree;
+            let mut ready: VecDeque<usize> = VecDeque::new();
             let mut outstanding = 0usize;
             let mut aborted = false;
 
@@ -80,14 +88,29 @@ fn run_graph(
                 }};
             }
 
-            // Seed the roots (no dependencies), in input order.
-            for i in 0..n {
-                if indegree[i] == 0 {
-                    executed[i] = true;
-                    outstanding += 1;
-                    spawn!(i);
+            // Launch ready nodes up to the concurrency cap (skipped once aborted).
+            macro_rules! pump {
+                () => {{
+                    while !aborted && outstanding < cap {
+                        match ready.pop_front() {
+                            Some(i) => {
+                                executed[i] = true;
+                                outstanding += 1;
+                                spawn!(i);
+                            }
+                            None => break,
+                        }
+                    }
+                }};
+            }
+
+            // Seed the roots (no dependencies), in input order, then fill up to the cap.
+            for (i, &degree) in indegree.iter().enumerate() {
+                if degree == 0 {
+                    ready.push_back(i);
                 }
             }
+            pump!();
 
             while outstanding > 0 {
                 let (i, outcome) = rx.recv().expect("worker dropped the channel");
@@ -107,15 +130,14 @@ fn run_graph(
                     }
                 }
 
-                // Free dependents; spawn any that are now ready (unless aborted).
+                // Free dependents; enqueue any that are now ready.
                 for &dep in &dependents[i] {
                     indegree[dep] -= 1;
-                    if indegree[dep] == 0 && !aborted && !executed[dep] {
-                        executed[dep] = true;
-                        outstanding += 1;
-                        spawn!(dep);
+                    if indegree[dep] == 0 && !executed[dep] {
+                        ready.push_back(dep);
                     }
                 }
+                pump!();
             }
 
             (executed, first_error)

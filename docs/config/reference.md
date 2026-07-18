@@ -133,9 +133,9 @@ on-event  = "commit"
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `hooks` | list of strings | required | Hook IDs to include |
-| `parallel` | bool | `false` | Run all hooks in this group concurrently |
-| `fail-fast` | bool | `true` | Stop after first failure |
-| `max-workers` | int | 4 | Thread pool size when `parallel = true` |
+| `parallel` | bool | `false` | Run this group's hooks concurrently. When `false`, hooks run **serially** (one at a time), still in dependency order |
+| `fail-fast` | bool | `false` | Stop scheduling new hooks after the first failure |
+| `max-workers` | int ≥ 1 | 4 | Max hooks in flight at once when `parallel = true` (the concurrency cap) |
 | `on-event` | string | (none) | Git event: `"commit"`, `"push"`, `"commit-msg"`, `"merge"` |
 
 When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook.
@@ -522,6 +522,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 - The plan's running hooks and their in-plan dependency edges are handed to Rust as a graph. A hook starts **the moment all of its dependencies finish** — there is **no wave barrier**, so a freed hook begins while unrelated peers are still running. On uneven graphs (one slow hook in a level) this cuts wall-clock versus the old wave scheduler. Because a hook's environment work and subprocess wait release the GIL, concurrently-scheduled hooks genuinely overlap (rayon).
 - **Fail-fast** (a group setting): the first hook that does not pass stops the scheduling of any **not-yet-started** hook (in-flight hooks finish). A hook downstream of a failure therefore never starts — its dependencies only complete after the failure is recorded. When independent hooks race the failing one, the exact set that started is best-effort (as with any parallel runner), but the returned ordering is always deterministic.
+- **Concurrency cap:** a group's `max-workers` bounds how many hooks are in flight at once — the scheduler keeps a ready queue and only launches up to the cap, launching the next as each finishes. A group with `parallel = false` runs **serially** (cap of 1, still in dependency order); `parallel = true` caps at `max-workers` (default 4). An all-hooks run (no group) is unbounded — rayon's global pool.
 - **Result ordering is deterministic:** `run_plan` returns the executed `HookResult`s in the plan's node order (flattened levels), independent of completion timing.
 - The Rust core owns scheduling and parallelism; each hook is still executed by the Python `run_hook` (which owns environment resolution and the subprocess), called back per node.
 

@@ -31,6 +31,7 @@ def run_plan(
     env_manager: EnvManager | None = None,
     runner: ProcessRunner | None = None,
     fail_fast: bool = False,
+    max_workers: int | None = None,
     cwd: Path | None = None,
     environ: Mapping[str, str] | None = None,
 ) -> tuple[HookResult, ...]:
@@ -39,9 +40,10 @@ def run_plan(
     The plan's running hooks and their in-plan dependency edges become the graph for
     ``gatecheck_core.run_graph``: each hook starts as soon as its dependencies finish
     (dynamic scheduling, no wave barrier) and — when ``fail_fast`` — no not-yet-started
-    hook launches after one returns non-passing. Each hook runs via ``run_hook`` with
-    its routed files (``files_by_hook``); skipped hooks (``plan.skipped``) are not
-    executed here.
+    hook launches after one returns non-passing. ``max_workers`` caps the number of
+    hooks in flight at once (``1`` = serial); ``None`` runs unbounded on rayon's global
+    pool. Each hook runs via ``run_hook`` with its routed files (``files_by_hook``);
+    skipped hooks (``plan.skipped``) are not executed here.
     """
     running = [hook for level in plan.levels for hook in level]
     hooks = {hook.id: hook for hook in running}
@@ -64,5 +66,5 @@ def run_plan(
     # Only edges to hooks that are actually running impose ordering; the planner has
     # already dropped edges to skipped / unselected hooks, so intersect defensively.
     deps = [[index_of[dep] for dep in hook.depends_on if dep in index_of] for hook in running]
-    executed = core.run_graph(nodes, deps, execute, fail_fast)
+    executed = core.run_graph(nodes, deps, execute, fail_fast, max_workers)
     return tuple(results[hook_id] for hook_id in executed)
