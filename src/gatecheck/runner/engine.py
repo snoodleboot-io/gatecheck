@@ -1,9 +1,11 @@
 """Parallel execution engine — drive an ExecutionPlan through the Rust core (STY-0014 / GAT-16).
 
-Bridges the Python planner/executor and the native ``gatecheck_core.run_waves``
-scheduler: it flattens the plan's dependency levels into waves, hands the Rust
-engine a callback that runs one hook (``run_hook``), and collects the results. Rust
-owns the wave-parallel scheduling and fail-fast; Python owns per-hook execution.
+Bridges the Python planner/executor and the native ``gatecheck_core.run_graph``
+dynamic scheduler: it hands the Rust engine the dependency graph (the running hooks
+plus their in-plan dependency edges) and a callback that runs one hook
+(``run_hook``), and collects the results. Rust owns the dynamic (non-wave-barrier)
+scheduling and fail-fast — a hook starts the moment its dependencies finish; Python
+owns per-hook execution.
 """
 
 from __future__ import annotations
@@ -34,13 +36,16 @@ def run_plan(
 ) -> tuple[HookResult, ...]:
     """Execute ``plan`` and return the ``HookResult``s in execution order.
 
-    The plan's levels become waves for ``gatecheck_core.run_waves``: hooks in a wave
-    run concurrently, later waves wait for earlier ones, and — when ``fail_fast`` —
-    no wave starts after one that contained a non-passing hook. Each hook runs via
-    ``run_hook`` with its routed files (``files_by_hook``); skipped hooks
-    (``plan.skipped``) are not executed here.
+    The plan's running hooks and their in-plan dependency edges become the graph for
+    ``gatecheck_core.run_graph``: each hook starts as soon as its dependencies finish
+    (dynamic scheduling, no wave barrier) and — when ``fail_fast`` — no not-yet-started
+    hook launches after one returns non-passing. Each hook runs via ``run_hook`` with
+    its routed files (``files_by_hook``); skipped hooks (``plan.skipped``) are not
+    executed here.
     """
-    hooks = {hook.id: hook for level in plan.levels for hook in level}
+    running = [hook for level in plan.levels for hook in level]
+    hooks = {hook.id: hook for hook in running}
+    index_of = {hook.id: i for i, hook in enumerate(running)}
     results: dict[str, HookResult] = {}
 
     def execute(hook_id: str) -> int:
@@ -55,6 +60,9 @@ def run_plan(
         results[hook_id] = result
         return _STATUS_CODE[result.status]
 
-    waves = [[hook.id for hook in level] for level in plan.levels]
-    executed = core.run_waves(waves, execute, fail_fast)
+    nodes = [hook.id for hook in running]
+    # Only edges to hooks that are actually running impose ordering; the planner has
+    # already dropped edges to skipped / unselected hooks, so intersect defensively.
+    deps = [[index_of[dep] for dep in hook.depends_on if dep in index_of] for hook in running]
+    executed = core.run_graph(nodes, deps, execute, fail_fast)
     return tuple(results[hook_id] for hook_id in executed)

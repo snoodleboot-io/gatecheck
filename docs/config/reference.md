@@ -518,11 +518,12 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 ### Runner — parallel execution engine
 
-`gatecheck.runner.run_plan` executes an `ExecutionPlan` through the native **`gatecheck_core`** (Rust) scheduler:
+`gatecheck.runner.run_plan` executes an `ExecutionPlan` through the native **`gatecheck_core`** (Rust) **dynamic scheduler** (`run_graph`):
 
-- The plan's dependency **levels become waves**. Hooks within a wave run **concurrently** (rayon); each wave waits for the previous one. Because a hook's environment work and subprocess wait release the GIL, the hooks in a wave genuinely overlap.
-- **Fail-fast** (a group setting) is wave-granular: after a wave in which any hook did not pass, no further wave is started (the current wave finishes).
-- The Rust core owns scheduling and parallelism; each hook is still executed by the Python `run_hook` (which owns environment resolution and the subprocess), called back per node. `run_plan` returns the `HookResult`s in execution order.
+- The plan's running hooks and their in-plan dependency edges are handed to Rust as a graph. A hook starts **the moment all of its dependencies finish** — there is **no wave barrier**, so a freed hook begins while unrelated peers are still running. On uneven graphs (one slow hook in a level) this cuts wall-clock versus the old wave scheduler. Because a hook's environment work and subprocess wait release the GIL, concurrently-scheduled hooks genuinely overlap (rayon).
+- **Fail-fast** (a group setting): the first hook that does not pass stops the scheduling of any **not-yet-started** hook (in-flight hooks finish). A hook downstream of a failure therefore never starts — its dependencies only complete after the failure is recorded. When independent hooks race the failing one, the exact set that started is best-effort (as with any parallel runner), but the returned ordering is always deterministic.
+- **Result ordering is deterministic:** `run_plan` returns the executed `HookResult`s in the plan's node order (flattened levels), independent of completion timing.
+- The Rust core owns scheduling and parallelism; each hook is still executed by the Python `run_hook` (which owns environment resolution and the subprocess), called back per node.
 
 ---
 

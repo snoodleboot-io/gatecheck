@@ -1,13 +1,17 @@
 """Unit tests for gatecheck.runner.run_plan — the Rust-backed engine (STY-0014 / GAT-16).
 
-Exercises the real ``gatecheck_core.run_waves`` scheduler, but with the environment
-and subprocess behind dependency-injected fakes (no real env resolution, no real
-process). Covers dependency-ordered execution, parallel waves, result ordering, and
-wave-granular fail-fast. AAA structure throughout.
+Exercises the real ``gatecheck_core.run_graph`` dynamic scheduler, but with the
+environment and subprocess behind dependency-injected fakes (no real env resolution,
+no real process). Covers dependency-ordered execution, parallel scheduling, result
+ordering, fail-fast (a hook downstream of a failure never starts), and — via a
+barrier probe — that a freed hook starts before an unrelated slow peer finishes
+(the dynamic, non-wave-barrier property). AAA structure throughout.
 """
 
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 
 from gatecheck.config import GatecheckConfig
@@ -95,3 +99,79 @@ def test_without_fail_fast_everything_runs_despite_failure() -> None:
     assert [r.hook_id for r in results] == ["a", "b"]
     assert results[0].status == "failed"
     assert results[1].status == "passed"
+
+
+def test_diamond_graph_runs_all_in_topo_order() -> None:
+    # Arrange — a -> {b, c} -> d (diamond)
+    config = _config(
+        [
+            _hook("a"),
+            _hook("b", ["a"]),
+            _hook("c", ["a"]),
+            _hook("d", ["b", "c"]),
+        ]
+    )
+    # Act
+    results = _run(config, runner=FakeProcessRunner())
+    # Assert — deterministic input order; a before b/c before d
+    assert [r.hook_id for r in results] == ["a", "b", "c", "d"]
+    assert all(r.status == "passed" for r in results)
+
+
+def test_fail_fast_stops_downstream_but_not_in_flight_peer() -> None:
+    # Arrange — root a fans out to b (fails) and c; d depends on b.
+    # b's failure must stop d (downstream); c is a peer of b and still runs.
+    config = _config(
+        [
+            _hook("a"),
+            _hook("b", ["a"]),
+            _hook("c", ["a"]),
+            _hook("d", ["b"]),
+        ]
+    )
+    # Act
+    results = _run(config, runner=FakeProcessRunner(fail_ids={"b"}), fail_fast=True)
+    ran = {r.hook_id for r in results}
+    # Assert — d (downstream of the failed b) never started
+    assert "d" not in ran
+    assert "a" in ran and "b" in ran
+    assert next(r for r in results if r.hook_id == "b").status == "failed"
+
+
+def test_freed_hook_starts_before_slow_peer_finishes() -> None:
+    """Dynamic property: with a→b and an independent slow s, b starts as soon as a
+    finishes — it does NOT wait for s (which would be its wave-mate under the old
+    barrier scheduler). We prove it by having b block until it observes s still running."""
+    # Arrange
+    config = _config([_hook("s"), _hook("a"), _hook("b", ["a"])])
+    running: set[str] = set()
+    lock = threading.Lock()
+    observed_overlap = threading.Event()
+
+    class ProbeRunner:
+        def run(self, argv: list[str], *, env: object, cwd: object) -> tuple[int, str]:
+            tool = argv[0]
+            with lock:
+                running.add(tool)
+            if tool == "s":
+                # Hold s "running" long enough for b to observe the overlap.
+                time.sleep(0.5)
+                with lock:
+                    running.discard(tool)
+                return (0, "ok")
+            if tool == "b":
+                # b must have been started while s is still running (no wave barrier).
+                for _ in range(200):
+                    with lock:
+                        if "s" in running:
+                            observed_overlap.set()
+                            break
+                    time.sleep(0.005)
+            return (0, "ok")
+
+    # Act
+    results = _run(config, runner=ProbeRunner())
+
+    # Assert — b overlapped s; all three ran
+    assert observed_overlap.is_set(), "b did not start until the slow peer finished"
+    assert {r.hook_id for r in results} == {"s", "a", "b"}

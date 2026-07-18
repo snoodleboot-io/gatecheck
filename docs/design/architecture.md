@@ -22,7 +22,7 @@ gatecheck is divided into two layers that communicate across a well-defined boun
 │  DAG solver        Parallel runner     Git integration  │
 │  Kahn's alg        rayon thread pool   staged files     │
 │  cycle detection   subprocess fan-out  branch name      │
-│  wave building     shell splitting     changed files    │
+│  dynamic sched.    shell splitting     changed files    │
 │                                                         │
 │  Cache hashing     File matching       Affected pkgs    │
 │  SHA-256 keys      glob engine         transitive deps  │
@@ -53,8 +53,8 @@ sequenceDiagram
         EnvMgr-->>CLI: ResolvedEnv(bin_dir)
     end
     CLI->>RustCore: py_run_hooks(specs, files, cwd, fail_fast, workers)
-    Note over RustCore: build_waves() → topological sort
-    Note over RustCore: rayon parallel execution per wave
+    Note over RustCore: run_graph() → dynamic DAG scheduling
+    Note over RustCore: rayon; each hook starts when its deps finish
     RustCore-->>CLI: [HookResult dicts]
     CLI->>CLI: render rich output
 ```
