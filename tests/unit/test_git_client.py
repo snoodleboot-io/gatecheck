@@ -49,6 +49,38 @@ def test_tracked_files_argv(monkeypatch: pytest.MonkeyPatch) -> None:
     assert recorded[0] == ["git", "ls-files", "-z"]
 
 
+def test_current_branch_argv_and_strip(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange
+    recorded: list[list[str]] = []
+    _patch_run(monkeypatch, recorded, SimpleNamespace(returncode=0, stdout="main\n", stderr=""))
+    # Act
+    branch = SubprocessGitClient().current_branch()
+    # Assert
+    assert branch == "main"
+    assert recorded[0] == ["git", "branch", "--show-current"]
+
+
+def test_current_branch_empty_when_detached(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange — detached HEAD → empty output, exit 0
+    recorded: list[list[str]] = []
+    _patch_run(monkeypatch, recorded, SimpleNamespace(returncode=0, stdout="\n", stderr=""))
+    # Act
+    branch = SubprocessGitClient().current_branch()
+    # Assert
+    assert branch == ""
+
+
+def test_current_branch_nonzero_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange
+    recorded: list[list[str]] = []
+    _patch_run(
+        monkeypatch, recorded, SimpleNamespace(returncode=128, stdout="", stderr="fatal: boom")
+    )
+    # Act / Assert
+    with pytest.raises(GitError, match="cannot determine current branch"):
+        SubprocessGitClient().current_branch()
+
+
 def test_nonzero_exit_raises_git_error(monkeypatch: pytest.MonkeyPatch) -> None:
     # Arrange
     recorded: list[list[str]] = []

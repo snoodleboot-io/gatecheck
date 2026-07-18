@@ -82,15 +82,20 @@ when = { env-not = "SKIP_MYPY", branch-not = "release/*" }
 
 | Key | Type | Description |
 |---|---|---|
-| `branch` | string | Exact branch name match |
-| `branch-not` | string | Exact branch name exclusion |
-| `branch-matches` | string | Regex match against branch name |
-| `files-match` | glob | Only run if at least one staged file matches |
-| `env` | string | Only run if this env var is set |
+| `branch` | string | Run only on this exact branch name |
+| `branch-not` | glob | Skip when the current branch matches this glob (e.g. `release/*`) |
+| `branch-matches` | glob | Run only when the current branch matches this glob |
+| `files-match` | glob | Run only if at least one changed file matches |
+| `env` | string | Run only if this env var is set |
 | `env-not` | string | Skip if this env var is set |
 | `on-ci` | bool | `true` = CI only, `false` = never on CI |
 
-CI is detected via `CI` or `GITHUB_ACTIONS` environment variables.
+All glob patterns are `fnmatch`-style and case-sensitive (as with the `files` /
+`exclude` globs), so `/` is matched like any other character. CI is detected via the
+`CI` or `GITHUB_ACTIONS` environment variables. The branch conditions read the
+current branch via `git branch --show-current` (empty on a detached HEAD, in which
+case the branch conditions do not apply). Conditions are checked in the order above;
+the first one that fails is the reported skip reason.
 
 ### Full hook example
 
@@ -500,7 +505,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 `gatecheck.runner.build_plan` turns the config into a dependency-ordered `ExecutionPlan` (no execution):
 
 - **Selection:** a named `[group.<name>]` (hooks in the group's order) or every hook (declared order) when no group is given.
-- **`when` filter:** hooks excluded by their `when` conditions (`env-not`, `on-ci`) are set aside as **skipped, with a reason**, not dropped silently. CI is detected via the `CI` or `GITHUB_ACTIONS` environment variables.
+- **`when` filter:** hooks excluded by their `when` conditions (`env` / `env-not`, `on-ci`, `branch` / `branch-not` / `branch-matches`, `files-match`) are set aside as **skipped, with a reason**, not dropped silently. The current branch and the changeset are passed in from the git seam; when that context is absent a branch/`files-match` condition is fail-open (the hook runs). CI is detected via the `CI` or `GITHUB_ACTIONS` environment variables.
 - **`depends-on` DAG:** dependencies are resolved into a directed graph and topologically sorted into **levels** — hooks in the same level have no dependency between them and may run concurrently; later levels wait for earlier ones. A dependency that isn't running (skipped or outside the group) drops its edge; a dependency on a hook that doesn't exist, or a dependency cycle, is a `PlanError`.
 
 ### Runner — executing a hook

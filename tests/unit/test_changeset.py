@@ -31,7 +31,13 @@ class FakeGitClient:
         return self._tracked
 
 
-def _hook(hook_id: str, *, files: str | None = None, pass_files: bool = True) -> HookDef:
+def _hook(
+    hook_id: str,
+    *,
+    files: str | None = None,
+    exclude: str | None = None,
+    pass_files: bool = True,
+) -> HookDef:
     data: dict[str, object] = {
         "id": hook_id,
         "from": "system",
@@ -40,6 +46,8 @@ def _hook(hook_id: str, *, files: str | None = None, pass_files: bool = True) ->
     }
     if files is not None:
         data["files"] = files
+    if exclude is not None:
+        data["exclude"] = exclude
     return HookDef.model_validate(data)
 
 
@@ -113,6 +121,26 @@ def test_glob_matches_nested_paths() -> None:
     result = resolve_changeset([hook], git=git)
     # Assert
     assert result.files_by_hook["lint"] == _paths("src/pkg/mod.py")
+
+
+def test_exclude_glob_removes_matching_files() -> None:
+    # Arrange — lint all .py but drop tests
+    git = FakeGitClient(staged=["src/app.py", "tests/test_app.py", "src/util.py"])
+    hook = _hook("lint", files="*.py", exclude="tests/*")
+    # Act
+    result = resolve_changeset([hook], git=git)
+    # Assert — the excluded test file is gone; the rest remain
+    assert result.files_by_hook["lint"] == _paths("src/app.py", "src/util.py")
+
+
+def test_exclude_applies_without_a_files_glob() -> None:
+    # Arrange — no files glob (whole changeset), but exclude a subtree
+    git = FakeGitClient(staged=["a.py", "vendor/x.py", "b.py"])
+    hook = _hook("lint", exclude="vendor/*")
+    # Act
+    result = resolve_changeset([hook], git=git)
+    # Assert
+    assert result.files_by_hook["lint"] == _paths("a.py", "b.py")
 
 
 def test_multiple_hooks_each_get_their_own_subset() -> None:

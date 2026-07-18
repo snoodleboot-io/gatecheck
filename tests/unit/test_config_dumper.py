@@ -272,6 +272,46 @@ def test_when_is_inline_table(tmp_path: Path) -> None:
     assert ".when]" not in text
 
 
+def test_richer_when_and_exclude_round_trip(tmp_path: Path) -> None:
+    """The GAT-30 fields (branch* / files-match / env, plus hook-level exclude)
+    survive a dump → load round-trip via the generic model_dump path."""
+    # Arrange
+    from gatecheck.config import dump_config, load_config
+
+    hook = HookDef(
+        id="h",
+        **{
+            "from": "pypi:x",
+            "run": "x",
+            "exclude": "vendor/*",
+            "when": HookWhen(
+                **{
+                    "env": "DEPLOY",
+                    "branch-matches": "release/*",
+                    "branch-not": "wip/*",
+                    "files-match": "*.py",
+                }
+            ),
+        },
+    )
+    cfg = GatecheckConfig(hook=[hook])
+    out = tmp_path / "check.toml"
+
+    # Act
+    dump_config(cfg, out)
+    reloaded = load_config(out)
+
+    # Assert — the reloaded config equals the original
+    assert reloaded == cfg
+    when = reloaded.hook[0].when
+    assert when is not None
+    assert when.env == "DEPLOY"
+    assert when.branch_matches == "release/*"
+    assert when.branch_not == "wip/*"
+    assert when.files_match == "*.py"
+    assert reloaded.hook[0].exclude == "vendor/*"
+
+
 # ---------------------------------------------------------------------------
 # AoT count
 # ---------------------------------------------------------------------------

@@ -11,9 +11,11 @@ from gatecheck.runner import (
     GitError,
     PlanError,
     RunReport,
+    SubprocessGitClient,
     build_plan,
     build_report,
     resolve_changeset,
+    route_files,
     run_plan,
 )
 from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
@@ -49,19 +51,30 @@ def run(
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 
+    # Resolve the git context once (base changeset + branch) so the plan's
+    # `when` conditions (branch* / files-match) can be evaluated before routing.
+    git = SubprocessGitClient()
     try:
-        plan = build_plan(config, group=group)
+        changeset = resolve_changeset([], all_files=all_files, git=git)
+        branch = git.current_branch()
+    except GitError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        plan = build_plan(
+            config,
+            group=group,
+            branch=branch,
+            changed_files=[f.as_posix() for f in changeset.files],
+        )
     except PlanError as exc:
         raise click.ClickException(str(exc)) from exc
 
     running = [hook for level in plan.levels for hook in level]
-    try:
-        changeset = resolve_changeset(running, all_files=all_files)
-    except GitError as exc:
-        raise click.ClickException(str(exc)) from exc
+    files_by_hook = route_files(running, changeset.files)
 
     fail_fast = _fail_fast(config, group)
-    results = run_plan(plan, changeset.files_by_hook, fail_fast=fail_fast)
+    results = run_plan(plan, files_by_hook, fail_fast=fail_fast)
 
     report = build_report(plan, results)
     click.echo(report.render())
