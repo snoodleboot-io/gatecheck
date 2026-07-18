@@ -25,6 +25,7 @@ from gatecheck.env.env_cache import default_cache_root, is_healthy, publish_atom
 from gatecheck.env.env_error import EnvError
 from gatecheck.env.uv_bootstrap import UvBootstrapError
 from gatecheck.env.uv_runner import SubprocessUvRunner, UvBuildError, UvNotFound, UvRunner
+from gatecheck.offline import is_offline
 from gatecheck.registry import RegistryClient, ResolvedPyPISource, resolve_pypi_source
 from gatecheck.sources import (
     ProjectSource,
@@ -66,6 +67,7 @@ class EnvManager:
         self._cache_root = cache_root
         self._client = client
         self._uv_runner = uv_runner
+        self._offline = is_offline(environ)
 
     def resolve(self, hook: HookDef) -> ResolvedEnv:
         """Resolve ``hook`` to a ``ResolvedEnv`` (an executable environment).
@@ -127,7 +129,9 @@ class EnvManager:
                     reason="project/system sources reuse an existing binary; no environment is cached",
                 )
             case PyPISource():
-                pinned = resolve_pypi_source(source, self._sources, client=self._client)
+                pinned = resolve_pypi_source(
+                    source, self._sources, client=self._client, offline=self._offline
+                )
                 key = self._pypi_cache_key(pinned)
                 cache_root = (
                     self._cache_root
@@ -166,11 +170,19 @@ class EnvManager:
         (``UvNotFound`` / ``UvBuildError``) and a venv missing ``tool`` map to
         ``EnvError`` naming the hook.
         """
-        pinned = resolve_pypi_source(source, self._sources, client=self._client)
+        pinned = resolve_pypi_source(
+            source, self._sources, client=self._client, offline=self._offline
+        )
         key = self._pypi_cache_key(pinned)
         cache_root = (
             self._cache_root if self._cache_root is not None else default_cache_root(self._environ)
         )
+        if self._offline and not is_healthy(venv_slot(cache_root, key)):
+            raise EnvError(
+                hook.id,
+                f"offline: no cached environment for '{pinned.name}=={pinned.version}'; "
+                "run 'gatecheck sync' while online first to warm the cache",
+            )
         runner = (
             self._uv_runner
             if self._uv_runner is not None

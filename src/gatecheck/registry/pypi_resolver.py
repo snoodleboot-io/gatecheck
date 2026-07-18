@@ -46,6 +46,7 @@ def resolve_pypi_source(
     *,
     client: RegistryClient | None = None,
     allow_prereleases: bool = False,
+    offline: bool = False,
 ) -> ResolvedPyPISource:
     """Resolve ``source`` to a pinned ``ResolvedPyPISource`` by querying the index.
 
@@ -53,10 +54,16 @@ def resolve_pypi_source(
     never a mutable default). Raises ``RegistryError`` for every failure domain
     (unknown alias, invalid requirement, markers/extras, package-not-found,
     no-version-satisfies, network, malformed index).
-    """
-    resolver_client = UrllibRegistryClient() if client is None else client
 
+    When ``offline`` is true the index is **not** queried: the pin is derived locally
+    and the requirement must carry a single exact ``==`` version (``RegistryError``
+    otherwise). File metadata (``sha256``/``url``/``filename``) is unavailable offline.
+    """
     index_url = _resolve_index(source, sources)
+    if offline:
+        return _resolve_offline(source, index_url)
+
+    resolver_client = UrllibRegistryClient() if client is None else client
     requirement, canonical_name = _parse_requirement(source, index_url)
     page = _fetch(resolver_client, source, index_url, canonical_name)
 
@@ -98,6 +105,49 @@ def _resolve_index(source: PyPISource, sources: SourceSpec | None) -> str:
             f"unsupported index URL scheme '{scheme or '(none)'}' (only http/https allowed)",
         )
     return index_url
+
+
+def _resolve_offline(source: PyPISource, index_url: str) -> ResolvedPyPISource:
+    """Derive the pin from an exact ``==`` requirement without touching the index.
+
+    Offline runs cannot enumerate index versions, so only a single exact pin is
+    resolvable; a range/compatible/prefix requirement raises ``RegistryError``.
+    """
+    requirement, canonical_name = _parse_requirement(source, index_url)
+    version = _exact_version(requirement.specifier)
+    if version is None:
+        raise RegistryError(
+            source.requirement,
+            index_url,
+            "offline mode requires an exact pin (pypi:NAME==VERSION); "
+            "run 'gatecheck sync' online first to warm the cache",
+        )
+    return ResolvedPyPISource(
+        kind="pypi",
+        requirement=source.requirement,
+        name=str(canonical_name),
+        version=version,
+        index_url=index_url,
+        registry=source.registry,
+        sha256=None,
+        url=None,
+        filename=None,
+    )
+
+
+def _exact_version(specifier: SpecifierSet) -> str | None:
+    """Return the normalized version of a single exact ``==`` pin, else ``None``.
+
+    A prefix match (``==1.0.*``) or any non-``==``/multi-clause specifier is not an
+    exact pin and yields ``None``.
+    """
+    specs = list(specifier)
+    if len(specs) != 1:
+        return None
+    spec = specs[0]
+    if spec.operator != "==" or spec.version.endswith(".*"):
+        return None
+    return str(Version(spec.version))
 
 
 def _parse_requirement(source: PyPISource, index_url: str) -> tuple[Requirement, str]:

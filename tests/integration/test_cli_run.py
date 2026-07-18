@@ -7,6 +7,7 @@ when the required tools are absent.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -48,6 +49,28 @@ def test_run_all_hooks_pass_exits_zero() -> None:
         assert result.exit_code == 0, result.output
         assert "ok" in result.output
         assert "1 passed" in result.output
+
+
+@_skip
+def test_run_offline_flag_runs_system_hooks() -> None:
+    # Arrange — system hooks need no network, so --offline is a no-op for them.
+    runner = CliRunner()
+    try:
+        with runner.isolated_filesystem():
+            _init_repo()
+            _write(
+                "check.toml",
+                '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\npass-files = false\n',
+            )
+            # Act — the flag is accepted and the run still passes
+            result = runner.invoke(main, ["run", "--offline"])
+            # Assert
+            assert result.exit_code == 0, result.output
+            assert "1 passed" in result.output
+    finally:
+        # `run --offline` sets GATECHECK_OFFLINE in the process env; clear the mutation
+        # so it cannot leak into later in-process tests.
+        os.environ.pop("GATECHECK_OFFLINE", None)
 
 
 @_skip

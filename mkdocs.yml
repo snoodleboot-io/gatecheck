@@ -128,6 +128,7 @@ nav:
     - Python Projects: guides/python.md
     - Monorepo Setup: guides/monorepo.md
     - CI Integration: guides/ci.md
+    - Air-gapped / Offline: guides/air-gapped.md
     - Private Registries: guides/private-registries.md
     - Docker Hooks: guides/docker.md
     - Writing Custom Hooks: guides/custom-hooks.md

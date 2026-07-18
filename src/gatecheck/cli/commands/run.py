@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import click
 
 from gatecheck.config import ConfigError, GatecheckConfig, load_config
+from gatecheck.offline import OFFLINE_ENV
 from gatecheck.runner import (
     GitError,
     PlanError,
@@ -33,6 +35,11 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
 )
 @click.option("--all-files", is_flag=True, help="Run against every tracked file, not just staged.")
 @click.option("--affected", is_flag=True, help="Run only on packages affected by the changeset.")
+@click.option(
+    "--offline",
+    is_flag=True,
+    help="Never touch the network; a cache miss is a clear error (sets GATECHECK_OFFLINE).",
+)
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -40,8 +47,12 @@ def run(
     config_path: Path,
     all_files: bool,
     affected: bool,
+    offline: bool,
 ) -> None:
     """Resolve the changeset, plan the hooks, execute them, and report."""
+    if offline:
+        os.environ[OFFLINE_ENV] = "1"
+
     if affected:
         _run_affected(ctx, config_path, all_files)
         return

@@ -153,6 +153,47 @@ def test_exact_pin_returns_full_descriptor() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Offline mode (STY-0034) — no index fetch; exact pins only
+# ---------------------------------------------------------------------------
+
+
+def test_offline_exact_pin_resolves_without_client() -> None:
+    # Arrange — a client that would explode if consulted
+    client = FakeRegistryClient(error=AssertionError("offline must not fetch"))
+    source = PyPISource(requirement="ruff==0.4.9", registry=None)
+    # Act
+    result = resolve_pypi_source(source, None, client=client, offline=True)
+    # Assert — pinned locally; no fetch happened; file metadata is unavailable
+    assert result.name == "ruff"
+    assert result.version == "0.4.9"
+    assert result.index_url == DEFAULT_INDEX
+    assert result.sha256 is None and result.url is None and result.filename is None
+    assert client.calls == []
+
+
+def test_offline_pin_matches_the_online_version_string() -> None:
+    # Arrange — the same exact pin, resolved online vs offline
+    source = PyPISource(requirement="ruff==0.4.9", registry=None)
+    online = resolve_pypi_source(source, None, client=_client("ruff", ["0.4.9"]))
+    # Act
+    offline = resolve_pypi_source(source, None, offline=True)
+    # Assert — identical version string → identical cache key material
+    assert offline.version == online.version == "0.4.9"
+
+
+@pytest.mark.parametrize(
+    "requirement",
+    ["ruff", "ruff>=0.4", "ruff~=0.4.1", "ruff>0.4.1", "ruff==0.4.*", "ruff==0.4,!=0.4.1"],
+)
+def test_offline_non_exact_pin_errors(requirement: str) -> None:
+    # Arrange
+    source = PyPISource(requirement=requirement, registry=None)
+    # Act / Assert — a clear, actionable error, no fetch
+    with pytest.raises(RegistryError, match="offline mode requires an exact pin"):
+        resolve_pypi_source(source, None, offline=True)
+
+
+# ---------------------------------------------------------------------------
 # AC-2 / AC-3 — version selection (highest satisfying; bare -> latest; ~=; >)
 # ---------------------------------------------------------------------------
 
