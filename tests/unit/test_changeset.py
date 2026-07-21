@@ -15,12 +15,19 @@ from gatecheck.runner import Changeset, resolve_changeset
 
 
 class FakeGitClient:
-    """In-memory GitClient returning canned staged / tracked path lists."""
+    """In-memory GitClient returning canned staged / tracked / changed-since lists."""
 
-    def __init__(self, staged: list[str] | None = None, tracked: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        staged: list[str] | None = None,
+        tracked: list[str] | None = None,
+        changed: list[str] | None = None,
+    ) -> None:
         self._staged = tuple(staged or [])
         self._tracked = tuple(tracked or [])
+        self._changed = tuple(changed or [])
         self.calls: list[str] = []
+        self.refs: list[str] = []
 
     def staged_files(self) -> tuple[str, ...]:
         self.calls.append("staged")
@@ -29,6 +36,11 @@ class FakeGitClient:
     def tracked_files(self) -> tuple[str, ...]:
         self.calls.append("tracked")
         return self._tracked
+
+    def changed_since(self, ref: str) -> tuple[str, ...]:
+        self.calls.append("changed")
+        self.refs.append(ref)
+        return self._changed
 
 
 def _hook(
@@ -77,6 +89,27 @@ def test_all_files_uses_tracked_files() -> None:
     # Assert
     assert result.files == _paths("a.py", "b.txt", "c.md")
     assert git.calls == ["tracked"]
+
+
+def test_base_uses_changed_since_and_forwards_the_ref() -> None:
+    # Arrange
+    git = FakeGitClient(staged=["staged.py"], tracked=["all.py"], changed=["since.py"])
+    # Act
+    result = resolve_changeset([_hook("lint")], base="main", git=git)
+    # Assert — the ref decides the file set, and it is forwarded verbatim
+    assert result.files == _paths("since.py")
+    assert git.calls == ["changed"]
+    assert git.refs == ["main"]
+
+
+def test_base_takes_precedence_over_all_files() -> None:
+    # Arrange
+    git = FakeGitClient(staged=["staged.py"], tracked=["all.py"], changed=["since.py"])
+    # Act — the CLI rejects this combination, but the library defines precedence
+    result = resolve_changeset([_hook("lint")], all_files=True, base="main", git=git)
+    # Assert
+    assert result.files == _paths("since.py")
+    assert git.calls == ["changed"]
 
 
 # ── per-hook file routing ─────────────────────────────────────────

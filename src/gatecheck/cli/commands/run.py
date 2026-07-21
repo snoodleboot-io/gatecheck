@@ -34,6 +34,13 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
     help="Path to check.toml.",
 )
 @click.option("--all-files", is_flag=True, help="Run against every tracked file, not just staged.")
+@click.option(
+    "--base",
+    "base",
+    metavar="REF",
+    default=None,
+    help="Run against files changed since REF (merge-base), instead of the staged set.",
+)
 @click.option("--affected", is_flag=True, help="Run only on packages affected by the changeset.")
 @click.option(
     "--offline",
@@ -46,15 +53,18 @@ def run(
     group: str | None,
     config_path: Path,
     all_files: bool,
+    base: str | None,
     affected: bool,
     offline: bool,
 ) -> None:
     """Resolve the changeset, plan the hooks, execute them, and report."""
+    if all_files and base is not None:
+        raise click.ClickException("--all-files and --base are mutually exclusive")
     if offline:
         os.environ[OFFLINE_ENV] = "1"
 
     if affected:
-        _run_affected(ctx, config_path, all_files)
+        _run_affected(ctx, config_path, all_files, base)
         return
 
     try:
@@ -66,7 +76,7 @@ def run(
     # `when` conditions (branch* / files-match) can be evaluated before routing.
     git = SubprocessGitClient()
     try:
-        changeset = resolve_changeset([], all_files=all_files, git=git)
+        changeset = resolve_changeset([], all_files=all_files, base=base, git=git)
         branch = git.current_branch()
     except GitError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -118,7 +128,9 @@ def _max_workers(config: GatecheckConfig, group: str | None) -> int | None:
     return group_def.max_workers
 
 
-def _run_affected(ctx: click.Context, config_path: Path, all_files: bool) -> None:
+def _run_affected(
+    ctx: click.Context, config_path: Path, all_files: bool, base: str | None = None
+) -> None:
     """Run only the hooks of packages affected by the changeset (monorepo mode)."""
     try:
         workspace = discover_workspace(config_path)
@@ -126,7 +138,7 @@ def _run_affected(ctx: click.Context, config_path: Path, all_files: bool) -> Non
         raise click.ClickException(str(exc)) from exc
 
     try:
-        changeset = resolve_changeset([], all_files=all_files)
+        changeset = resolve_changeset([], all_files=all_files, base=base)
     except GitError as exc:
         raise click.ClickException(str(exc)) from exc
 

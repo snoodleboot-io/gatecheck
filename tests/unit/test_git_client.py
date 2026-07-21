@@ -49,6 +49,39 @@ def test_tracked_files_argv(monkeypatch: pytest.MonkeyPatch) -> None:
     assert recorded[0] == ["git", "ls-files", "-z"]
 
 
+def test_changed_since_argv_uses_merge_base_form(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange
+    recorded: list[list[str]] = []
+    _patch_run(
+        monkeypatch, recorded, SimpleNamespace(returncode=0, stdout="a.py\x00b.py\x00", stderr="")
+    )
+    # Act
+    files = SubprocessGitClient().changed_since("main")
+    # Assert — three-dot (merge-base) diff, deleted files filtered out
+    assert files == ("a.py", "b.py")
+    assert recorded[0] == [
+        "git",
+        "diff",
+        "--name-only",
+        "-z",
+        "--diff-filter=ACMR",
+        "main...HEAD",
+    ]
+
+
+def test_changed_since_unknown_ref_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Arrange — git rejects the ref
+    recorded: list[list[str]] = []
+    _patch_run(
+        monkeypatch,
+        recorded,
+        SimpleNamespace(returncode=128, stdout="", stderr="fatal: bad revision 'nope'"),
+    )
+    # Act / Assert — a clear error, not an empty (silently passing) changeset
+    with pytest.raises(GitError, match="bad revision"):
+        SubprocessGitClient().changed_since("nope")
+
+
 def test_current_branch_argv_and_strip(monkeypatch: pytest.MonkeyPatch) -> None:
     # Arrange
     recorded: list[list[str]] = []
