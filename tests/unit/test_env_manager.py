@@ -34,11 +34,22 @@ import pytest
 
 from gatecheck.config.hook_def import HookDef
 from gatecheck.env import EnvError, EnvManager, ResolvedEnv
-from gatecheck.registry import RegistryError
+from gatecheck.registry import ProjectFile, ProjectPage, RegistryError
 from gatecheck.sources import SourceResolutionError, SourceSpecError
 from gatecheck.venv import bin_dir_name
 
 _CACHE_KEY_SCHEME = "env-v1"
+
+
+class _StubRegistryClient:
+    """In-memory RegistryClient so pypi resolution never touches the network."""
+
+    def fetch_project(self, index_url: str, name: str) -> ProjectPage:
+        return ProjectPage(
+            name=name,
+            files=(ProjectFile(filename=f"{name}-0.4.0-py3-none-any.whl", sha256="deadbeef"),),
+        )
+
 
 # ---------------------------------------------------------------------------
 # Helpers — build hermetic fake executables + HookDefs.
@@ -410,12 +421,18 @@ def test_env_error_message_form_and_fields() -> None:
 
 def test_env_error_caught_as_value_error(tmp_path: Path) -> None:
     # AC-12: existing `except ValueError` handlers still catch EnvError.
-    # Arrange
-    manager = EnvManager(environ={"PATH": "/nonexistent"})
+    # Arrange — an isolated cache root and an injected index page keep this hermetic:
+    # without them the manager reads the developer's real user cache (a warm ruff slot
+    # makes it a hit, so nothing raises) and queries PyPI for real.
+    manager = EnvManager(
+        environ={"PATH": "/nonexistent"},
+        cache_root=tmp_path / "cache",
+        client=_StubRegistryClient(),
+    )
 
-    # Act
+    # Act — uv is unreachable (PATH is empty), so building the venv fails
     with pytest.raises(ValueError) as exc_info:
-        manager.resolve(_hook("fmt", "pypi:ruff", "ruff format"))
+        manager.resolve(_hook("fmt", "pypi:ruff==0.4.0", "ruff format"))
 
     # Assert
     assert isinstance(exc_info.value, EnvError)
