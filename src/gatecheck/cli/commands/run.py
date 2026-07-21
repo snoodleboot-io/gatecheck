@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -47,6 +48,7 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
     is_flag=True,
     help="Never touch the network; a cache miss is a clear error (sets GATECHECK_OFFLINE).",
 )
+@click.option("--json", "as_json", is_flag=True, help="Emit the run report as JSON.")
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -56,6 +58,7 @@ def run(
     base: str | None,
     affected: bool,
     offline: bool,
+    as_json: bool,
 ) -> None:
     """Resolve the changeset, plan the hooks, execute them, and report."""
     if all_files and base is not None:
@@ -64,7 +67,7 @@ def run(
         os.environ[OFFLINE_ENV] = "1"
 
     if affected:
-        _run_affected(ctx, config_path, all_files, base)
+        _run_affected(ctx, config_path, all_files, base, as_json)
         return
 
     try:
@@ -99,8 +102,13 @@ def run(
     results = run_plan(plan, files_by_hook, fail_fast=fail_fast, max_workers=max_workers)
 
     report = build_report(plan, results)
-    click.echo(report.render())
+    _emit(report, as_json)
     ctx.exit(report.exit_code)
+
+
+def _emit(report: RunReport, as_json: bool) -> None:
+    """Print the report as JSON or the human rendering — nothing else on stdout."""
+    click.echo(json.dumps(report.to_dict(), indent=2) if as_json else report.render())
 
 
 def _fail_fast(config: GatecheckConfig, group: str | None) -> bool:
@@ -129,7 +137,11 @@ def _max_workers(config: GatecheckConfig, group: str | None) -> int | None:
 
 
 def _run_affected(
-    ctx: click.Context, config_path: Path, all_files: bool, base: str | None = None
+    ctx: click.Context,
+    config_path: Path,
+    all_files: bool,
+    base: str | None = None,
+    as_json: bool = False,
 ) -> None:
     """Run only the hooks of packages affected by the changeset (monorepo mode)."""
     try:
@@ -148,5 +160,5 @@ def _run_affected(
         raise click.ClickException(str(exc)) from exc
 
     report = RunReport(results=results, skipped=(), not_run=())
-    click.echo(report.render())
+    _emit(report, as_json)
     ctx.exit(report.exit_code)

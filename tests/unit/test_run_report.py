@@ -7,6 +7,8 @@ blocked), and the rendered summary. AAA structure throughout.
 
 from __future__ import annotations
 
+import json
+
 from gatecheck.config import GatecheckConfig
 from gatecheck.runner import HookResult, build_plan, build_report
 
@@ -93,6 +95,52 @@ def test_skipped_hooks_are_reported() -> None:
     assert "skip  b" in rendered
     assert "1 passed, 1 skipped" in rendered
     assert report.exit_code == 0
+
+
+def test_to_dict_covers_every_section_and_round_trips() -> None:
+    # Arrange — a pass, a failure, a skip, and a not-run hook
+    plan = build_plan(
+        _config(
+            [
+                _hook("a"),
+                _hook("b"),
+                _hook("skipped", when={"env-not": "SKIP"}),
+                _hook("later", ["b"]),
+            ]
+        ),
+        environ={"SKIP": "1"},
+    )
+    results = [_result("a", "passed"), _result("b", "failed", output="boom", exit_code=1)]
+    # Act
+    payload = build_report(plan, results).to_dict()
+    # Assert — serializable, and every section is represented
+    assert json.loads(json.dumps(payload)) == payload
+    assert [r["hook_id"] for r in payload["results"]] == ["a", "b"]
+    assert payload["results"][1]["status"] == "failed"
+    assert payload["results"][1]["exit_code"] == 1
+    assert payload["results"][1]["output"] == "boom"
+    assert payload["skipped"] == [
+        {"hook_id": "skipped", "reason": "env SKIP is set"},
+    ]
+    assert payload["not_run"] == ["later"]
+    assert payload["summary"] == {
+        "passed": 1,
+        "failed": 1,
+        "error": 0,
+        "skipped": 1,
+        "not_run": 1,
+    }
+    assert payload["exit_code"] == 1
+
+
+def test_to_dict_exit_code_zero_when_all_pass() -> None:
+    # Arrange
+    plan = build_plan(_config([_hook("a")]), environ={})
+    # Act
+    payload = build_report(plan, [_result("a", "passed")]).to_dict()
+    # Assert
+    assert payload["exit_code"] == 0
+    assert payload["summary"]["passed"] == 1
 
 
 def test_network_skip_is_surfaced_and_not_a_failure() -> None:
