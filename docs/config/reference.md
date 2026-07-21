@@ -51,7 +51,7 @@ Each `[[hook]]` table defines one hook. The double brackets mean it's an array â
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | string | Unique identifier. Used in group references and CLI (`--hook id`). |
+| `id` | string | Unique identifier. Referenced by `[group.<name>].hooks` and `depends-on`. |
 | `from` | string | Source spec â€” see [Source Types](sources.md). |
 | `run` | string | Command to execute. `{files}` is replaced with matching staged files. |
 

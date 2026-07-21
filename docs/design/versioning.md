@@ -44,7 +44,7 @@ A MAJOR bump requires one of:
    feat(config): rename pass-filenames to pass-files
    
    BREAKING CHANGE: The `pass-filenames` key in check.toml has been renamed
-   to `pass-files`. Automated migration: run `gatecheck migrate --in-place`.
+   to `pass-files`. Update the key in your check.toml.
    ```
 
 2. **A `!` after the type** (shorthand):

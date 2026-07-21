@@ -28,9 +28,9 @@ _Changes on `main` not yet released._
 - Named groups with parallel execution and `on-event` git hook binding
 - `gatecheck install` — git hook installer
 - `gatecheck sync` — environment sync with uv
-- `gatecheck cache show/prune/why` — transparent cache management
+- `gatecheck cache why/clear` — transparent cache management
 - `gatecheck migrate` — automated `.pre-commit-config.yaml` → `check.toml` conversion
-- `gatecheck workspace list/affected` — workspace introspection
+- `gatecheck run --affected` — workspace-aware execution, results prefixed `<package>:<hook>`
 - `check.toml` or `[tool.gatecheck]` in `pyproject.toml`
 - Sub-10ms startup on no-op commits (vs 300ms+ for pre-commit)
 

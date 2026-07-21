@@ -43,7 +43,7 @@ jobs:
   env:
     BASE_SHA: ${{ github.event.pull_request.base.sha }}
   run: |
-    gatecheck run --affected --base "$BASE_SHA" --all-files
+    gatecheck run --affected --base "$BASE_SHA"
 ```
 
 ### JSON output for annotations

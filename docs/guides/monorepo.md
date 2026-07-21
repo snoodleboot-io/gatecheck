@@ -129,8 +129,11 @@ $ gatecheck run --affected --base main
 
 ### Specific package
 
+Run from inside the package directory — gatecheck discovers that package's
+`check.toml`:
+
 ```bash
-gatecheck run --root packages/api
+cd packages/api && gatecheck run
 ```
 
 ## Dependency graph
@@ -159,22 +162,26 @@ package that a root change actually broke is not.
 
 When 10 packages all declare `from = "pypi:ruff>=0.4"`, gatecheck resolves this to the same cache key and uses a single shared venv. The lockfile at the workspace root tracks this globally.
 
-## Listing packages
+## Seeing which packages ran
+
+There is no separate introspection command — `gatecheck run --affected` reports the
+packages it selected, prefixing each result with the package name:
 
 ```bash
-$ gatecheck workspace list
+$ gatecheck run --affected --base main
 
-  Package    Path                    Hooks  Depends on
-  ─────────────────────────────────────────────────────
-  api        packages/api            5      shared
-  frontend   packages/frontend       3      —
-  legacy     packages/legacy         4      —
-  shared     libs/shared             2      —
+ok    shared:ruff  (0.31s)
+ok    shared:mypy  (1.04s)
+ok    api:ruff     (0.28s)
 
-$ gatecheck workspace affected --base main
+3 passed
+```
 
-  ● shared   libs/shared
-  ● api      packages/api
+Pair it with `--json` when you need the selection programmatically — each
+`results[].hook_id` carries the `<package>:<hook>` prefix:
+
+```bash
+gatecheck run --affected --base main --json | jq -r '.results[].hook_id'
 ```
 
 ## CI integration
