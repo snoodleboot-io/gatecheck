@@ -269,6 +269,95 @@ def test_conditions_are_anded_first_failure_wins() -> None:
     assert "not 'main'" in plan.skipped[0].reason
 
 
+# ── no matching files (BUG-0002) ──────────────────────────────────
+
+
+def test_hook_with_no_matching_files_is_skipped() -> None:
+    """A file-consuming hook whose glob matches nothing must not run: with an empty
+    {files} most tools scan the whole project, so a --fix hook would rewrite files
+    the change never touched."""
+    # Arrange
+    config = _config([_hook("lint", files="*.py")])
+    # Act — the changeset holds no Python files
+    plan = build_plan(config, environ={}, changed_files=["README.md"])
+    # Assert
+    assert plan.levels == ()
+    assert [s.hook_id for s in plan.skipped] == ["lint"]
+    assert plan.skipped[0].reason == "no matching files"
+
+
+def test_hook_runs_when_the_changeset_matches() -> None:
+    # Arrange
+    config = _config([_hook("lint", files="*.py")])
+    # Act
+    plan = build_plan(config, environ={}, changed_files=["src/app.py"])
+    # Assert
+    assert _ids(plan) == [["lint"]]
+    assert plan.skipped == ()
+
+
+def test_empty_changeset_skips_every_file_consuming_hook() -> None:
+    # Arrange — nothing staged, the common `gatecheck run` case
+    config = _config([_hook("a"), _hook("b", files="*.py")])
+    # Act
+    plan = build_plan(config, environ={}, changed_files=[])
+    # Assert — both skipped; neither tool is handed an empty path list
+    assert plan.levels == ()
+    assert {s.hook_id for s in plan.skipped} == {"a", "b"}
+
+
+def test_pass_files_false_hook_still_runs_with_no_files() -> None:
+    # Arrange — a project-wide hook (mypy src/, cargo clippy) never wanted files
+    config = _config([_hook("types", **{"pass-files": False})])
+    # Act
+    plan = build_plan(config, environ={}, changed_files=[])
+    # Assert — exempt from the rule; pass-files = false is the escape hatch
+    assert _ids(plan) == [["types"]]
+    assert plan.skipped == ()
+
+
+def test_exclude_emptying_the_set_skips_the_hook() -> None:
+    # Arrange — the only matching file is excluded
+    config = _config([_hook("lint", files="*.py", exclude="vendor/*")])
+    # Act
+    plan = build_plan(config, environ={}, changed_files=["vendor/x.py"])
+    # Assert — routing and planning agree on the empty set
+    assert [s.hook_id for s in plan.skipped] == ["lint"]
+
+
+def test_no_matching_files_is_fail_open_without_a_changeset() -> None:
+    # Arrange — changeset unknown (the run_affected / unit-test default)
+    config = _config([_hook("lint", files="*.py")])
+    # Act
+    plan = build_plan(config, environ={})
+    # Assert — runs rather than guessing
+    assert _ids(plan) == [["lint"]]
+
+
+def test_when_reason_wins_over_no_matching_files() -> None:
+    # Arrange — both would skip; the explicit condition is the more useful reason
+    config = _config([_hook("lint", files="*.py", when={"env-not": "SKIP"})])
+    # Act
+    plan = build_plan(config, environ={"SKIP": "1"}, changed_files=["README.md"])
+    # Assert
+    assert plan.skipped[0].reason == "env SKIP is set"
+
+
+def test_dependent_of_a_file_skipped_hook_still_runs() -> None:
+    # Arrange — b depends on a; a is skipped for want of files
+    config = _config(
+        [
+            _hook("a", files="*.py"),
+            _hook("b", **{"depends-on": ["a"], "pass-files": False}),
+        ]
+    )
+    # Act
+    plan = build_plan(config, environ={}, changed_files=["README.md"])
+    # Assert — the edge drops, as with any other skip
+    assert _ids(plan) == [["b"]]
+    assert [s.hook_id for s in plan.skipped] == ["a"]
+
+
 # ── when: requires-network (offline) ──────────────────────────────
 
 

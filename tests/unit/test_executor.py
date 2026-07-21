@@ -109,7 +109,14 @@ def test_files_placeholder_is_substituted_in_place() -> None:
     assert runner.argv == ["ruff", "check", "a.py", "b.py", "--fix"]
 
 
-def test_empty_file_list_is_a_noop() -> None:
+def test_empty_file_list_appends_nothing_to_argv() -> None:
+    """``run_hook`` itself adds no paths when given none.
+
+    Note this is a statement about argv assembly only — it is *not* a no-op for the
+    tool, which typically reads "no paths" as "scan everything". Preventing that is
+    the planner's job: ``build_plan`` skips a ``pass-files`` hook whose glob matches
+    nothing (BUG-0002), so this argv shape is not reached for file-consuming hooks.
+    """
     # Arrange
     runner = FakeProcessRunner()
     # Act
