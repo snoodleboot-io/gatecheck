@@ -50,6 +50,34 @@ class RunReport:
         lines.append(self._summary())
         return "\n".join(lines)
 
+    def to_dict(self) -> dict[str, object]:
+        """Serialize to a plain dict for ``--json`` output (mirrors ``CacheExplanation``)."""
+        return {
+            "results": [
+                {
+                    "hook_id": result.hook_id,
+                    "status": result.status,
+                    "exit_code": result.exit_code,
+                    "duration": round(result.duration, 4),
+                    "output": result.output,
+                }
+                for result in self.results
+            ],
+            "skipped": [{"hook_id": skip.hook_id, "reason": skip.reason} for skip in self.skipped],
+            "not_run": list(self.not_run),
+            "summary": {
+                "passed": self._count("passed"),
+                "failed": self._count("failed"),
+                "error": self._count("error"),
+                "skipped": len(self.skipped),
+                "not_run": len(self.not_run),
+            },
+            "exit_code": self.exit_code,
+        }
+
+    def _count(self, status: str) -> int:
+        return sum(1 for result in self.results if result.status == status)
+
     def _summary(self) -> str:
         passed = sum(1 for result in self.results if result.status == "passed")
         failed = sum(1 for result in self.results if result.status == "failed")

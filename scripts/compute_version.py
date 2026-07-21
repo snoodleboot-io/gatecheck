@@ -20,6 +20,7 @@ Output (GitHub Actions output format):
   should_release=true|false
   changelog=<markdown text>
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,18 +28,20 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from pathlib import Path
+from enum import Enum
 
 
 class BumpLevel(Enum):
-    NONE  = 0
+    NONE = 0
     PATCH = 1
     MINOR = 2
     MAJOR = 3
 
-    def __gt__(self, other):  return self.value > other.value
-    def __ge__(self, other):  return self.value >= other.value
+    def __gt__(self, other):
+        return self.value > other.value
+
+    def __ge__(self, other):
+        return self.value >= other.value
 
 
 # Conventional commit pattern
@@ -50,17 +53,17 @@ CC_RE = re.compile(
 BREAKING_FOOTER_RE = re.compile(r"^BREAKING CHANGE:", re.MULTILINE)
 
 BUMP_MAP: dict[str, BumpLevel] = {
-    "feat":     BumpLevel.MINOR,
-    "fix":      BumpLevel.PATCH,
-    "perf":     BumpLevel.PATCH,
+    "feat": BumpLevel.MINOR,
+    "fix": BumpLevel.PATCH,
+    "perf": BumpLevel.PATCH,
     "refactor": BumpLevel.PATCH,
-    "revert":   BumpLevel.PATCH,
-    "docs":     BumpLevel.NONE,
-    "style":    BumpLevel.NONE,
-    "test":     BumpLevel.NONE,
-    "chore":    BumpLevel.NONE,
-    "ci":       BumpLevel.NONE,
-    "build":    BumpLevel.NONE,
+    "revert": BumpLevel.PATCH,
+    "docs": BumpLevel.NONE,
+    "style": BumpLevel.NONE,
+    "test": BumpLevel.NONE,
+    "chore": BumpLevel.NONE,
+    "ci": BumpLevel.NONE,
+    "build": BumpLevel.NONE,
 }
 
 
@@ -85,10 +88,7 @@ class VersionPlan:
 
 
 def git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        capture_output=True, text=True, check=True
-    )
+    result = subprocess.run(["git", *args], capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
 
@@ -123,11 +123,13 @@ def commits_since(tag: str | None) -> list[dict]:
         if not entry:
             continue
         parts = entry.split("\x00", 2)
-        commits.append({
-            "sha": parts[0] if len(parts) > 0 else "",
-            "subject": parts[1] if len(parts) > 1 else "",
-            "body": parts[2] if len(parts) > 2 else "",
-        })
+        commits.append(
+            {
+                "sha": parts[0] if len(parts) > 0 else "",
+                "subject": parts[1] if len(parts) > 1 else "",
+                "body": parts[2] if len(parts) > 2 else "",
+            }
+        )
     return commits
 
 
@@ -138,9 +140,8 @@ def parse_conventional(commit: dict) -> ConventionalCommit | None:
     if not m:
         return None
 
-    is_breaking = (
-        bool(m.group("breaking"))
-        or bool(BREAKING_FOOTER_RE.search(commit.get("body", "")))
+    is_breaking = bool(m.group("breaking")) or bool(
+        BREAKING_FOOTER_RE.search(commit.get("body", ""))
     )
 
     return ConventionalCommit(
@@ -169,9 +170,7 @@ def compute_bump(commits: list[ConventionalCommit], force_major: bool) -> BumpLe
     return level
 
 
-def next_version(
-    current: tuple[int, int, int], bump: BumpLevel
-) -> tuple[int, int, int]:
+def next_version(current: tuple[int, int, int], bump: BumpLevel) -> tuple[int, int, int]:
     major, minor, patch = current
     if bump == BumpLevel.MAJOR:
         return (major + 1, 0, 0)
@@ -261,8 +260,9 @@ def gh_output(key: str, value: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compute next semantic version.")
-    parser.add_argument("--force-major", default="false",
-                        help="Force a MAJOR bump ('true'/'false')")
+    parser.add_argument(
+        "--force-major", default="false", help="Force a MAJOR bump ('true'/'false')"
+    )
     args = parser.parse_args()
 
     force_major = args.force_major.lower() == "true"
@@ -273,29 +273,23 @@ def main() -> None:
         current = parse_tag(latest_tag)
     else:
         current = (0, 0, 0)
-        print(f"No existing tags found — starting from 0.0.0", file=sys.stderr)
+        print("No existing tags found — starting from 0.0.0", file=sys.stderr)
 
     # ---- Analyse commits since last tag ----
     raw_commits = commits_since(latest_tag)
-    conventional = [
-        c for raw in raw_commits
-        if (c := parse_conventional(raw)) is not None
-    ]
+    conventional = [c for raw in raw_commits if (c := parse_conventional(raw)) is not None]
 
     non_conventional = len(raw_commits) - len(conventional)
     if non_conventional:
-        print(
-            f"⚠ {non_conventional} non-conventional commit(s) ignored.",
-            file=sys.stderr
-        )
+        print(f"⚠ {non_conventional} non-conventional commit(s) ignored.", file=sys.stderr)
 
     # ---- Compute bump level ----
     bump = compute_bump(conventional, force_major=force_major)
     next_ver = next_version(current, bump)
 
     current_str = ".".join(str(x) for x in current)
-    next_str    = ".".join(str(x) for x in next_ver)
-    tag         = f"v{next_str}"
+    next_str = ".".join(str(x) for x in next_ver)
+    tag = f"v{next_str}"
 
     print(f"Current version : {current_str}", file=sys.stderr)
     print(f"Commits analysed: {len(conventional)}", file=sys.stderr)

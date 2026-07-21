@@ -7,6 +7,7 @@ when the required tools are absent.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -71,6 +72,46 @@ def test_run_offline_flag_runs_system_hooks() -> None:
         # `run --offline` sets GATECHECK_OFFLINE in the process env; clear the mutation
         # so it cannot leak into later in-process tests.
         os.environ.pop("GATECHECK_OFFLINE", None)
+
+
+@_skip
+def test_run_json_emits_parseable_report_only() -> None:
+    # Arrange
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\npass-files = false\n',
+        )
+        # Act
+        result = runner.invoke(main, ["run", "--json"])
+        # Assert — stdout is the JSON document and nothing else (pipes into jq)
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert payload["summary"]["passed"] == 1
+        assert payload["exit_code"] == 0
+        assert payload["results"][0]["hook_id"] == "say"
+        assert "ok  " not in result.output  # the human rendering must not leak
+
+
+@_skip
+def test_run_json_still_exits_nonzero_on_failure() -> None:
+    # Arrange — a hook that fails
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "nope"\nfrom = "system"\nrun = "false"\npass-files = false\n',
+        )
+        # Act
+        result = runner.invoke(main, ["run", "--json"])
+        # Assert — still usable as a gate, and still valid JSON
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["exit_code"] == 1
+        assert payload["summary"]["failed"] == 1
 
 
 @_skip
