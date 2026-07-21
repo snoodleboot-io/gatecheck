@@ -1,13 +1,22 @@
 # check.toml Reference
 
-gatecheck is configured via `check.toml` in the project root, or via `[tool.gatecheck]` in `pyproject.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
+gatecheck is configured via `check.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
 
-## File lookup order
+## Locating the file
 
-gatecheck searches upward from the current directory for:
+Commands read `check.toml` from the current directory. Point elsewhere with `--config PATH`:
 
-1. `check.toml`
-2. `pyproject.toml` (must contain `[tool.gatecheck]`)
+```bash
+gatecheck run --config config/check.toml
+```
+
+!!! note "No `pyproject.toml` support or upward search yet"
+
+    Config currently lives in a `check.toml` you run against directly. Reading
+    `[tool.gatecheck]` from `pyproject.toml`, and searching upward from a
+    subdirectory, are both planned but **not yet implemented**
+    ([GAT-48](https://linear.app/snoodleboot/issue/GAT-48)). For now, run from the
+    directory that holds `check.toml`, or pass `--config`.
 
 ## Top-level sections
 
@@ -180,7 +189,7 @@ inherit    = "merge"
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `depends-on` | list of strings | `[]` | Package names this package depends on. Used by `--affected` to propagate execution to downstream packages when a dependency changes. |
-| `python` | string | (workspace default) | Python version for this package's isolated envs |
+| `python` | string | — | **Accepted but not yet honoured.** The field validates, but nothing reads it — environments are built with whatever interpreter `uv` selects. Tracked in [GAT-47](https://linear.app/snoodleboot/issue/GAT-47). |
 | `inherit` | `"merge"` \| `"override"` \| `"none"` | workspace default | Per-package override of the workspace inherit mode |
 
 ---
