@@ -2,14 +2,15 @@
 #
 # Gating jobs (per CONTRIBUTING.md § "Running checks locally"):
 #   - python-checks : ruff (lint + format) + mypy + pytest on Python 3.11 and 3.12
+#   - windows-checks: the same Python gates on windows-latest
 #   - rust-checks   : cargo fmt --check + clippy -D warnings + cargo test
+#   - docs-build    : mkdocs build --strict (a dead internal link fails the PR)
 #
 # The Python package depends on the `gatecheck-core` native extension, which is
 # NOT published to PyPI — CI builds it from gatecheck-rs/ with maturin and
 # installs the resulting wheel before installing gatecheck itself.
 #
-# Follow-ups (not yet gating): docs-build (mkdocs build --strict) and
-# cross-platform build-wheels smoke tests.
+# Follow-up (not yet gating): cross-platform build-wheels smoke tests.
 
 name: ci
 
@@ -143,3 +144,35 @@ jobs:
 
       - name: Cargo test
         run: cargo test --manifest-path gatecheck-rs/Cargo.toml
+
+  docs-build:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # git-revision-date-localized reads commit history for page dates.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Install ONLY the docs extra, not the project: gatecheck depends on the
+      # gatecheck-core native extension, which is built from source rather than
+      # published, and mkdocs does not need to import gatecheck at all. Reading the
+      # list out of pyproject.toml keeps it from drifting.
+      - name: Install docs dependencies
+        run: |
+          python -c "
+          import tomllib, pathlib
+          data = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+          reqs = data['project']['optional-dependencies']['docs']
+          pathlib.Path('docs-requirements.txt').write_text('\n'.join(reqs) + '\n')
+          "
+          pip install -r docs-requirements.txt
+
+      # --strict turns a dead internal link into a build failure. A broken link is a
+      # bug in a documentation site, and far cheaper to catch here than after publish.
+      - name: Build docs
+        run: mkdocs build --strict

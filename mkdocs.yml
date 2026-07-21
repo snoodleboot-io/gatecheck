@@ -130,7 +130,6 @@ nav:
     - CI Integration: guides/ci.md
     - Air-gapped / Offline: guides/air-gapped.md
     - Private Registries: guides/private-registries.md
-    - Docker Hooks: guides/docker.md
     - Writing Custom Hooks: guides/custom-hooks.md
   - CLI Reference:
     - cli/index.md
@@ -139,7 +138,6 @@ nav:
     - gatecheck sync: cli/sync.md
     - gatecheck cache: cli/cache.md
     - gatecheck migrate: cli/migrate.md
-    - gatecheck workspace: cli/workspace.md
   - Design:
     - design/index.md
     - Architecture Overview: design/architecture.md

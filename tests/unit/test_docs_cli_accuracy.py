@@ -30,6 +30,7 @@ _HTML_CODE = re.compile(r"<code[^>]*>(.*?)</code>", re.DOTALL | re.IGNORECASE)
 # skips prose and shell comments that merely mention gatecheck mid-line, and the
 # negative lookahead avoids matching the `gatecheck-core` package name.
 _INVOCATION = re.compile(r"^[ \t]*(?:\$ )?(gatecheck(?![-\w])[^\n|>&#]*)", re.MULTILINE)
+_HELP_OPTS = ("-h", "--help")
 
 
 def _sources() -> list[Path]:
@@ -84,6 +85,8 @@ def _walk(command: str) -> None:
         if token.startswith("-"):
             option = token.split("=", 1)[0]
             valid = {opt for param in node.params for opt in param.opts + param.secondary_opts}
+            # click supplies the help option via context settings, not as a param.
+            valid |= set(_HELP_OPTS)
             assert option in valid, (
                 f"`{' '.join(seen)}` has no option {option!r} (valid: {', '.join(sorted(valid))})"
             )

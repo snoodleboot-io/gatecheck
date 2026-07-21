@@ -137,9 +137,9 @@ on-event  = "commit"
 | `parallel` | bool | `false` | Run this group's hooks concurrently. When `false`, hooks run **serially** (one at a time), still in dependency order |
 | `fail-fast` | bool | `false` | Stop scheduling new hooks after the first failure |
 | `max-workers` | int ≥ 1 | 4 | Max hooks in flight at once when `parallel = true` (the concurrency cap) |
-| `on-event` | string | (none) | Git event: `"commit"`, `"push"`, `"commit-msg"`, `"merge"` |
+| `on-event` | string | (none) | Git event: `"commit"` or `"push"` |
 
-When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook.
+When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook — `commit` → `.git/hooks/pre-commit`, `push` → `.git/hooks/pre-push`. Several groups may target the same event; they are written into that hook in declared order. Any other value is rejected at config load.
 
 ---
 
@@ -191,13 +191,20 @@ The `from` field accepts a URI-style source spec:
 
 | Spec | Example | Description |
 |---|---|---|
-| `pypi:<spec>` | `pypi:ruff>=0.4,<1` | Public PyPI, semver range supported |
+| `pypi:<spec>` | `pypi:ruff>=0.4,<1` | Public PyPI; PEP 440 specifiers supported |
 | `pypi+<alias>:<spec>` | `pypi+internal:my-linter==1.0` | Private registry (alias from `[sources]`) |
-| `project` | `project` | Use the project's own activated venv |
-| `local:<path>` | `local:scripts/lint.py` | Local script or local package |
-| `git:<url>[@ref]` | `git:https://github.com/org/repo@v2.1` | Git repo at a tag or commit |
-| `docker:<image>` | `docker:ghcr.io/org/linter:latest` | Docker image |
-| `system` | `system` | No env management — raw PATH |
+| `project` | `project` | A tool already in the project's venv (`$VIRTUAL_ENV` or `.venv`) |
+| `system` | `system` | A tool already on `PATH` — no environment management |
+
+!!! warning "Not yet supported: `local:`, `git:`, `docker:`"
+
+    These three schemes **parse** — a `check.toml` using them loads without a syntax
+    error — but resolving one raises `'<scheme>' sources are not supported`. They are
+    recognized so the error is clear rather than a confusing parse failure, and so
+    they are reserved rather than silently reinterpreted.
+
+    Today, reach for `system` (a tool your image or machine already provides) or
+    `pypi:` (anything published to an index, including your own private one).
 
 See [Source Types](sources.md) for detailed documentation on each source type.
 
@@ -431,7 +438,7 @@ The tool to locate is the **first shell token of `run`**: `shlex.split(hook.run)
 
 | `from` kind | Behavior |
 |---|---|
-| `system` / `project` | `resolve_source` locates the tool (see [Resolving `project` / `system` sources](#resolving-project--system-sources)); `bin_dir` is the resolved executable's parent, and `cache_key` is derived over `("env-v1", origin, executable path)`. Because `origin` (`"project"` vs `"system"`) is part of the key material, the same binary reached two ways keys distinctly. |
+| `system` / `project` | `resolve_source` locates the tool (see [Resolving `project` / `system` sources](#resolving-project-system-sources)); `bin_dir` is the resolved executable's parent, and `cache_key` is derived over `("env-v1", origin, executable path)`. Because `origin` (`"project"` vs `"system"`) is part of the key material, the same binary reached two ways keys distinctly. |
 | `pypi:` / `pypi+alias:` | Pinned via `resolve_pypi_source`, then built (or reused from cache) as a **uv-backed venv** — see [uv-backed `pypi` environments](#uv-backed-pypi-environments) below. `bin_dir` is the cached venv's `bin/`. |
 | `local:` / `git:` / `docker:` | Unsupported — raises `EnvError`. |
 
@@ -458,7 +465,7 @@ Errors raised by the underlying source / registry layers are **not** re-wrapped 
 A `from = "pypi:<req>"` / `pypi+<alias>:<req>` hook resolves to an isolated,
 content-addressed virtualenv built by [uv](https://docs.astral.sh/uv/):
 
-1. The requirement is pinned to an exact distribution by `resolve_pypi_source` (see [Resolving `pypi:` / `pypi+alias:` sources](#resolving-pypi--pypialias-sources)).
+1. The requirement is pinned to an exact distribution by `resolve_pypi_source` (see [Resolving `pypi:` / `pypi+alias:` sources](#resolving-pypi-pypialias-sources)).
 2. A **cache key** is derived as a SHA-256 over `("env-v1", "pypi", name, version, index_url)` — content-addressed on the pinned distribution, so the same `name==version` from the same index is built **once** and reused across hooks, runs, and projects.
 3. On a cache **miss**, `uv venv` + `uv pip install <name>==<version> --index-url <url>` build the venv in a temp directory that is atomically published into the cache slot (a failed build never leaves a partial environment). When the registry supplied a `sha256`, the install uses `--require-hashes`.
 4. `bin_dir` is the cached venv's `bin/` directory.
