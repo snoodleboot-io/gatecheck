@@ -13,9 +13,11 @@ import fnmatch
 import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 from gatecheck.config import GatecheckConfig, HookDef
 from gatecheck.offline import is_offline
+from gatecheck.runner.changeset import route_files
 from gatecheck.runner.plan_error import PlanError
 
 _CI_VARS = ("CI", "GITHUB_ACTIONS")
@@ -63,6 +65,7 @@ def build_plan(
     selected = _select(config, group, by_id)
     is_ci = any(env.get(var) for var in _CI_VARS)
     offline = is_offline(env)
+    changed_paths = None if changed_files is None else [Path(f) for f in changed_files]
 
     running: list[HookDef] = []
     skipped: list[SkippedHook] = []
@@ -70,6 +73,8 @@ def build_plan(
         reason = _skip_reason(
             hook, env, is_ci=is_ci, offline=offline, branch=branch, changed_files=changed_files
         )
+        if reason is None:
+            reason = _no_matching_files_reason(hook, changed_paths)
         if reason is None:
             running.append(hook)
         else:
@@ -143,6 +148,25 @@ def _skip_reason(
     ):
         return f"no changed file matches '{when.files_match}'"
     return None
+
+
+def _no_matching_files_reason(hook: HookDef, changed_paths: list[Path] | None) -> str | None:
+    """Skip a file-consuming hook when the changeset routes it nothing.
+
+    Running such a hook is not the no-op it looks like: with an empty ``{files}`` most
+    tools fall back to scanning the whole project, so a ``--fix`` hook silently
+    rewrites files the change never touched (BUG-0002). ``pass-files = false`` hooks
+    are exempt — they never wanted files and are meant to run project-wide.
+
+    ``changed_paths`` of ``None`` means the changeset is unknown here, so the check is
+    skipped (fail-open), as with the ``files-match`` and ``branch`` conditions.
+    """
+    if changed_paths is None or not hook.pass_files:
+        return None
+    # Reuse the real routing so `files` / `exclude` semantics cannot drift.
+    if route_files([hook], changed_paths)[hook.id]:
+        return None
+    return "no matching files"
 
 
 def _check_dependencies_exist(hooks: list[HookDef], by_id: Mapping[str, HookDef]) -> None:

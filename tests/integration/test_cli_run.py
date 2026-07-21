@@ -75,6 +75,39 @@ def test_run_offline_flag_runs_system_hooks() -> None:
 
 
 @_skip
+def test_fix_hook_does_not_touch_the_tree_when_nothing_matches() -> None:
+    """BUG-0002 regression: a file-consuming hook must not run on an empty changeset.
+
+    With `{files}` expanding to nothing, a tool like `ruff check --fix` falls back to
+    scanning the whole project and rewrites files the change never touched. Here the
+    stand-in truncates every file it is *not* given, so if it runs project-wide the
+    untouched source is destroyed.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        Path("victim.py").write_text("ORIGINAL\n", encoding="utf-8")
+        # A "formatter" that clobbers victim.py whenever it is invoked.
+        Path("fixer.sh").write_text("#!/bin/sh\necho CLOBBERED > victim.py\n", encoding="utf-8")
+        Path("fixer.sh").chmod(0o755)
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "fix"\nfrom = "system"\nrun = "./fixer.sh {files}"\nfiles = "*.py"\n',
+        )
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-qm", "seed"], check=True, capture_output=True)
+
+        # Act — nothing staged, so the hook's *.py glob routes it nothing
+        result = runner.invoke(main, ["run"])
+
+        # Assert — skipped, and the working tree is intact
+        assert result.exit_code == 0, result.output
+        assert "skip  fix" in result.output
+        assert "no matching files" in result.output
+        assert Path("victim.py").read_text(encoding="utf-8") == "ORIGINAL\n"
+
+
+@_skip
 def test_run_json_emits_parseable_report_only() -> None:
     # Arrange
     runner = CliRunner()

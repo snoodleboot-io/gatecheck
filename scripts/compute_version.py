@@ -111,10 +111,7 @@ def parse_tag(tag: str) -> tuple[int, int, int]:
 
 def commits_since(tag: str | None) -> list[dict]:
     """Return list of {sha, subject, body} dicts since tag (or all commits)."""
-    if tag:
-        log_range = f"{tag}..HEAD"
-    else:
-        log_range = "HEAD"
+    log_range = f"{tag}..HEAD" if tag else "HEAD"
 
     raw = git("log", log_range, "--format=%H%x00%s%x00%b%x01")
     commits = []
