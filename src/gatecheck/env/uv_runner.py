@@ -69,12 +69,20 @@ class SubprocessUvRunner:
         self._install(uv, pinned, venv.python_executable(dest))
 
     def _install(self, uv: str, pinned: ResolvedPyPISource, python: Path) -> None:
-        """Install ``pinned`` into the venv at ``python``, using ``--require-hashes`` when known."""
-        if pinned.sha256 is None:
+        """Install ``pinned`` into the venv at ``python``, using ``--require-hashes`` when known.
+
+        **Every** known hash for the version is pinned, not just the representative
+        one: a distribution ships one wheel per platform and the installer resolves
+        the wheel for *this* machine, so a single hash fails everywhere else
+        (BUG-0001). Repeated ``--hash`` is the standard lockfile form — the install
+        succeeds if the resolved artifact matches any listed hash.
+        """
+        if not pinned.hashes:
             self._run(self._install_argv(uv, pinned, python))
             return
-        # uv requires the hash to travel with the requirement, via a requirements file.
-        requirement = f"{pinned.name}=={pinned.version} --hash=sha256:{pinned.sha256}\n"
+        # uv requires the hashes to travel with the requirement, via a requirements file.
+        hashes = " ".join(f"--hash=sha256:{digest}" for digest in pinned.hashes)
+        requirement = f"{pinned.name}=={pinned.version} {hashes}\n"
         handle, req_path = tempfile.mkstemp(prefix="gatecheck-req-", suffix=".txt")
         try:
             with os.fdopen(handle, "w", encoding="utf-8") as req_file:

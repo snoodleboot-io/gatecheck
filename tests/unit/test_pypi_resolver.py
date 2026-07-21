@@ -153,6 +153,74 @@ def test_exact_pin_returns_full_descriptor() -> None:
 
 
 # ---------------------------------------------------------------------------
+# BUG-0001 — every artifact hash for the selected version must be carried
+# ---------------------------------------------------------------------------
+
+
+def test_all_hashes_for_the_selected_version_are_collected() -> None:
+    # Arrange — one version, several platform wheels plus an sdist (the ruff shape)
+    page = ProjectPage(
+        name="ruff",
+        files=(
+            _wheel("ruff", "0.4.0", sha256="linux64"),
+            _wheel("ruff", "0.4.0", sha256="macosarm"),
+            _wheel("ruff", "0.4.0", sha256="win64"),
+            _sdist("ruff", "0.4.0", sha256="sdisthash"),
+        ),
+    )
+    client = FakeRegistryClient({"ruff": page})
+    source = PyPISource(requirement="ruff==0.4.0", registry=None)
+    # Act
+    result = resolve_pypi_source(source, None, client=client)
+    # Assert — all four, in index order; the representative stays the preferred wheel
+    assert result.hashes == ("linux64", "macosarm", "win64", "sdisthash")
+    assert result.sha256 == "linux64"
+
+
+def test_files_without_a_hash_are_omitted() -> None:
+    # Arrange — the index does not publish a hash for one artifact
+    page = ProjectPage(
+        name="ruff",
+        files=(
+            _wheel("ruff", "0.4.0", sha256=None),
+            _wheel("ruff", "0.4.0", sha256="known"),
+        ),
+    )
+    client = FakeRegistryClient({"ruff": page})
+    source = PyPISource(requirement="ruff==0.4.0", registry=None)
+    # Act
+    result = resolve_pypi_source(source, None, client=client)
+    # Assert — only the known hash is pinned
+    assert result.hashes == ("known",)
+
+
+def test_hashes_cover_only_the_selected_version() -> None:
+    # Arrange — two versions; the range selects 0.4.0
+    page = ProjectPage(
+        name="ruff",
+        files=(
+            _wheel("ruff", "0.4.0", sha256="v040"),
+            _wheel("ruff", "1.0.0", sha256="v100"),
+        ),
+    )
+    client = FakeRegistryClient({"ruff": page})
+    source = PyPISource(requirement="ruff==0.4.0", registry=None)
+    # Act
+    result = resolve_pypi_source(source, None, client=client)
+    # Assert — the other version's artifact is not pinned
+    assert result.hashes == ("v040",)
+
+
+def test_offline_pin_carries_no_hashes() -> None:
+    # Arrange — offline cannot know the artifact set
+    source = PyPISource(requirement="ruff==0.4.9", registry=None)
+    # Act
+    result = resolve_pypi_source(source, None, offline=True)
+    # Assert — empty, so the installer falls back to a plain pinned install
+    assert result.hashes == ()
+
+
+# ---------------------------------------------------------------------------
 # Offline mode (STY-0034) — no index fetch; exact pins only
 # ---------------------------------------------------------------------------
 

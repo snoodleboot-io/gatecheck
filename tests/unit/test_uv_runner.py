@@ -27,7 +27,10 @@ from gatecheck.registry import ResolvedPyPISource
 INDEX = "https://pypi.org/simple"
 
 
-def _pinned(sha256: str | None = None) -> ResolvedPyPISource:
+def _pinned(sha256: str | None = None, hashes: tuple[str, ...] | None = None) -> ResolvedPyPISource:
+    """A pinned source; ``hashes`` defaults to the representative ``sha256`` when given."""
+    if hashes is None:
+        hashes = (sha256,) if sha256 is not None else ()
     return ResolvedPyPISource(
         kind="pypi",
         requirement="ruff==0.4.0",
@@ -35,6 +38,7 @@ def _pinned(sha256: str | None = None) -> ResolvedPyPISource:
         version="0.4.0",
         index_url=INDEX,
         sha256=sha256,
+        hashes=hashes,
     )
 
 
@@ -111,6 +115,44 @@ def test_build_venv_passes_require_hashes_when_sha_present(
     runner.build_venv(_pinned("cafef00d"), tmp_path / "venv")
     # Assert
     assert "--require-hashes" in recorded[1]
+
+
+def test_every_hash_reaches_the_requirements_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """BUG-0001 regression: a multi-wheel version must pin ALL its hashes, not just the
+    representative one — the installer resolves the wheel for the current platform."""
+    # Arrange — capture the requirements file contents before it is unlinked
+    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
+    written: list[str] = []
+
+    def capture(argv: list[str]) -> None:
+        if "-r" in argv:
+            written.append(Path(argv[argv.index("-r") + 1]).read_text(encoding="utf-8"))
+
+    monkeypatch.setattr(runner, "_run", capture)
+    digests = ("aaa111", "bbb222", "ccc333")
+    # Act
+    runner.build_venv(_pinned("aaa111", hashes=digests), tmp_path / "venv")
+    # Assert — one --hash per artifact, all on the pinned requirement
+    assert len(written) == 1
+    for digest in digests:
+        assert f"--hash=sha256:{digest}" in written[0]
+    assert written[0].startswith("ruff==0.4.0 ")
+
+
+def test_no_hashes_falls_back_to_plain_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange — nothing known about the artifacts
+    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
+    recorded: list[list[str]] = []
+    monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
+    # Act
+    runner.build_venv(_pinned(), tmp_path / "venv")
+    # Assert — a plain pinned install, no --require-hashes
+    assert "--require-hashes" not in recorded[1]
+    assert "ruff==0.4.0" in recorded[1]
 
 
 # ── _find_uv ──────────────────────────────────────────────────────
