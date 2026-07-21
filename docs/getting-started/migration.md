@@ -11,12 +11,15 @@ gatecheck migrate
 This reads `.pre-commit-config.yaml` in the current directory and writes `check.toml`. Review the output before committing.
 
 ```bash
-# Preview without writing
-gatecheck migrate --dry-run
+# Specify paths explicitly
+gatecheck migrate --input .pre-commit-config.yaml --output check.toml
 
-# Specify paths
-gatecheck migrate --source .pre-commit-config.yaml --output check.toml
+# Write somewhere else to diff before adopting
+gatecheck migrate --output check.toml.new
 ```
+
+`migrate` never edits your `.pre-commit-config.yaml`, and it prints a warning for
+every hook it could not translate confidently — nothing is silently dropped.
 
 ## What gets converted
 

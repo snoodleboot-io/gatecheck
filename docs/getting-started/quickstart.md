@@ -70,11 +70,14 @@ gatecheck run
 # Run a specific group
 gatecheck run lint
 
-# Run on all tracked files (good for CI)
+# Run on all tracked files
 gatecheck run --all-files
 
-# Run a single hook
-gatecheck run --hook ruff
+# Run against everything changed since a branch (good for CI)
+gatecheck run --base main
+
+# Machine-readable results
+gatecheck run --json
 ```
 
 ## What it looks like

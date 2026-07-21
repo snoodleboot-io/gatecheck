@@ -96,7 +96,7 @@ Evaluates `when:` conditions (branch, env vars, CI detection — these require O
 
 ### `installer.py` — Git hook installation
 
-Writes shell scripts into `.git/hooks/` that call `gatecheck run --event <event>`. Respects `group.on-event` to route to `pre-commit`, `pre-push`, `commit-msg`, etc.
+Writes a shell script into `.git/hooks/` per event, calling `gatecheck run <group>` for each group bound to that event. `group.on-event` routes the group to the matching git hook (`commit` → `pre-commit`, `push` → `pre-push`).
 
 ### `migrate.py` — pre-commit importer
 

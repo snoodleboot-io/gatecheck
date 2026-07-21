@@ -80,7 +80,7 @@ Source changed: was 'pypi:black==23.9.1', now 'pypi:black==24.3.0'.
 Env at ~/.cache/gatecheck/envs/pypi_a3f8b2c1d4e5f6a7 will be rebuilt.
 ```
 
-`gatecheck cache show` lists all cached envs with size, age, and source. `gatecheck cache prune` removes stale ones.
+`gatecheck cache why <hook>` explains any hook's cache key and hit/miss status (`--json` for machine consumption). `gatecheck cache clear` removes cached environments, reporting how many and how much space was freed — `--dry-run` previews, `--all` also drops the bootstrapped `uv`.
 
 ### 6. Config verbosity
 
