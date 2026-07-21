@@ -26,6 +26,8 @@ class GitClient(Protocol):
 
     def tracked_files(self) -> tuple[str, ...]: ...
 
+    def changed_since(self, ref: str) -> tuple[str, ...]: ...
+
     def current_branch(self) -> str: ...
 
 
@@ -42,6 +44,18 @@ class SubprocessGitClient:
     def tracked_files(self) -> tuple[str, ...]:
         """Return every tracked path (for ``--all-files``)."""
         return self._run(["git", "ls-files", "-z"])
+
+    def changed_since(self, ref: str) -> tuple[str, ...]:
+        """Return non-deleted paths changed relative to ``ref`` (for ``--base``).
+
+        Uses the three-dot form (``<ref>...HEAD``), which diffs against the
+        **merge base** rather than the ref's current tip. A branch that has fallen
+        behind therefore reports only its own changes, not everything the base has
+        moved on by.
+        """
+        return self._run(
+            ["git", "diff", "--name-only", "-z", "--diff-filter=ACMR", f"{ref}...HEAD"]
+        )
 
     def current_branch(self) -> str:
         """Return the current branch name (empty when detached).

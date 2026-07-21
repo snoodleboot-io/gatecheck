@@ -29,17 +29,24 @@ def resolve_changeset(
     hooks: Sequence[HookDef],
     *,
     all_files: bool = False,
+    base: str | None = None,
     git: GitClient | None = None,
 ) -> Changeset:
     """Resolve the changeset and route files to each hook.
 
-    The base file set is every tracked file (``all_files=True``) or the staged files
-    (default), queried via ``git`` (raises ``GitError`` on failure). Each hook then
-    receives no files when ``pass_files`` is false, the whole changeset when its
-    ``files`` glob is unset, or the glob-matching subset otherwise.
+    The base file set is, in precedence order: the files changed against ``base``
+    (a git ref — the CI shape), every tracked file (``all_files=True``), or the
+    staged files (default). Queried via ``git`` (raises ``GitError`` on failure).
+    Each hook then receives no files when ``pass_files`` is false, the whole
+    changeset when its ``files`` glob is unset, or the glob-matching subset otherwise.
     """
     client = SubprocessGitClient() if git is None else git
-    raw = client.tracked_files() if all_files else client.staged_files()
+    if base is not None:
+        raw = client.changed_since(base)
+    elif all_files:
+        raw = client.tracked_files()
+    else:
+        raw = client.staged_files()
     files = tuple(Path(path) for path in raw)
     return Changeset(files=files, files_by_hook=route_files(hooks, files))
 

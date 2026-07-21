@@ -74,6 +74,72 @@ def test_run_offline_flag_runs_system_hooks() -> None:
 
 
 @_skip
+def test_run_base_and_all_files_are_mutually_exclusive() -> None:
+    # Arrange
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\npass-files = false\n',
+        )
+        # Act
+        result = runner.invoke(main, ["run", "--all-files", "--base", "main"])
+        # Assert — a clean error, not a silent precedence rule
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
+
+@_skip
+def test_run_base_with_unknown_ref_errors_clearly() -> None:
+    # Arrange
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\npass-files = false\n',
+        )
+        # Act — a ref that does not exist must not resolve to an empty, passing run
+        result = runner.invoke(main, ["run", "--base", "no-such-ref"])
+        # Assert
+        assert result.exit_code != 0
+        assert "Traceback" not in result.output
+
+
+@_skip
+def test_run_base_selects_files_changed_since_the_ref() -> None:
+    # Arrange — a commit on main, then a branch that changes one file
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write("base.py", "x = 1\n")
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "show"\nfrom = "system"\nrun = "echo"\nfiles = "*.py"\n',
+        )
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-qm", "base"], check=True, capture_output=True)
+        # The default branch name varies by git config, so read it rather than assume.
+        base_ref = subprocess.run(
+            ["git", "branch", "--show-current"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        subprocess.run(["git", "checkout", "-qb", "feature"], check=True, capture_output=True)
+        _write("added.py", "y = 2\n")
+        subprocess.run(["git", "add", "-A"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-qm", "add"], check=True, capture_output=True)
+
+        # Act — nothing is staged, so only --base can find the change
+        result = runner.invoke(main, ["run", "--base", base_ref])
+
+        # Assert — the run resolved against the ref and completed. (Which files were
+        # selected is asserted precisely against real git in
+        # test_changeset_base_real_git.py; the report only echoes hook output on failure.)
+        assert result.exit_code == 0, result.output
+        assert "1 passed" in result.output
+
+
+@_skip
 def test_run_failing_hook_exits_one_and_shows_output() -> None:
     # Arrange
     runner = CliRunner()
