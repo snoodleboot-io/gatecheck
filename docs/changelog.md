@@ -31,7 +31,7 @@ _Changes on `main` not yet released._
 - `gatecheck cache why/clear` — transparent cache management
 - `gatecheck migrate` — automated `.pre-commit-config.yaml` → `check.toml` conversion
 - `gatecheck run --affected` — workspace-aware execution, results prefixed `<package>:<hook>`
-- `check.toml` or `[tool.gatecheck]` in `pyproject.toml`
+- `check.toml` configuration with humane `path:line:col` errors
 - Sub-10ms startup on no-op commits (vs 300ms+ for pre-commit)
 
 [Unreleased]: https://github.com/snoodleboot-io/gatecheck/compare/v0.1.0...HEAD
