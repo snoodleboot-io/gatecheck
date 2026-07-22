@@ -38,6 +38,8 @@ gatecheck-rs/target/
 # ── Docs ──────────────────────────────────────────────────────
 site/
 docs/_build/
+public/                 # Pages deploy artifact (marketing + docs), built in CI
+docs-requirements.txt   # generated from pyproject [docs] extra by the Pages/CI jobs
 
 # ── IDE / OS ──────────────────────────────────────────────────
 .idea/

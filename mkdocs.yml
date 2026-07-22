@@ -1,6 +1,10 @@
 site_name: gatecheck
 site_description: A modern pre-commit replacement with real package sources, monorepo support, and Rust-powered parallel execution.
-site_url: https://gatecheck.dev
+# The docs are served under /docs/ of the site root (the marketing landing page is at
+# the root). On GitHub Pages that root is /gatecheck/; swap for https://gatecheck.dev/docs/
+# once the custom domain is wired up. Internal nav links are relative, so navigation
+# works regardless — site_url only sets the canonical URL and the sitemap.
+site_url: https://snoodleboot-io.github.io/gatecheck/docs/
 repo_url: https://github.com/snoodleboot-io/gatecheck
 repo_name: snoodleboot-io/gatecheck
 edit_uri: edit/main/docs/
