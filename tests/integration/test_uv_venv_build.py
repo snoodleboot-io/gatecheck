@@ -83,4 +83,6 @@ def test_real_uv_build_of_distribution_with_dependencies(tmp_path: Path) -> None
 
     # Assert — the tool installed alongside its dependencies
     assert isinstance(resolved, ResolvedEnv)
-    assert any((resolved.bin_dir / name).exists() for name in ("detect-secrets", "detect-secrets.exe"))
+    assert any(
+        (resolved.bin_dir / name).exists() for name in ("detect-secrets", "detect-secrets.exe")
+    )
