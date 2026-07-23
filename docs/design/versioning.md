@@ -6,7 +6,7 @@ gatecheck follows [Semantic Versioning 2.0.0](https://semver.org/) with one stri
 
 ## The rule
 
-There are no `VERSION` files. No `__version__ = "..."` strings to keep in sync. No `pyproject.toml` version fields to update before releasing. The version number lives exclusively in git tags, and CI computes and creates those tags.
+There are no `VERSION` files. No `__version__ = "..."` strings to keep in sync. No `pyproject.toml` version fields to update before releasing. The version number lives exclusively in git tags; a maintainer computes the next one with `scripts/compute_version.py` and pushes the tag, and the build derives the package version from it.
 
 This means:
 
@@ -32,8 +32,11 @@ fix: / perf: / refactor:→ PATCH
 docs: / test: / chore:  → (none)
 ```
 
-5. Outputs the next version to GitHub Actions outputs
-6. If there are releasable commits, the release job creates the tag
+5. Prints the next version (and whether there is anything releasable)
+
+A maintainer runs it to decide the next version, then **creates and pushes that tag by
+hand** — tagging is a deliberate human action, not auto-pushed from `main`. Pushing the
+tag is what triggers the release workflow.
 
 ## The MAJOR bump special case
 
@@ -52,7 +55,7 @@ A MAJOR bump requires one of:
    feat!: drop Python 3.10 support
    ```
 
-3. **Manual workflow dispatch** with `bump_major = true` — for cases where a MAJOR bump is appropriate but the commit message doesn't cleanly express it (rare).
+3. **The `--force-major` flag** to `compute_version.py` — for the rare case where a MAJOR bump is appropriate but no commit message cleanly expresses it.
 
 This is intentional friction. Bumping MAJOR means committing to a backwards-incompatible change. Having to make that declaration in the commit message itself means it's tied to the specific commit that introduces the break, making the git history self-documenting.
 
