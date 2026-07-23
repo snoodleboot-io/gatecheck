@@ -60,6 +60,7 @@ class EnvManager:
         cache_root: Path | None = None,
         client: RegistryClient | None = None,
         uv_runner: UvRunner | None = None,
+        python_version: str | None = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._environ = environ
@@ -67,6 +68,10 @@ class EnvManager:
         self._cache_root = cache_root
         self._client = client
         self._uv_runner = uv_runner
+        # A package's [package].python: the interpreter its pypi venvs are built with.
+        # Part of the cache key when set, so packages on different interpreters don't
+        # share a venv. None → uv's default (and the cache key is unchanged).
+        self._python_version = python_version
         self._offline = is_offline(environ)
 
     def resolve(self, hook: HookDef) -> ResolvedEnv:
@@ -145,13 +150,7 @@ class EnvManager:
                     source_kind="pypi",
                     source_summary=f"pypi {pinned.name}=={pinned.version} @ {pinned.index_url}",
                     cache_key=key,
-                    key_material=(
-                        _CACHE_KEY_SCHEME,
-                        "pypi",
-                        pinned.name,
-                        pinned.version,
-                        pinned.index_url,
-                    ),
+                    key_material=self._pypi_key_material(pinned),
                     cache_dir=str(slot),
                     status="hit" if hit else "miss",
                     reason=(
@@ -186,7 +185,9 @@ class EnvManager:
         runner = (
             self._uv_runner
             if self._uv_runner is not None
-            else SubprocessUvRunner(self._environ, cache_root=cache_root)
+            else SubprocessUvRunner(
+                self._environ, cache_root=cache_root, python_version=self._python_version
+            )
         )
         try:
             slot = publish_atomically(lambda dest: runner.build_venv(pinned, dest), cache_root, key)
@@ -244,9 +245,16 @@ class EnvManager:
 
         Reuses the ``env-v1`` scheme but keys on ``name`` + ``version`` + ``index_url``
         (content-addressing the venv), distinct from the non-venv key by the ``pypi``
-        field. ``sha256`` is an install-integrity input, not a key input.
+        field. A requested ``python_version`` is appended so packages built on
+        different interpreters don't collide; when it is unset the key is unchanged.
+        ``sha256`` is an install-integrity input, not a key input.
         """
-        material = "\n".join(
-            [_CACHE_KEY_SCHEME, "pypi", pinned.name, pinned.version, pinned.index_url]
-        )
+        material = "\n".join(self._pypi_key_material(pinned))
         return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+    def _pypi_key_material(self, pinned: ResolvedPyPISource) -> tuple[str, ...]:
+        """The ordered key inputs for a pypi venv (shared by ``resolve`` and ``explain``)."""
+        material = [_CACHE_KEY_SCHEME, "pypi", pinned.name, pinned.version, pinned.index_url]
+        if self._python_version:
+            material.append(f"python={self._python_version}")
+        return tuple(material)

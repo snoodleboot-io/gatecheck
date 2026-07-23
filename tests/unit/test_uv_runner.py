@@ -93,8 +93,22 @@ def test_build_venv_runs_uv_venv_then_install(
     monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
     # Act
     runner.build_venv(_pinned(), dest)
-    # Assert — venv creation first, then install targeting the venv python
+    # Assert — venv creation first (no --python by default), then install
     assert recorded[0] == [runner._find_uv(), "venv", str(dest)]
+
+
+def test_build_venv_passes_python_version_when_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange — a package pinned to 3.9
+    dest = tmp_path / "venv"
+    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)}, python_version="3.9")
+    recorded: list[list[str]] = []
+    monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
+    # Act
+    runner.build_venv(_pinned(), dest)
+    # Assert — uv is told which interpreter to build with
+    assert recorded[0] == [runner._find_uv(), "venv", "--python", "3.9", str(dest)]
     assert recorded[1][:5] == [
         runner._find_uv(),
         "pip",

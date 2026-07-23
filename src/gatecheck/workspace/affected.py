@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from gatecheck.env import EnvManager
 from gatecheck.runner import HookResult, build_plan, route_files, run_plan
 from gatecheck.workspace.inheritance import effective_config
 from gatecheck.workspace.loader import DiscoveredPackage, Workspace
@@ -70,9 +71,20 @@ def run_affected(workspace: Workspace, changed_files: Sequence[Path]) -> tuple[H
         ]
         running = [hook for level in plan.levels for hook in level]
         files_by_hook = route_files(running, package_files)
-        for result in run_plan(plan, files_by_hook, cwd=package.path):
+        # Build the package's pypi venvs with its [package].python interpreter, if set.
+        env_manager = EnvManager(
+            workspace_root=package.path,
+            sources=effective.sources,
+            python_version=_package_python(package),
+        )
+        for result in run_plan(plan, files_by_hook, env_manager=env_manager, cwd=package.path):
             results.append(_prefixed(package.name, result))
     return tuple(results)
+
+
+def _package_python(package: DiscoveredPackage) -> str | None:
+    """The package's ``[package].python``, if declared."""
+    return package.config.package.python if package.config.package else None
 
 
 def _directly_changed(workspace: Workspace, changed_files: Sequence[Path]) -> set[str]:

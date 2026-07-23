@@ -199,6 +199,30 @@ def test_missing_tool_in_built_venv_maps_to_env_error(tmp_path: Path) -> None:
         manager.resolve(_hook("pypi:ruff==0.4.0"))
 
 
+# ── [package].python interpreter (GAT-47) ─────────────────────────
+
+
+def test_python_version_changes_the_cache_key(tmp_path: Path) -> None:
+    # Arrange — same package, two interpreters
+    default_mgr = EnvManager(
+        cache_root=tmp_path, client=FakeRegistryClient(_ruff_page()), uv_runner=FakeUvRunner()
+    )
+    py39_mgr = EnvManager(
+        cache_root=tmp_path,
+        client=FakeRegistryClient(_ruff_page()),
+        uv_runner=FakeUvRunner(),
+        python_version="3.9",
+    )
+    # Act
+    default_env = default_mgr.resolve(_hook("pypi:ruff==0.4.0"))
+    py39_env = py39_mgr.resolve(_hook("pypi:ruff==0.4.0"))
+    # Assert — distinct slots, so two interpreters never share a venv...
+    assert default_env.cache_key != py39_env.cache_key
+    # ...and the default (no python_version) key is byte-for-byte the historic scheme,
+    # so warm caches from before GAT-47 stay valid.
+    assert default_env.cache_key == _expected_pypi_key()
+
+
 # ── offline mode (STY-0034) ───────────────────────────────────────
 
 
