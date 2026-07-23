@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from gatecheck.config.config_error import ConfigError
+from gatecheck.config.discovery import discover_config
 from gatecheck.config.dumper import dump_config
 from gatecheck.config.gatecheck_config import GatecheckConfig
 from gatecheck.config.group_def import GroupDef
@@ -20,6 +21,7 @@ __all__ = [
     "PackageSpec",
     "SourceSpec",
     "WorkspaceSpec",
+    "discover_config",
     "dump_config",
     "load_config",
 ]

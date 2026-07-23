@@ -28,6 +28,7 @@ def _locate_validation_errors(
     err: pydantic.ValidationError,
     source: str,
     toml_doc: tomlkit.TOMLDocument,
+    table_prefix: str = "",
 ) -> list[tuple[int, int, str]]:
     """Map each pydantic error to ``(line, col, formatted_msg)`` against the TOML source.
 
@@ -51,9 +52,9 @@ def _locate_validation_errors(
         raw_msg = str(err_dict["msg"])
         formatted = f"{raw_msg} (field: {'.'.join(str(x) for x in loc)})"
 
-        item, parent_loc = _walk_doc(toml_doc, loc)
+        item, parent_loc = _walk_doc(toml_doc, loc, table_prefix)
         target_text = _safe_as_string(item) if item is not None else None
-        anchor_line = _anchor_line(parent_loc, source)
+        anchor_line = _anchor_line(parent_loc, source, table_prefix)
 
         if item is None:
             # Parent-fallback: loc doesn't resolve in the source tree.
@@ -70,6 +71,7 @@ def _locate_validation_errors(
 def _locate_source_spec_errors(
     config: GatecheckConfig,
     source: str,
+    table_prefix: str = "",
 ) -> list[tuple[int, int, str]]:
     """Return ``(line, col, msg)`` for each hook whose ``from_`` fails parse_source.
 
@@ -85,7 +87,7 @@ def _locate_source_spec_errors(
         try:
             parse_source(hook.from_)
         except SourceSpecError as exc:
-            anchor = _nth_aot_header_line(source, "hook", index)
+            anchor = _nth_aot_header_line(source, _prefixed(table_prefix, "hook"), index)
             pos = _scan_field(source, anchor, "from", hook.from_)
             line, col = pos if pos is not None else (anchor, 1)
             msg = f"{exc} (hook: {hook.id})"
@@ -93,8 +95,14 @@ def _locate_source_spec_errors(
     return results
 
 
-def _walk_doc(toml_doc: tomlkit.TOMLDocument, loc: tuple[Any, ...]) -> tuple[Any, tuple[Any, ...]]:
+def _walk_doc(
+    toml_doc: tomlkit.TOMLDocument, loc: tuple[Any, ...], table_prefix: str = ""
+) -> tuple[Any, tuple[Any, ...]]:
     """Walk ``toml_doc`` along ``loc``; return (item-or-None, parent_loc).
+
+    ``table_prefix`` (e.g. ``"tool.gatecheck"``) is prepended when the config lives in
+    a sub-table of the document (a pyproject.toml), so ``loc`` — which is relative to
+    the validated table — resolves against the full document.
 
     Catches ``KeyError`` (incl. tomlkit's ``NonExistentKey``), ``IndexError`` (AoT
     out-of-range), and ``TypeError`` (subscripting a scalar). On failure ``item``
@@ -104,9 +112,10 @@ def _walk_doc(toml_doc: tomlkit.TOMLDocument, loc: tuple[Any, ...]) -> tuple[Any
     parent_loc = loc[:-1]
     if not loc:
         return (toml_doc, parent_loc)
+    prefix_keys = tuple(table_prefix.split(".")) if table_prefix else ()
     item: Any = toml_doc
     try:
-        for key in loc:
+        for key in (*prefix_keys, *loc):
             item = item[key]
     except (KeyError, IndexError, TypeError):
         return (None, parent_loc)
@@ -130,23 +139,32 @@ def _safe_as_string(item: Any) -> str | None:
         return None
 
 
-def _anchor_line(container: tuple[Any, ...], source: str) -> int:
+def _anchor_line(container: tuple[Any, ...], source: str, table_prefix: str = "") -> int:
     """Return the 1-based source line for the table-header that contains ``container``.
 
-    Empty container → line 1 (top-level scalar).
-    ``(name, N)`` with int N → Nth ``[[name]]`` AoT header (0-indexed N).
-    All-string container → ``[name1.name2....]`` dotted-table header.
+    Empty container → the config's own anchor: line 1 for a check.toml, or the
+    ``[table_prefix]`` header for a pyproject.toml.
+    ``(name, N)`` with int N → Nth ``[[<prefix.>name]]`` AoT header (0-indexed N).
+    All-string container → ``[<prefix.>name1.name2....]`` dotted-table header.
     Anything else falls back to line 1.
     """
     if not container:
+        if table_prefix:
+            line = _table_header_line(source, table_prefix)
+            return line if line is not None else 1
         return 1
     if len(container) == 2 and isinstance(container[0], str) and isinstance(container[1], int):
-        return _nth_aot_header_line(source, container[0], container[1])
+        return _nth_aot_header_line(source, _prefixed(table_prefix, container[0]), container[1])
     if all(isinstance(part, str) for part in container):
-        dotted = ".".join(str(part) for part in container)
+        dotted = _prefixed(table_prefix, ".".join(str(part) for part in container))
         line = _table_header_line(source, dotted)
         return line if line is not None else 1
     return 1
+
+
+def _prefixed(table_prefix: str, name: str) -> str:
+    """``name`` qualified by ``table_prefix`` (``tool.gatecheck.hook``); ``name`` if no prefix."""
+    return f"{table_prefix}.{name}" if table_prefix else name
 
 
 def _nth_aot_header_line(source: str, name: str, index: int) -> int:

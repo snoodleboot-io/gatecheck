@@ -7,6 +7,7 @@ from pathlib import Path
 
 import click
 
+from gatecheck.cli._config import resolve_config_path
 from gatecheck.config import ConfigError, load_config
 from gatecheck.env import EnvError, EnvManager, clear_cache
 from gatecheck.env.env_cache import default_cache_root
@@ -24,15 +25,15 @@ def cache() -> None:
     "--config",
     "config_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path("check.toml"),
-    show_default=True,
-    help="Path to check.toml.",
+    default=None,
+    help="Path to check.toml. Default: discovered from the current directory upward.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit the explanation as JSON.")
-def why(hook: str, config_path: Path, as_json: bool) -> None:
+def why(hook: str, config_path: Path | None, as_json: bool) -> None:
     """Explain hook ``HOOK``'s cache key and hit/miss status."""
+    resolved_config = resolve_config_path(config_path)
     try:
-        config = load_config(config_path)
+        config = load_config(resolved_config)
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 
@@ -40,7 +41,7 @@ def why(hook: str, config_path: Path, as_json: bool) -> None:
     if hook_def is None:
         available = ", ".join(h.id for h in config.hook) or "(none)"
         raise click.ClickException(
-            f"no hook with id '{hook}' in {config_path} (available: {available})"
+            f"no hook with id '{hook}' in {resolved_config} (available: {available})"
         )
 
     manager = EnvManager(sources=config.sources)

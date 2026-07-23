@@ -8,7 +8,7 @@ $ gatecheck sync [OPTIONS]
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | `check.toml` | Path to the configuration file. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
 
 `run` builds environments on demand anyway, so `sync` is never *required* — it just
 moves the cost somewhere you'd rather pay it: a setup step, a CI prep job, or a

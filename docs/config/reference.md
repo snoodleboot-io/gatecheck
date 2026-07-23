@@ -1,22 +1,24 @@
 # check.toml Reference
 
-gatecheck is configured via `check.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
+gatecheck is configured via `check.toml`, or via a `[tool.gatecheck]` table in `pyproject.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
 
 ## Locating the file
 
-Commands read `check.toml` from the current directory. Point elsewhere with `--config PATH`:
+When you don't pass `--config`, gatecheck searches **upward** from the current
+directory — like ruff, pre-commit and friends — so it works from any subdirectory of
+your project. At each level it looks for:
+
+1. `check.toml`
+2. `pyproject.toml` containing a `[tool.gatecheck]` table
+
+The first match wins, and the search stops at the repository root (the directory
+containing `.git`). Point somewhere explicit with `--config PATH`:
 
 ```bash
 gatecheck run --config config/check.toml
 ```
 
-!!! note "No `pyproject.toml` support or upward search yet"
-
-    Config currently lives in a `check.toml` you run against directly. Reading
-    `[tool.gatecheck]` from `pyproject.toml`, and searching upward from a
-    subdirectory, are both planned but **not yet implemented**
-    ([GAT-48](https://linear.app/snoodleboot/issue/GAT-48)). For now, run from the
-    directory that holds `check.toml`, or pass `--config`.
+If nothing is found, gatecheck says so plainly rather than failing obscurely.
 
 ## Top-level sections
 

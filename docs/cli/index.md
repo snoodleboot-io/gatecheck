@@ -22,9 +22,11 @@ $ gatecheck --version
 
 ## Conventions
 
-**`--config`** — every command that reads configuration accepts `--config PATH`,
-defaulting to `check.toml` in the current directory. In a monorepo, the config you
-point at determines which workspace root is discovered.
+**`--config`** — every command that reads configuration accepts `--config PATH`. When
+omitted, gatecheck searches **upward** from the current directory for a `check.toml`
+(or a `pyproject.toml` with `[tool.gatecheck]`), stopping at the repository root — so
+commands work from any subdirectory. In a monorepo, the config that's found determines
+which workspace root is discovered.
 
 **Exit codes** — `0` means the command achieved what it set out to do; `1` means a
 hook failed, an environment could not be built, or the configuration was invalid.

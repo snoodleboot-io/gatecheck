@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 
+from gatecheck.cli._config import resolve_config_path
 from gatecheck.config import ConfigError, load_config
 from gatecheck.install import InstallOutcome, has_on_event_groups, install_hooks
 from gatecheck.runner import GitError
@@ -16,14 +17,13 @@ from gatecheck.runner import GitError
     "--config",
     "config_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path("check.toml"),
-    show_default=True,
-    help="Path to check.toml.",
+    default=None,
+    help="Path to check.toml. Default: discovered from the current directory upward.",
 )
-def install(config_path: Path) -> None:
+def install(config_path: Path | None) -> None:
     """Write git hook scripts for each group that declares an ``on-event``."""
     try:
-        config = load_config(config_path)
+        config = load_config(resolve_config_path(config_path))
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 

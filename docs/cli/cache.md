@@ -30,7 +30,7 @@ $ gatecheck cache why <HOOK> [OPTIONS]
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | `check.toml` | Path to the configuration file. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
 | `--json` | off | Emit the explanation as JSON. |
 
 Cache behaviour that you can't inspect is indistinguishable from a bug. `why` shows

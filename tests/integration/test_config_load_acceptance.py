@@ -172,6 +172,8 @@ def test_unit_test_coverage_meets_ninety_percent() -> None:
             # STY-0002: ConfigError + _error_translator live alongside the loader and
             # share the same coverage gate. Include their unit tests in the gate.
             "tests/unit/test_config_error.py",
+            # GAT-48: discover_config is part of gatecheck.config; gate its tests too.
+            "tests/unit/test_config_discovery.py",
             "--cov=gatecheck.config",
             "--cov-report=term",
             "--cov-fail-under=90",
