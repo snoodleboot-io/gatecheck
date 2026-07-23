@@ -48,6 +48,15 @@ run        = "cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warning
 pass-files = false
 depends-on = ["cargo-fmt-check"]
 
+# Non-interactive secret scan against a committed baseline: fails only on a NEW
+# secret not already allowlisted. The baseline's exclude filter skips vendored dirs
+# and the agent tooling under .claude/. (Restored in GAT-49 — the previous version
+# ran the interactive `audit` against a baseline that didn't exist.)
+[[hook]]
+id   = "check-secrets"
+from = "pypi:detect-secrets==1.5.0"
+run  = "detect-secrets-hook --baseline .secrets.baseline {files}"
+
 # Fast checks on commit: lint + rust formatting.
 [group.lint]
 hooks     = ["ruff", "cargo-fmt-check", "cargo-clippy"]
@@ -63,7 +72,7 @@ on-event = "commit"
 
 # Everything, before push — and the group the CI `self-host` job runs.
 [group.full]
-hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy"]
+hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy", "check-secrets"]
 parallel  = true
 fail-fast = false
 on-event  = "push"
