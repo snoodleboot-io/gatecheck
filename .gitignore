@@ -51,7 +51,8 @@ Thumbs.db
 # ── Local secrets / scratch ───────────────────────────────────
 .env
 .env.local
-.secrets.baseline
+# NB: .secrets.baseline IS committed — it is detect-secrets' shared allowlist,
+# read by the check-secrets hook. It contains no secrets, only their locations.
 *.log
 scratch/
 
