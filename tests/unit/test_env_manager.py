@@ -421,16 +421,22 @@ def test_env_error_message_form_and_fields() -> None:
 
 def test_env_error_caught_as_value_error(tmp_path: Path) -> None:
     # AC-12: existing `except ValueError` handlers still catch EnvError.
-    # Arrange — an isolated cache root and an injected index page keep this hermetic:
-    # without them the manager reads the developer's real user cache (a warm ruff slot
-    # makes it a hit, so nothing raises) and queries PyPI for real.
+    # Arrange — fully hermetic: an injected index page (no PyPI query) and an injected
+    # uv runner that fails the build (no real uv, no network), so resolve() raises
+    # EnvError deterministically.
+    from gatecheck.env.uv_runner import UvNotFound
+
+    class _FailingUvRunner:
+        def build_venv(self, pinned: object, dest: Path) -> None:
+            raise UvNotFound("no uv (hermetic test)")
+
     manager = EnvManager(
-        environ={"PATH": "/nonexistent"},
         cache_root=tmp_path / "cache",
         client=_StubRegistryClient(),
+        uv_runner=_FailingUvRunner(),  # type: ignore[arg-type]
     )
 
-    # Act — uv is unreachable (PATH is empty), so building the venv fails
+    # Act — the venv build fails, so env resolution errors
     with pytest.raises(ValueError) as exc_info:
         manager.resolve(_hook("fmt", "pypi:ruff==0.4.0", "ruff format"))
 
