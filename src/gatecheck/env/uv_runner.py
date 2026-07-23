@@ -61,6 +61,14 @@ class SubprocessUvRunner:
     def build_venv(self, pinned: ResolvedPyPISource, dest: Path) -> None:
         """Create a venv at ``dest`` and install ``pinned`` into it.
 
+        Builds with ``--relocatable`` so Python console scripts get a relative
+        ``#!/bin/sh`` wrapper shebang instead of an absolute interpreter path. The
+        caller builds here (a temp dir) and then atomically moves the venv into the
+        cache slot; without ``--relocatable`` every console script's shebang would
+        point at the now-gone build dir and fail to execute (BUG-0007). Native-binary
+        tools like ``ruff`` have no shebang and were unaffected, which is why this
+        stayed hidden.
+
         Builds with ``--python <version>`` when a ``python_version`` was requested
         (a package's ``[package].python``); ``uv`` picks or downloads that interpreter.
         Raises ``UvNotFound`` if ``uv`` is absent and ``UvBuildError`` on a non-zero
@@ -68,7 +76,7 @@ class SubprocessUvRunner:
         build temp); this method never touches the cache layout.
         """
         uv = self._find_uv()
-        venv_argv = [uv, "venv"]
+        venv_argv = [uv, "venv", "--relocatable"]
         if self._python_version:
             venv_argv += ["--python", self._python_version]
         venv_argv.append(str(dest))
