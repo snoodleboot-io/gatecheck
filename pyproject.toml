@@ -44,7 +44,7 @@ dev = [
     "pytest-cov>=5",
     "pytest-xdist>=3",
     "mypy>=1.10",
-    "ruff>=0.4",
+    "ruff==0.15.20",           # pinned: must match check.toml's ruff hook exactly
     "maturin>=1.5",
     "pyyaml>=6",                # for gatecheck migrate
     "types-PyYAML>=6",          # yaml stubs for mypy

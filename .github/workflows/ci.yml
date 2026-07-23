@@ -5,6 +5,7 @@
 #   - windows-checks: the same Python gates on windows-latest
 #   - rust-checks   : cargo fmt --check + clippy -D warnings + cargo test
 #   - docs-build    : mkdocs build --strict (a dead internal link fails the PR)
+#   - self-host     : gatecheck run full --all-files — the tool gating itself
 #
 # The Python package depends on the `gatecheck-core` native extension, which is
 # NOT published to PyPI — CI builds it from gatecheck-rs/ with maturin and
@@ -176,3 +177,50 @@ jobs:
       # bug in a documentation site, and far cheaper to catch here than after publish.
       - name: Build docs
         run: mkdocs build --strict
+
+  # gatecheck checks gatecheck: run this repo's own check.toml through the runner.
+  # This is the dogfood gate — it exercises the pypi source path (an isolated,
+  # uv-built ruff), the project/system paths (mypy, cargo), the DAG scheduler, and
+  # the report end to end. The direct python-checks / rust-checks jobs remain the
+  # trusted baseline; this runs alongside them until it has proven itself.
+  self-host:
+    name: self-host
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gatecheck-rs
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create virtualenv
+        run: uv venv --python 3.12 .venv
+
+      - name: Build and install the native core (gatecheck_core)
+        run: |
+          uv pip install --python .venv/bin/python maturin
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+
+      - name: Install gatecheck + dev dependencies
+        run: uv pip install --python .venv/bin/python -e ".[dev]"
+
+      # The `full` group: ruff (pypi, isolated), ruff-format, mypy (project),
+      # cargo-fmt-check + cargo-clippy (system). Hooks are check-mode, so a problem
+      # fails the run rather than rewriting the tree.
+      - name: gatecheck run full --all-files
+        run: .venv/bin/gatecheck run full --all-files
+
+      # Defense in depth: a check-mode hook must not have modified anything. If this
+      # ever fails, a hook is auto-fixing when it should be verifying.
+      - name: Working tree is unchanged
+        run: git diff --exit-code

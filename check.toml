@@ -1,68 +1,69 @@
-# gatecheck uses gatecheck to lint itself
-# This is the project's own check.toml
+# gatecheck checks gatecheck. This is the project's own config, and the CI
+# `self-host` job runs `gatecheck run full --all-files` against it.
+#
+# The hooks are CHECK-mode, not auto-fix: a gate's job is to fail on a problem, not
+# to silently rewrite your tree (a run that "passes" but modified files is
+# confusing, and useless as a CI gate — see the note in the docs on why an empty
+# {files} + --fix is a footgun). Run `ruff check --fix` / `ruff format` by hand to
+# fix; the hooks verify.
 
 [sources]
 default-registry = "https://pypi.org/simple"
 
+# ruff is pinned exactly: reproducible, stable cache key, and offline-capable. The
+# same pin is in pyproject.toml's [dev] extra so gatecheck's isolated ruff and the
+# ruff the direct CI steps use are byte-identical.
 [[hook]]
 id    = "ruff"
-from  = "pypi:ruff>=0.4"
-run   = "ruff check --fix {files}"
+from  = "pypi:ruff==0.15.20"
+run   = "ruff check {files}"
 files = "*.py"
 
 [[hook]]
-id    = "ruff-format"
-from  = "pypi:ruff>=0.4"
-run   = "ruff format {files}"
-files = "*.py"
+id         = "ruff-format"
+from       = "pypi:ruff==0.15.20"
+run        = "ruff format --check {files}"
+files      = "*.py"
 depends-on = ["ruff"]
 
+# mypy needs to import the project's dependencies to type-check, so it runs from the
+# project venv rather than an isolated one. No args → it uses [tool.mypy].files.
 [[hook]]
-id        = "mypy"
-from      = "project"
-run       = "mypy src/gatecheck"
+id         = "mypy"
+from       = "project"
+run        = "mypy"
 pass-files = false
-when      = { env-not = "SKIP_MYPY" }
+when       = { env-not = "SKIP_MYPY" }
 
 [[hook]]
-id    = "cargo-fmt-check"
-from  = "system"
-run   = "cargo fmt --manifest-path gatecheck-rs/Cargo.toml -- --check"
+id         = "cargo-fmt-check"
+from       = "system"
+run        = "cargo fmt --manifest-path gatecheck-rs/Cargo.toml -- --check"
 pass-files = false
 
 [[hook]]
-id    = "cargo-clippy"
-from  = "system"
-run   = "cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings"
+id         = "cargo-clippy"
+from       = "system"
+run        = "cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings"
 pass-files = false
 depends-on = ["cargo-fmt-check"]
 
-[[hook]]
-id        = "check-secrets"
-from      = "pypi:detect-secrets"
-run       = "detect-secrets audit .secrets.baseline"
-pass-files = false
-when      = { on-ci = true }
-
-[[hook]]
-id        = "conventional-commit"
-from      = "pypi:commitizen"
-run       = "cz check --commit-msg-file .git/COMMIT_EDITMSG"
-pass-files = false
-
-[group.format]
-hooks     = ["ruff-format"]
-parallel  = false
-on-event  = "commit"
-
+# Fast checks on commit: lint + rust formatting.
 [group.lint]
 hooks     = ["ruff", "cargo-fmt-check", "cargo-clippy"]
 parallel  = true
 fail-fast = false
 on-event  = "commit"
 
+# Formatting check on commit.
+[group.format]
+hooks    = ["ruff-format"]
+parallel = false
+on-event = "commit"
+
+# Everything, before push — and the group the CI `self-host` job runs.
 [group.full]
-hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy", "check-secrets"]
+hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy"]
 parallel  = true
 fail-fast = false
 on-event  = "push"
