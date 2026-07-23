@@ -191,7 +191,7 @@ inherit    = "merge"
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `depends-on` | list of strings | `[]` | Package names this package depends on. Used by `--affected` to propagate execution to downstream packages when a dependency changes. |
-| `python` | string | — | **Accepted but not yet honoured.** The field validates, but nothing reads it — environments are built with whatever interpreter `uv` selects. Tracked in [GAT-47](https://linear.app/snoodleboot/issue/GAT-47). |
+| `python` | string | (uv default) | Interpreter for this package's `pypi:` envs — passed to `uv venv --python <version>` and part of the cache key, so packages on different interpreters don't share a venv. |
 | `inherit` | `"merge"` \| `"override"` \| `"none"` | workspace default | Per-package override of the workspace inherit mode |
 
 ---

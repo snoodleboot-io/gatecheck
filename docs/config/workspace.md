@@ -54,14 +54,14 @@ Only valid in a package's own config.
 |---|---|---|---|
 | `depends-on` | list of names | `[]` | Packages this one depends on |
 | `inherit` | `"merge"` \| `"override"` \| `"none"` | workspace default | Override the inherit mode here |
-| `python` | string | — | **Accepted but not yet honoured** — see below |
+| `python` | string | — | Interpreter for this package's `pypi:` environments |
 
-!!! warning "`python` is currently inert"
-
-    The field validates, but nothing reads it: environments are built with whatever
-    interpreter `uv` picks. Setting it has no effect today. Tracked in
-    [GAT-47](https://linear.app/snoodleboot/issue/GAT-47); it is documented here so
-    nobody builds a workflow on it.
+The `python` version is passed to `uv venv --python <version>` when building this
+package's `pypi:` hook environments, and it's part of the environment cache key — so
+two packages pinning different interpreters get separate venvs rather than colliding.
+`project` / `system` hooks are unaffected (they reuse an existing binary), and a tool
+that's interpreter-agnostic (ruff, say) won't behave differently, but a package that
+genuinely needs a specific interpreter for its isolated tools gets it.
 
 ---
 

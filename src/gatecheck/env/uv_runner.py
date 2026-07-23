@@ -51,21 +51,29 @@ class SubprocessUvRunner:
         cache_root: Path | None = None,
         bootstrapper: Callable[[Path], Path] | None = None,
         allow_bootstrap: bool = True,
+        python_version: str | None = None,
     ) -> None:
         self._environ = environ  # None → os.environ, resolved lazily in _find_uv
         self._cache_root = cache_root  # None → default_cache_root(environ)
         self._bootstrapper = bootstrapper  # injectable seam (tests); None → bootstrap_uv
         self._allow_bootstrap = allow_bootstrap
+        self._python_version = python_version  # None → uv's default interpreter
 
     def build_venv(self, pinned: ResolvedPyPISource, dest: Path) -> None:
         """Create a venv at ``dest`` and install ``pinned`` into it.
 
+        Builds with ``--python <version>`` when a ``python_version`` was requested
+        (a package's ``[package].python``); ``uv`` picks or downloads that interpreter.
         Raises ``UvNotFound`` if ``uv`` is absent and ``UvBuildError`` on a non-zero
         ``uv`` exit. ``dest`` is a fresh directory owned by the caller (the atomic
         build temp); this method never touches the cache layout.
         """
         uv = self._find_uv()
-        self._run([uv, "venv", str(dest)])
+        venv_argv = [uv, "venv"]
+        if self._python_version:
+            venv_argv += ["--python", self._python_version]
+        venv_argv.append(str(dest))
+        self._run(venv_argv)
         self._install(uv, pinned, venv.python_executable(dest))
 
     def _install(self, uv: str, pinned: ResolvedPyPISource, python: Path) -> None:

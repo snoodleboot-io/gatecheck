@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.workspace import WorkspaceError, affected_packages, discover_workspace
+from gatecheck.workspace import WorkspaceError, affected_packages, discover_workspace, run_affected
 
 
 def _write(path: Path, body: str) -> None:
@@ -121,3 +121,61 @@ def test_root_change_mixed_with_package_change_still_all(tmp_path: Path) -> None
     affected = affected_packages(workspace, [Path("packages/a/x.py"), Path("uv.lock")])
     # Assert — root change dominates → all packages
     assert _names(affected) == ["a", "b"]
+
+
+# ── [package].python threads into the env manager (GAT-47) ─────────
+
+
+def test_run_affected_passes_package_python_to_env_manager(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A package's [package].python must reach the EnvManager that builds its venvs."""
+    # Arrange — one package pinning python 3.9, with a system hook (no real venv build)
+    body = (
+        '[[hook]]\nid = "lint"\nfrom = "system"\nrun = "echo"\npass-files = false\n'
+        '\n[package]\npython = "3.9"\n'
+    )
+    _write(tmp_path / "packages" / "api" / "check.toml", body)
+    workspace = _workspace(tmp_path)
+
+    # Spy on the EnvManager the affected runner constructs.
+    captured: dict[str, object] = {}
+    import gatecheck.workspace.affected as affected_mod
+
+    real_env_manager = affected_mod.EnvManager
+
+    def spy(*args: object, **kwargs: object) -> object:
+        captured["python_version"] = kwargs.get("python_version")
+        return real_env_manager(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(affected_mod, "EnvManager", spy)
+
+    # Act — a change under the package
+    run_affected(workspace, [Path("packages/api/x.py")])
+
+    # Assert
+    assert captured["python_version"] == "3.9"
+
+
+def test_run_affected_python_version_none_when_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange — a package with no [package].python
+    _package(tmp_path, "api")
+    workspace = _workspace(tmp_path)
+    captured: dict[str, object] = {}
+    import gatecheck.workspace.affected as affected_mod
+
+    real = affected_mod.EnvManager
+    monkeypatch.setattr(
+        affected_mod,
+        "EnvManager",
+        lambda *a, **k: (
+            captured.__setitem__("python_version", k.get("python_version")),
+            real(*a, **k),
+        )[1],
+    )
+    # Act
+    run_affected(workspace, [Path("packages/api/x.py")])
+    # Assert
+    assert captured["python_version"] is None
