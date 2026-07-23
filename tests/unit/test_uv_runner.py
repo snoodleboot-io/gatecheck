@@ -27,18 +27,14 @@ from gatecheck.registry import ResolvedPyPISource
 INDEX = "https://pypi.org/simple"
 
 
-def _pinned(sha256: str | None = None, hashes: tuple[str, ...] | None = None) -> ResolvedPyPISource:
-    """A pinned source; ``hashes`` defaults to the representative ``sha256`` when given."""
-    if hashes is None:
-        hashes = (sha256,) if sha256 is not None else ()
+def _pinned() -> ResolvedPyPISource:
+    """A pinned source at an exact version."""
     return ResolvedPyPISource(
         kind="pypi",
         requirement="ruff==0.4.0",
         name="ruff",
         version="0.4.0",
         index_url=INDEX,
-        sha256=sha256,
-        hashes=hashes,
     )
 
 
@@ -67,17 +63,6 @@ def test_install_argv_no_hash() -> None:
         "--index-url",
         INDEX,
     ]
-
-
-def test_install_argv_with_hash_uses_require_hashes_and_reqfile() -> None:
-    # Act
-    argv = SubprocessUvRunner._install_argv(
-        "uv", _pinned("deadbeef"), Path("/v/bin/python"), "/tmp/r.txt"
-    )
-    # Assert
-    assert "--require-hashes" in argv
-    assert argv[argv.index("-r") + 1] == "/tmp/r.txt"
-    assert "ruff==0.4.0" not in argv  # requirement travels via the file, not argv
 
 
 # ── build_venv argv (via a recording _run) ────────────────────────
@@ -118,55 +103,24 @@ def test_build_venv_passes_python_version_when_set(
     ]
 
 
-def test_build_venv_passes_require_hashes_when_sha_present(
+def test_install_is_a_plain_version_pin_without_require_hashes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """BUG-0006: install NAME==VERSION and let uv resolve the tree. --require-hashes
+    would demand every transitive dependency be pinned+hashed too, which gatecheck
+    can't provide, so it must not be used."""
     # Arrange
     runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
     recorded: list[list[str]] = []
     monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
     # Act
-    runner.build_venv(_pinned("cafef00d"), tmp_path / "venv")
-    # Assert
-    assert "--require-hashes" in recorded[1]
-
-
-def test_every_hash_reaches_the_requirements_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """BUG-0001 regression: a multi-wheel version must pin ALL its hashes, not just the
-    representative one — the installer resolves the wheel for the current platform."""
-    # Arrange — capture the requirements file contents before it is unlinked
-    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
-    written: list[str] = []
-
-    def capture(argv: list[str]) -> None:
-        if "-r" in argv:
-            written.append(Path(argv[argv.index("-r") + 1]).read_text(encoding="utf-8"))
-
-    monkeypatch.setattr(runner, "_run", capture)
-    digests = ("aaa111", "bbb222", "ccc333")
-    # Act
-    runner.build_venv(_pinned("aaa111", hashes=digests), tmp_path / "venv")
-    # Assert — one --hash per artifact, all on the pinned requirement
-    assert len(written) == 1
-    for digest in digests:
-        assert f"--hash=sha256:{digest}" in written[0]
-    assert written[0].startswith("ruff==0.4.0 ")
-
-
-def test_no_hashes_falls_back_to_plain_install(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # Arrange — nothing known about the artifacts
-    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
-    recorded: list[list[str]] = []
-    monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
-    # Act
     runner.build_venv(_pinned(), tmp_path / "venv")
-    # Assert — a plain pinned install, no --require-hashes
-    assert "--require-hashes" not in recorded[1]
-    assert "ruff==0.4.0" in recorded[1]
+    # Assert — the install is a plain exact pin against the index, no hashes involved
+    install = recorded[1]
+    assert "--require-hashes" not in install
+    assert "-r" not in install
+    assert "ruff==0.4.0" in install
+    assert install[install.index("--index-url") + 1] == INDEX
 
 
 # ── _find_uv ──────────────────────────────────────────────────────

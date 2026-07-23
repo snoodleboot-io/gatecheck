@@ -15,11 +15,8 @@ class ResolvedPyPISource(BaseModel):
     ``index_url`` (enough to install ``name==version --index-url <index_url>``); the
     optional ``sha256`` / ``url`` / ``filename`` are best-effort artifact metadata for
     a single *representative* file (display / ``cache why``), ``None`` when unavailable.
-
-    ``hashes`` carries **every** known sha256 for the selected version, which is what
-    an install must pin against: a distribution ships one wheel per platform, so the
-    representative ``sha256`` is almost never the file the installer resolves for the
-    current machine (BUG-0001).
+    They are not used for installation — gatecheck installs by exact version and lets
+    uv resolve the tree; full-tree hash verification would need a lockfile (BUG-0006).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -33,4 +30,3 @@ class ResolvedPyPISource(BaseModel):
     sha256: str | None = None
     url: str | None = None
     filename: str | None = None
-    hashes: tuple[str, ...] = ()

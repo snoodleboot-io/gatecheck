@@ -14,7 +14,6 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import tempfile
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Protocol
@@ -77,40 +76,31 @@ class SubprocessUvRunner:
         self._install(uv, pinned, venv.python_executable(dest))
 
     def _install(self, uv: str, pinned: ResolvedPyPISource, python: Path) -> None:
-        """Install ``pinned`` into the venv at ``python``, using ``--require-hashes`` when known.
+        """Install ``pinned`` into the venv at ``python`` as an exact version pin.
 
-        **Every** known hash for the version is pinned, not just the representative
-        one: a distribution ships one wheel per platform and the installer resolves
-        the wheel for *this* machine, so a single hash fails everywhere else
-        (BUG-0001). Repeated ``--hash`` is the standard lockfile form — the install
-        succeeds if the resolved artifact matches any listed hash.
+        Installs ``NAME==VERSION`` and lets ``uv`` resolve and verify the dependency
+        tree. gatecheck does **not** use ``--require-hashes``: that mode requires every
+        package in the resolution — including transitive dependencies — to be pinned
+        and hashed, but gatecheck only knows the top-level package's version, so it
+        would fail for any package with dependencies (BUG-0006). The exact version pin
+        is the reproducibility guarantee; full-tree hash verification would need a
+        lockfile, which is a separate feature.
         """
-        if not pinned.hashes:
-            self._run(self._install_argv(uv, pinned, python))
-            return
-        # uv requires the hashes to travel with the requirement, via a requirements file.
-        hashes = " ".join(f"--hash=sha256:{digest}" for digest in pinned.hashes)
-        requirement = f"{pinned.name}=={pinned.version} {hashes}\n"
-        handle, req_path = tempfile.mkstemp(prefix="gatecheck-req-", suffix=".txt")
-        try:
-            with os.fdopen(handle, "w", encoding="utf-8") as req_file:
-                req_file.write(requirement)
-            self._run(self._install_argv(uv, pinned, python, req_path))
-        finally:
-            os.unlink(req_path)
+        self._run(self._install_argv(uv, pinned, python))
 
     @staticmethod
-    def _install_argv(
-        uv: str, pinned: ResolvedPyPISource, python: Path, req_path: str | None = None
-    ) -> list[str]:
-        """Build the ``uv pip install`` argv (``--require-hashes -r`` when ``req_path`` is set)."""
-        argv = [uv, "pip", "install", "--python", str(python)]
-        if req_path is not None:
-            argv += ["--require-hashes", "-r", req_path]
-        else:
-            argv += [f"{pinned.name}=={pinned.version}"]
-        argv += ["--index-url", pinned.index_url]
-        return argv
+    def _install_argv(uv: str, pinned: ResolvedPyPISource, python: Path) -> list[str]:
+        """Build the ``uv pip install NAME==VERSION --index-url URL`` argv."""
+        return [
+            uv,
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            f"{pinned.name}=={pinned.version}",
+            "--index-url",
+            pinned.index_url,
+        ]
 
     def _find_uv(self) -> str:
         """Locate ``uv``: ``GATECHECK_UV`` override → ``PATH`` → auto-bootstrap a pinned uv.

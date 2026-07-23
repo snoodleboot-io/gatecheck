@@ -71,8 +71,7 @@ def resolve_pypi_source(
     selected = _select_version(
         requirement.specifier, candidates, source, index_url, canonical_name, allow_prereleases
     )
-    files = candidates[selected]
-    chosen = _choose_file(files)
+    chosen = _choose_file(candidates[selected])
 
     return ResolvedPyPISource(
         kind="pypi",
@@ -84,18 +83,7 @@ def resolve_pypi_source(
         sha256=None if chosen is None else chosen.sha256,
         url=None if chosen is None else chosen.url,
         filename=None if chosen is None else chosen.filename,
-        hashes=_all_hashes(files),
     )
-
-
-def _all_hashes(files: list[ProjectFile]) -> tuple[str, ...]:
-    """Every known sha256 across ``files``, in index order (files without one skipped).
-
-    An install must accept any of the version's artifacts — the installer picks the
-    wheel matching the current platform — so pinning only the representative file's
-    hash makes the install fail everywhere else (BUG-0001).
-    """
-    return tuple(entry.sha256 for entry in files if entry.sha256)
 
 
 def _resolve_index(source: PyPISource, sources: SourceSpec | None) -> str:
