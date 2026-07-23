@@ -136,24 +136,29 @@ pytest tests/ -v --tb=short
 
 ## Versioning
 
-**You never touch a version number.** There are no `VERSION` files, no `__version__` strings to update, no `setup.cfg` version fields.
+**You never edit a version number in source.** There are no `VERSION` files, no
+`__version__` strings, no `setup.cfg` version fields. The `gatecheck` version is
+derived from the git tag by hatch-vcs at build time.
 
-The CI pipeline computes the version from the git tag history and conventional commit messages:
+`scripts/compute_version.py` computes what the *next* tag should be, from the tag
+history and conventional-commit messages:
 
 1. Find the latest `vX.Y.Z` tag
-2. Read all commits since that tag
-3. Determine bump level from commit types
-4. Compute and tag `v(X+1).Y.Z`, `vX.(Y+1).Z`, or `vX.Y.(Z+1)`
-
-If you want to understand what version a release would be, run:
+2. Read all commits since it
+3. Determine the bump level from commit types — `feat:` → minor, `fix:`/`perf:`/`refactor:`/`revert:` → patch, a `BREAKING CHANGE:` footer (or `--force-major`) → major, `docs:`/`chore:`/`ci:` alone → no release
+4. Print `v(X+1).Y.Z`, `vX.(Y+1).Z`, or `vX.Y.(Z+1)`
 
 ```bash
 python scripts/compute_version.py
 ```
 
-**The only way to bump MAJOR is:**
-1. Add `BREAKING CHANGE:` footer to a commit message, OR
-2. Trigger the CI workflow manually with `bump_major = true`
+You then create that tag yourself and push it (see [Release process](#release-process)).
+The script *advises* the version; it does not push tags — tagging is a deliberate human
+action so a release is never cut without one.
+
+`gatecheck-core` (the Rust extension) versions separately, from
+`gatecheck-rs/Cargo.toml`; bump it when the Rust changes. See
+[RELEASING.md](RELEASING.md#versioning-the-two-packages).
 
 ## PR process
 
@@ -173,19 +178,22 @@ uv pip install mkdocs-material mkdocs-minify-plugin mkdocs-git-revision-date-loc
 mkdocs serve
 ```
 
-Docs deploy automatically on merge to main (as the `dev` alias) and on each release (as a versioned alias).
+The `pages` workflow deploys the docs (and the marketing landing page) to GitHub Pages on every merge to `main` that touches `docs/`, `website/` or `mkdocs.yml`.
 
 ## Release process
 
-Releases are fully automated. You do not manually trigger a release.
+Full details, including the one-time PyPI Trusted Publisher setup, are in
+[RELEASING.md](RELEASING.md). In short:
 
-1. Commits land on `main` via PRs
-2. CI computes the next version from conventional commits
-3. If there are releasable commits (feat/fix/perf/refactor), CI:
-   - Creates a `vX.Y.Z` git tag
-   - Builds wheels for all supported platforms
-   - Publishes to PyPI via trusted publishing (OIDC)
-   - Creates a GitHub release with generated changelog
-   - Deploys versioned docs
+1. **Decide the version.** `python scripts/compute_version.py` reads the
+   conventional-commit history since the last tag and prints the next version.
+2. **Tag and push** — `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag *is* the
+   version.
+3. The `release` workflow builds both distributions (`gatecheck` and `gatecheck-core`),
+   smoke-tests them on Linux/macOS/Windows, then **pauses on the `release`
+   environment** for a manual approval — a human reviews before anything reaches PyPI.
+4. On approval it publishes to PyPI via Trusted Publishing (OIDC, no tokens) and creates
+   the GitHub release with generated notes.
 
-The `release` GitHub Actions environment requires a manual approval step before publishing. This gives a human the chance to review the computed version and changelog before it goes out.
+Tag creation is deliberately a human step, not auto-pushed from `main` — the approval
+gate plus an explicit tag are two independent chances to catch a bad release.
