@@ -79,7 +79,7 @@ def test_build_venv_runs_uv_venv_then_install(
     # Act
     runner.build_venv(_pinned(), dest)
     # Assert — venv creation first (no --python by default), then install
-    assert recorded[0] == [runner._find_uv(), "venv", str(dest)]
+    assert recorded[0] == [runner._find_uv(), "venv", "--relocatable", str(dest)]
 
 
 def test_build_venv_passes_python_version_when_set(
@@ -93,7 +93,7 @@ def test_build_venv_passes_python_version_when_set(
     # Act
     runner.build_venv(_pinned(), dest)
     # Assert — uv is told which interpreter to build with
-    assert recorded[0] == [runner._find_uv(), "venv", "--python", "3.9", str(dest)]
+    assert recorded[0] == [runner._find_uv(), "venv", "--relocatable", "--python", "3.9", str(dest)]
     assert recorded[1][:5] == [
         runner._find_uv(),
         "pip",

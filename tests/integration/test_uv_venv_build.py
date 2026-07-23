@@ -18,6 +18,7 @@ Three shapes are covered deliberately:
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -86,3 +87,36 @@ def test_real_uv_build_of_distribution_with_dependencies(tmp_path: Path) -> None
     assert any(
         (resolved.bin_dir / name).exists() for name in ("detect-secrets", "detect-secrets.exe")
     )
+
+
+@pytest.mark.skipif(_UV is None, reason="uv is not installed on this host")
+def test_console_script_tool_executes_after_the_atomic_move(tmp_path: Path) -> None:
+    """BUG-0007 regression: a Python console-script tool must EXECUTE from the cache.
+
+    The venv is built in a temp dir then atomically moved into the slot. Without a
+    --relocatable venv, a console script's shebang points at the vanished build dir and
+    fails with ENOENT — so we must actually run the script, not just check it exists.
+    Resolving alone (the test above) can't catch it; ruff is a native binary and never
+    could either.
+    """
+    # Arrange — detect-secrets-hook is a Python console script (has a shebang)
+    manager = EnvManager(cache_root=tmp_path)
+    hook = HookDef.model_validate(
+        {
+            "id": "secrets",
+            "from": "pypi:detect-secrets==1.5.0",
+            "run": "detect-secrets-hook --version",
+        }
+    )
+    resolved = manager.resolve(hook)
+    script = next(
+        resolved.bin_dir / name
+        for name in ("detect-secrets-hook", "detect-secrets-hook.exe")
+        if (resolved.bin_dir / name).exists()
+    )
+
+    # Act — execute the script straight out of the moved venv slot
+    result = subprocess.run([str(script), "--version"], capture_output=True, text=True)
+
+    # Assert — it ran (the relative shebang resolved), not ENOENT on a stale interpreter
+    assert result.returncode == 0, result.stderr
