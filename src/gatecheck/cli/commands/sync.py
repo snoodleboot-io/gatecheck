@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 
+from gatecheck.cli._config import resolve_config_path
 from gatecheck.config import ConfigError, load_config
 from gatecheck.env import SyncOutcome, sync_environments
 
@@ -17,15 +18,14 @@ _LABEL = {"built": "built ", "cached": "cached", "ready": "ready ", "error": "ER
     "--config",
     "config_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path("check.toml"),
-    show_default=True,
-    help="Path to check.toml.",
+    default=None,
+    help="Path to check.toml. Default: discovered from the current directory upward.",
 )
 @click.pass_context
-def sync(ctx: click.Context, config_path: Path) -> None:
+def sync(ctx: click.Context, config_path: Path | None) -> None:
     """Resolve every hook's environment ahead of a run."""
     try:
-        config = load_config(config_path)
+        config = load_config(resolve_config_path(config_path))
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 

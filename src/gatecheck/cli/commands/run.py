@@ -8,6 +8,7 @@ from pathlib import Path
 
 import click
 
+from gatecheck.cli._config import resolve_config_path
 from gatecheck.config import ConfigError, GatecheckConfig, load_config
 from gatecheck.offline import OFFLINE_ENV
 from gatecheck.runner import (
@@ -30,9 +31,8 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
     "--config",
     "config_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    default=Path("check.toml"),
-    show_default=True,
-    help="Path to check.toml.",
+    default=None,
+    help="Path to check.toml. Default: discovered from the current directory upward.",
 )
 @click.option("--all-files", is_flag=True, help="Run against every tracked file, not just staged.")
 @click.option(
@@ -53,7 +53,7 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
 def run(
     ctx: click.Context,
     group: str | None,
-    config_path: Path,
+    config_path: Path | None,
     all_files: bool,
     base: str | None,
     affected: bool,
@@ -66,12 +66,14 @@ def run(
     if offline:
         os.environ[OFFLINE_ENV] = "1"
 
+    resolved_config = resolve_config_path(config_path)
+
     if affected:
-        _run_affected(ctx, config_path, all_files, base, as_json)
+        _run_affected(ctx, resolved_config, all_files, base, as_json)
         return
 
     try:
-        config = load_config(config_path)
+        config = load_config(resolved_config)
     except ConfigError as exc:
         raise click.ClickException(str(exc)) from exc
 

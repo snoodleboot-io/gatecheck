@@ -271,3 +271,73 @@ def test_load_dump_reload_round_trips(sample_check_toml: Path, tmp_path: Path) -
 
     # Assert
     assert cfg1 == cfg2
+
+
+# ── pyproject.toml [tool.gatecheck] (GAT-48) ──────────────────────
+
+
+def test_loads_from_pyproject_tool_gatecheck(tmp_path: Path) -> None:
+    """A pyproject.toml is loaded from its [tool.gatecheck] table, ignoring the rest."""
+    # Arrange
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        '[build-system]\nrequires = ["hatchling"]\n\n'
+        "[tool.gatecheck]\n"
+        "[[tool.gatecheck.hook]]\n"
+        'id = "ruff"\nfrom = "system"\nrun = "ruff check"\n',
+        encoding="utf-8",
+    )
+    # Act
+    cfg = load_config(path)
+    # Assert
+    assert [h.id for h in cfg.hook] == ["ruff"]
+
+
+def test_pyproject_without_tool_gatecheck_is_a_clear_error(tmp_path: Path) -> None:
+    # Arrange — a pyproject.toml with no [tool.gatecheck]
+    path = tmp_path / "pyproject.toml"
+    path.write_text('[tool.poetry]\nname = "x"\n', encoding="utf-8")
+    # Act / Assert
+    with pytest.raises(ConfigError) as exc_info:
+        load_config(path)
+    assert "no [tool.gatecheck] table" in str(exc_info.value)
+
+
+def test_pyproject_validation_error_maps_into_the_subtable(tmp_path: Path) -> None:
+    """A schema error's line/col must point inside [tool.gatecheck], not at line 1."""
+    # Arrange — an unknown key on the hook at line 6
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        "[tool.poetry]\n"  # 1
+        'name = "x"\n'  # 2
+        "\n"  # 3
+        "[[tool.gatecheck.hook]]\n"  # 4
+        'id = "a"\n'  # 5
+        'from = "system"\n'  # 6
+        'run = "echo"\n'  # 7
+        "bogus = true\n",  # 8  <- the error
+        encoding="utf-8",
+    )
+    # Act
+    with pytest.raises(ConfigError) as exc_info:
+        load_config(path)
+    # Assert — anchored at line 8, the offending key, not the top of the file
+    message = str(exc_info.value)
+    assert "pyproject.toml:8:" in message
+    assert "bogus" in message
+
+
+def test_pyproject_source_spec_error_maps_into_the_subtable(tmp_path: Path) -> None:
+    # Arrange — a malformed `from` at line 3
+    path = tmp_path / "pyproject.toml"
+    path.write_text(
+        "[[tool.gatecheck.hook]]\n"  # 1
+        'id = "a"\n'  # 2
+        'from = "pypi:"\n'  # 3  <- empty requirement
+        'run = "echo"\n',  # 4
+        encoding="utf-8",
+    )
+    # Act / Assert — points at the `from` line inside the sub-table
+    with pytest.raises(ConfigError) as exc_info:
+        load_config(path)
+    assert "pyproject.toml:3:" in str(exc_info.value)

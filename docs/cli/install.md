@@ -8,7 +8,7 @@ $ gatecheck install [OPTIONS]
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | `check.toml` | Path to the configuration file. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
 
 ## What it installs
 

@@ -13,7 +13,7 @@ With no `GROUP`, every hook in `check.toml` runs. With one, only that
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | `check.toml` | Path to the configuration file. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
 | `--all-files` | off | Run against every **tracked** file instead of the staged set. |
 | `--base REF` | — | Run against files changed since `REF`. Mutually exclusive with `--all-files`. |
 | `--affected` | off | Monorepo: run only the hooks of [affected packages](../guides/monorepo.md). |
