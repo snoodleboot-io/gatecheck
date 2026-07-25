@@ -57,6 +57,14 @@ id   = "check-secrets"
 from = "pypi:detect-secrets==1.5.0"
 run  = "detect-secrets-hook --baseline .secrets.baseline {files}"
 
+# Conventional-commit gate on the message itself (GAT-51). Runs from the commit-msg
+# hook: git passes the pending message file, which gatecheck forwards as {commit-msg}.
+# `cz check` fails a message that doesn't match the conventional format.
+[[hook]]
+id   = "conventional-commit"
+from = "pypi:commitizen==4.16.5"
+run  = "cz check --commit-msg-file {commit-msg}"
+
 # Fast checks on commit: lint + rust formatting.
 [group.lint]
 hooks     = ["ruff", "cargo-fmt-check", "cargo-clippy"]
@@ -76,3 +84,9 @@ hooks     = ["ruff", "ruff-format", "mypy", "cargo-fmt-check", "cargo-clippy", "
 parallel  = true
 fail-fast = false
 on-event  = "push"
+
+# Conventional-commit check on the message. Wired to .git/hooks/commit-msg by
+# `gatecheck install`; not part of `full` since it needs the message file, not files.
+[group.msg]
+hooks    = ["conventional-commit"]
+on-event = "commit-msg"

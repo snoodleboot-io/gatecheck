@@ -105,6 +105,32 @@ when       = { files-match = "*.py" }
 `pass-files = false` says "never pass files"; `files-match` says "only bother when
 Python changed". That pairing is the idiom for expensive project-wide tools.
 
+## Checking the commit message
+
+A hook in a [`commit-msg` group](../config/groups.md) checks the pending commit
+message instead of files. Reference the message file with `{commit-msg}`:
+
+```toml
+[[hook]]
+id   = "no-wip"
+from = "system"
+run  = "./scripts/no-wip.sh {commit-msg}"
+
+[group.msg]
+hooks    = ["no-wip"]
+on-event = "commit-msg"
+```
+
+```sh title="scripts/no-wip.sh"
+#!/bin/sh
+# Reject messages that still say WIP.
+grep -qi '\bwip\b' "$1" && { echo "message still marked WIP"; exit 1; }
+exit 0
+```
+
+`{commit-msg}` expands to the message-file path passed by git; the hook's `files`
+glob is ignored in this mode. See [`gatecheck run`](../cli/run.md#message-check-mode).
+
 ## Quoting and arguments
 
 `run` is tokenized like a shell command line — quotes group arguments, but there is

@@ -494,28 +494,21 @@ def test_group_def_uses_alias_fail_fast() -> None:
     assert group.fail_fast is True
 
 
-def test_group_def_uses_alias_on_event() -> None:
-    """Given the hyphenated ``on-event`` alias, When GroupDef is built, Then the
-    snake_case attribute is populated with the literal value."""
-    # Arrange
-    payload = {"hooks": ["a"], "on-event": "push"}
-
+@pytest.mark.parametrize("event", ["commit", "push", "commit-msg"])
+def test_group_def_on_event_accepts_each_supported_event(event: str) -> None:
+    """Given each supported ``on-event`` value, When GroupDef is built, Then it's kept."""
     # Act
-    group = GroupDef(**payload)
-
+    group = GroupDef(**{"hooks": ["a"], "on-event": event})
     # Assert
-    assert group.on_event == "push"
+    assert group.on_event == event
 
 
 def test_group_def_on_event_literal_rejects_unknown_value() -> None:
     """Given an ``on_event`` value not in the locked Literal set, When GroupDef is built,
     Then ValidationError is raised."""
-    # Arrange
-    # (inline kwargs below)
-
-    # Act / Assert
+    # Act / Assert — 'merge' is not a supported git event for gatecheck
     with pytest.raises(ValidationError):
-        GroupDef(hooks=["a"], on_event="commit-msg")
+        GroupDef(hooks=["a"], on_event="merge")
 
 
 def test_group_def_rejects_extra_field() -> None:

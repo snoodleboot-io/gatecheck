@@ -21,6 +21,7 @@ from gatecheck.runner.hook_result import HookResult, HookStatus
 from gatecheck.runner.process_runner import ProcessRunner, SubprocessProcessRunner
 
 _FILES_TOKEN = "{files}"
+_COMMIT_MSG_TOKEN = "{commit-msg}"
 
 
 def run_hook(
@@ -31,6 +32,7 @@ def run_hook(
     runner: ProcessRunner | None = None,
     environ: Mapping[str, str] | None = None,
     cwd: Path | None = None,
+    commit_msg_file: Path | None = None,
 ) -> HookResult:
     """Execute ``hook`` against ``files`` and return its ``HookResult``.
 
@@ -49,7 +51,7 @@ def run_hook(
     except (EnvError, RegistryError) as exc:
         return HookResult(hook.id, "error", None, str(exc), 0.0)
 
-    argv = _assemble_argv(hook.run, files)
+    argv = _assemble_argv(hook.run, files, commit_msg_file)
     child_env = {
         **base_env,
         "PATH": os.pathsep.join([str(resolved.bin_dir), base_env.get("PATH", "")]),
@@ -66,8 +68,16 @@ def run_hook(
     return HookResult(hook.id, status, exit_code, output, duration)
 
 
-def _assemble_argv(run: str, files: Sequence[Path]) -> list[str]:
-    """Tokenize ``run`` and place the files (``{files}`` in place, else appended)."""
+def _assemble_argv(
+    run: str, files: Sequence[Path], commit_msg_file: Path | None = None
+) -> list[str]:
+    """Tokenize ``run`` and substitute placeholders.
+
+    ``{files}`` expands to the hook's files in place (else the files are appended);
+    ``{commit-msg}`` expands to the commit-message file path in a commit-msg run. A
+    ``{commit-msg}`` token outside a commit-msg run has no substitution and is left
+    literal (it is a misconfiguration to use it there).
+    """
     file_args = [str(f) for f in files]
     argv: list[str] = []
     substituted = False
@@ -75,6 +85,8 @@ def _assemble_argv(run: str, files: Sequence[Path]) -> list[str]:
         if token == _FILES_TOKEN:
             argv.extend(file_args)
             substituted = True
+        elif token == _COMMIT_MSG_TOKEN and commit_msg_file is not None:
+            argv.append(str(commit_msg_file))
         else:
             argv.append(token)
     if not substituted:

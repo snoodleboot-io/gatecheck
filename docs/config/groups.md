@@ -127,16 +127,26 @@ on-event = "commit"
 [group.full]
 hooks    = ["ruff", "mypy", "tests"]
 on-event = "push"
+
+[group.msg]
+hooks    = ["conventional-commit"]
+on-event = "commit-msg"
 ```
 
 | `on-event` | git hook |
 |---|---|
 | `commit` | `.git/hooks/pre-commit` |
 | `push` | `.git/hooks/pre-push` |
+| `commit-msg` | `.git/hooks/commit-msg` |
 
-Only these two values are accepted; anything else is rejected at load.
+Only these three values are accepted; anything else is rejected at load.
 [`gatecheck install`](../cli/install.md) writes the scripts. Groups without an
 `on-event` never fire automatically — run them by name.
+
+A `commit-msg` group checks the commit message instead of the changeset. Git passes
+the path of the pending message file, which gatecheck forwards to the group's hooks
+via the [`{commit-msg}`](../cli/run.md#message-check-mode) placeholder — see
+[`gatecheck run`](../cli/run.md#message-check-mode).
 
 Several groups can share an event; they run in declared order, and the first failure
 stops the commit.

@@ -49,6 +49,13 @@ from gatecheck.workspace import WorkspaceError, discover_workspace, run_affected
     help="Never touch the network; a cache miss is a clear error (sets GATECHECK_OFFLINE).",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit the run report as JSON.")
+@click.option(
+    "--commit-msg-file",
+    "commit_msg_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Message-check mode: run against this commit-message file ({commit-msg}).",
+)
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -59,14 +66,23 @@ def run(
     affected: bool,
     offline: bool,
     as_json: bool,
+    commit_msg_file: Path | None,
 ) -> None:
     """Resolve the changeset, plan the hooks, execute them, and report."""
     if all_files and base is not None:
         raise click.ClickException("--all-files and --base are mutually exclusive")
+    if commit_msg_file is not None and (all_files or base is not None or affected):
+        raise click.ClickException(
+            "--commit-msg-file cannot be combined with --all-files, --base, or --affected"
+        )
     if offline:
         os.environ[OFFLINE_ENV] = "1"
 
     resolved_config = resolve_config_path(config_path)
+
+    if commit_msg_file is not None:
+        _run_commit_msg(ctx, resolved_config, group, commit_msg_file, as_json)
+        return
 
     if affected:
         _run_affected(ctx, resolved_config, all_files, base, as_json)
@@ -102,6 +118,47 @@ def run(
     fail_fast = _fail_fast(config, group)
     max_workers = _max_workers(config, group)
     results = run_plan(plan, files_by_hook, fail_fast=fail_fast, max_workers=max_workers)
+
+    report = build_report(plan, results)
+    _emit(report, as_json)
+    ctx.exit(report.exit_code)
+
+
+def _run_commit_msg(
+    ctx: click.Context,
+    config_path: Path,
+    group: str | None,
+    commit_msg_file: Path,
+    as_json: bool,
+) -> None:
+    """Message-check mode: run the group's hooks against a commit-message file.
+
+    There is no file changeset — hooks reference the message via ``{commit-msg}`` and
+    run regardless of any ``files`` glob. ``when`` conditions still apply.
+    """
+    try:
+        config = load_config(config_path)
+    except ConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    try:
+        # No changeset: pass no changed_files so the empty-file-set skip is fail-open.
+        plan = build_plan(config, group=group)
+    except PlanError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    running = [hook for level in plan.levels for hook in level]
+    files_by_hook = {hook.id: () for hook in running}
+
+    fail_fast = _fail_fast(config, group)
+    max_workers = _max_workers(config, group)
+    results = run_plan(
+        plan,
+        files_by_hook,
+        fail_fast=fail_fast,
+        max_workers=max_workers,
+        commit_msg_file=commit_msg_file,
+    )
 
     report = build_report(plan, results)
     _emit(report, as_json)
