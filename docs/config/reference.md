@@ -64,7 +64,7 @@ Each `[[hook]]` table defines one hook. The double brackets mean it's an array �
 |---|---|---|
 | `id` | string | Unique identifier. Referenced by `[group.<name>].hooks` and `depends-on`. |
 | `from` | string | Source spec — see [Source Types](sources.md). |
-| `run` | string | Command to execute. `{files}` is replaced with matching staged files. |
+| `run` | string | Command to execute. `{files}` is replaced with matching staged files; `{commit-msg}` (in a `commit-msg` group) is replaced with the commit-message file path. |
 
 ### Optional fields
 
@@ -148,9 +148,9 @@ on-event  = "commit"
 | `parallel` | bool | `false` | Run this group's hooks concurrently. When `false`, hooks run **serially** (one at a time), still in dependency order |
 | `fail-fast` | bool | `false` | Stop scheduling new hooks after the first failure |
 | `max-workers` | int ≥ 1 | 4 | Max hooks in flight at once when `parallel = true` (the concurrency cap) |
-| `on-event` | string | (none) | Git event: `"commit"` or `"push"` |
+| `on-event` | string | (none) | Git event: `"commit"`, `"push"`, or `"commit-msg"` |
 
-When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook — `commit` → `.git/hooks/pre-commit`, `push` → `.git/hooks/pre-push`. Several groups may target the same event; they are written into that hook in declared order. Any other value is rejected at config load.
+When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook — `commit` → `.git/hooks/pre-commit`, `push` → `.git/hooks/pre-push`, `commit-msg` → `.git/hooks/commit-msg`. Several groups may target the same event; they are written into that hook in declared order. Any other value is rejected at config load. A `commit-msg` group checks the pending commit message rather than the changeset: its hooks receive the message-file path via the `{commit-msg}` placeholder (see `run` below).
 
 ---
 
@@ -532,7 +532,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 `gatecheck.runner.run_hook` runs one hook and returns a `HookResult`:
 
-- **Command:** `run` is tokenized (`shlex`); a standalone **`{files}`** token expands to the hook's files in place, otherwise the files are appended after the command. The files are the ones routed to that hook by the changeset step, so `pass-files = false` simply yields no file arguments.
+- **Command:** `run` is tokenized (`shlex`); a standalone **`{files}`** token expands to the hook's files in place, otherwise the files are appended after the command. The files are the ones routed to that hook by the changeset step, so `pass-files = false` simply yields no file arguments. In a `commit-msg` run, a **`{commit-msg}`** token expands to the pending message-file path; outside that mode it is left untouched.
 - **Environment:** the hook's `ResolvedEnv` (from the Environments layer) contributes its `bin/` directory to the front of `PATH`, so the hook's own tool is found first.
 - **Result:** `HookResult(hook_id, status, exit_code, output, duration)` — `status` is `passed` (exit 0), `failed` (non-zero exit), or `error` (the environment couldn't be resolved or the command couldn't be spawned). Combined stdout+stderr is captured. The subprocess sits behind an injectable seam, so execution is testable without spawning anything.
 

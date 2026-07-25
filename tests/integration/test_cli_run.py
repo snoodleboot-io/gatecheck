@@ -148,6 +148,55 @@ def test_run_json_still_exits_nonzero_on_failure() -> None:
 
 
 @_skip
+def test_commit_msg_run_checks_the_message_file() -> None:
+    # Arrange — a system hook that reads the message file via {commit-msg}. A tiny
+    # Python checker keeps this cross-platform (no shell-script exec bit / shebang).
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        Path("check_msg.py").write_text(
+            "import sys\nsys.exit(0 if open(sys.argv[1]).read().startswith('feat') else 1)\n",
+            encoding="utf-8",
+        )
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "cc"\nfrom = "system"\n'
+            'run = "python check_msg.py {commit-msg}"\npass-files = false\n'
+            '[group.msg]\nhooks = ["cc"]\non-event = "commit-msg"\n',
+        )
+        Path("good.txt").write_text("feat: a thing\n", encoding="utf-8")
+        Path("bad.txt").write_text("nope\n", encoding="utf-8")
+
+        # Act / Assert — a conforming message passes
+        ok = runner.invoke(main, ["run", "msg", "--commit-msg-file", "good.txt"])
+        assert ok.exit_code == 0, ok.output
+        assert "1 passed" in ok.output
+
+        # …and a non-conforming one fails
+        bad = runner.invoke(main, ["run", "msg", "--commit-msg-file", "bad.txt"])
+        assert bad.exit_code == 1
+        assert "FAIL  cc" in bad.output
+
+
+@_skip
+def test_commit_msg_file_is_mutually_exclusive_with_changeset_flags() -> None:
+    # Arrange
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _init_repo()
+        _write(
+            "check.toml",
+            '[[hook]]\nid = "say"\nfrom = "system"\nrun = "echo hi"\npass-files = false\n',
+        )
+        Path("msg.txt").write_text("feat: x\n", encoding="utf-8")
+        # Act
+        result = runner.invoke(main, ["run", "--commit-msg-file", "msg.txt", "--all-files"])
+        # Assert
+        assert result.exit_code != 0
+        assert "cannot be combined" in result.output
+
+
+@_skip
 def test_run_base_and_all_files_are_mutually_exclusive() -> None:
     # Arrange
     runner = CliRunner()

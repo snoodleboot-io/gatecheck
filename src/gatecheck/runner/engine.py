@@ -34,6 +34,7 @@ def run_plan(
     max_workers: int | None = None,
     cwd: Path | None = None,
     environ: Mapping[str, str] | None = None,
+    commit_msg_file: Path | None = None,
 ) -> tuple[HookResult, ...]:
     """Execute ``plan`` and return the ``HookResult``s in execution order.
 
@@ -58,6 +59,7 @@ def run_plan(
             runner=runner,
             environ=environ,
             cwd=cwd,
+            commit_msg_file=commit_msg_file,
         )
         results[hook_id] = result
         return _STATUS_CODE[result.status]

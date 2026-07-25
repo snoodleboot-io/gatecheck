@@ -16,7 +16,7 @@ class GroupDef(BaseModel):
     parallel: StrictBool = Field(default=False)
     fail_fast: StrictBool = Field(default=False, alias="fail-fast")
     max_workers: int = Field(default=4, alias="max-workers", ge=1)
-    on_event: Literal["commit", "push"] | None = Field(default=None, alias="on-event")
+    on_event: Literal["commit", "push", "commit-msg"] | None = Field(default=None, alias="on-event")
 
     @field_validator("hooks")
     @classmethod

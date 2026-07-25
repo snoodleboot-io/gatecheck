@@ -18,7 +18,9 @@ from gatecheck.runner import SubprocessGitClient
 
 _MARKER = "# gatecheck-managed"
 # group.on-event value -> git hook filename.
-_EVENT_TO_HOOK = {"commit": "pre-commit", "push": "pre-push"}
+_EVENT_TO_HOOK = {"commit": "pre-commit", "push": "pre-push", "commit-msg": "commit-msg"}
+# git passes the commit-msg hook the path to the message file as $1; forward it.
+_COMMIT_MSG_HOOK = "commit-msg"
 
 
 class HooksLocator(Protocol):
@@ -59,7 +61,7 @@ def install_hooks(
                 )
             )
             continue
-        _write_hook(path, groups)
+        _write_hook(path, git_hook, groups)
         outcomes.append(InstallOutcome(git_hook, groups, "installed", ""))
     return tuple(outcomes)
 
@@ -75,10 +77,15 @@ def _groups_by_hook(config: GatecheckConfig) -> dict[str, tuple[str, ...]]:
     return {git_hook: tuple(groups) for git_hook, groups in by_hook.items()}
 
 
-def _write_hook(path: Path, groups: Iterable[str]) -> None:
-    """Write an executable gatecheck-managed hook script running each group."""
+def _write_hook(path: Path, git_hook: str, groups: Iterable[str]) -> None:
+    """Write an executable gatecheck-managed hook script running each group.
+
+    The ``commit-msg`` hook forwards git's ``$1`` (the message-file path) to
+    ``gatecheck run --commit-msg-file`` so the message-check hooks can read it.
+    """
+    suffix = ' --commit-msg-file "$1"' if git_hook == _COMMIT_MSG_HOOK else ""
     lines = ["#!/bin/sh", _MARKER, "set -e"]
-    lines += [f"gatecheck run {group}" for group in groups]
+    lines += [f"gatecheck run {group}{suffix}" for group in groups]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

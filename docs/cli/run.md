@@ -17,6 +17,7 @@ With no `GROUP`, every hook in `check.toml` runs. With one, only that
 | `--all-files` | off | Run against every **tracked** file instead of the staged set. |
 | `--base REF` | — | Run against files changed since `REF`. Mutually exclusive with `--all-files`. |
 | `--affected` | off | Monorepo: run only the hooks of [affected packages](../guides/monorepo.md). |
+| `--commit-msg-file FILE` | — | [Message-check mode](#message-check-mode): check `FILE` (the commit message) instead of a changeset. Mutually exclusive with `--all-files`, `--base`, and `--affected`. |
 | `--offline` | off | Never touch the network; sets `GATECHECK_OFFLINE`. See [Air-gapped](../guides/air-gapped.md). |
 | `--json` | off | Emit the report as JSON instead of the human rendering. |
 
@@ -53,6 +54,37 @@ This is the decision that matters most, and the default is the one you want loca
     Every tracked file. Useful for a one-off sweep after adopting a new hook.
 
 Deleted files are never included — you can't lint a file that's gone.
+
+## Message-check mode
+
+`--commit-msg-file FILE` runs a group against the pending **commit message** rather
+than a changeset. This is what the [`commit-msg`](install.md) git hook uses: git
+writes the message to a temporary file and passes its path, and the installed hook
+forwards it as `gatecheck run <group> --commit-msg-file "$1"`.
+
+Hooks in the group reference the message file with the **`{commit-msg}`** placeholder,
+which expands to `FILE` in place. There's no changeset, so a hook's `files` glob is
+ignored and it always runs (its `when` conditions still apply).
+
+```toml title="check.toml"
+[[hook]]
+id   = "conventional-commit"
+from = "pypi:commitizen==4.9.1"
+run  = "cz check --commit-msg-file {commit-msg}"
+
+[group.msg]
+hooks    = ["conventional-commit"]
+on-event = "commit-msg"
+```
+
+```console
+$ gatecheck run msg --commit-msg-file .git/COMMIT_EDITMSG
+FAIL  conventional-commit   (0.28s)
+      commit validation failed: message does not match the conventional format
+```
+
+`--commit-msg-file` can't be combined with `--all-files`, `--base`, or `--affected` —
+those select a file changeset, which message-check mode doesn't use.
 
 ## Reading the output
 

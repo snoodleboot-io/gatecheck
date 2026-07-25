@@ -58,6 +58,28 @@ def test_push_event_maps_to_pre_push(tmp_path: Path) -> None:
     assert (tmp_path / "pre-push").exists()
 
 
+def test_commit_msg_event_maps_to_commit_msg_and_forwards_the_message_file(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    config = _config({"msg": {"hooks": ["a"], "on-event": "commit-msg"}})
+    # Act
+    outcomes = install_hooks(config, locator=FakeLocator(tmp_path))
+    # Assert — the commit-msg hook forwards git's $1 (the message-file path)
+    assert [(o.git_hook, o.status) for o in outcomes] == [("commit-msg", "installed")]
+    script = (tmp_path / "commit-msg").read_text(encoding="utf-8")
+    assert 'gatecheck run msg --commit-msg-file "$1"' in script
+
+
+def test_non_commit_msg_hooks_do_not_forward_a_message_file(tmp_path: Path) -> None:
+    # Arrange — a plain commit hook must NOT carry --commit-msg-file
+    config = _config({"lint": {"hooks": ["a"], "on-event": "commit"}})
+    # Act
+    install_hooks(config, locator=FakeLocator(tmp_path))
+    # Assert
+    assert "--commit-msg-file" not in (tmp_path / "pre-commit").read_text(encoding="utf-8")
+
+
 def test_groups_sharing_an_event_share_one_hook(tmp_path: Path) -> None:
     # Arrange — two groups both on commit
     config = _config(

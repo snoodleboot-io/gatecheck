@@ -125,6 +125,36 @@ def test_empty_file_list_appends_nothing_to_argv() -> None:
     assert runner.argv == ["ruff", "check"]
 
 
+def test_commit_msg_token_is_substituted() -> None:
+    # Arrange — a commit-msg hook referencing the message file
+    runner = FakeProcessRunner()
+    msg_file = Path("/tmp/COMMIT_EDITMSG")
+    # Act
+    run_hook(
+        _hook("cz check --commit-msg-file {commit-msg}"),
+        [],
+        env_manager=FakeEnvManager(),
+        runner=runner,
+        commit_msg_file=msg_file,
+    )
+    # Assert — {commit-msg} replaced by the path in place (native separators)
+    assert runner.argv == ["cz", "check", "--commit-msg-file", str(msg_file)]
+
+
+def test_commit_msg_token_stays_literal_without_a_message_file() -> None:
+    # Arrange — {commit-msg} used outside a commit-msg run (a misconfiguration)
+    runner = FakeProcessRunner()
+    # Act
+    run_hook(
+        _hook("cz check {commit-msg}"),
+        [],
+        env_manager=FakeEnvManager(),
+        runner=runner,
+    )
+    # Assert — no substitution; the token is passed through unchanged
+    assert runner.argv == ["cz", "check", "{commit-msg}"]
+
+
 def test_bin_dir_is_prepended_to_path() -> None:
     # Arrange
     runner = FakeProcessRunner()

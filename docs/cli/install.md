@@ -19,6 +19,7 @@ event maps to one git hook file:
 |---|---|
 | `commit` | `.git/hooks/pre-commit` |
 | `push` | `.git/hooks/pre-push` |
+| `commit-msg` | `.git/hooks/commit-msg` |
 
 Several groups can target the same event; they're written into that one hook file in
 declared order.
@@ -35,12 +36,17 @@ on-event = "commit"
 [group.full]
 hooks    = ["ruff", "mypy", "tests"]
 on-event = "push"
+
+[group.msg]
+hooks    = ["conventional-commit"]
+on-event = "commit-msg"
 ```
 
 ```console
 $ gatecheck install
 installed  pre-commit  (format, lint)
 installed  pre-push    (full)
+installed  commit-msg  (msg)
 ```
 
 The generated script is deliberately boring:
@@ -51,6 +57,16 @@ The generated script is deliberately boring:
 set -e
 gatecheck run format
 gatecheck run lint
+```
+
+The `commit-msg` script forwards git's message-file argument (`$1`) so the group's
+hooks can inspect the pending message via [`{commit-msg}`](run.md#message-check-mode):
+
+```sh title=".git/hooks/commit-msg"
+#!/bin/sh
+# gatecheck-managed
+set -e
+gatecheck run msg --commit-msg-file "$1"
 ```
 
 `set -e` means the first failing group stops the commit, and the non-zero exit
