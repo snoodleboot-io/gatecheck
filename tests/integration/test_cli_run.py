@@ -149,18 +149,19 @@ def test_run_json_still_exits_nonzero_on_failure() -> None:
 
 @_skip
 def test_commit_msg_run_checks_the_message_file() -> None:
-    # Arrange — a system hook that reads the message file via {commit-msg}
+    # Arrange — a system hook that reads the message file via {commit-msg}. A tiny
+    # Python checker keeps this cross-platform (no shell-script exec bit / shebang).
     runner = CliRunner()
     with runner.isolated_filesystem():
         _init_repo()
-        Path("check-msg.sh").write_text(
-            '#!/bin/sh\ngrep -q "^feat" "$1" || exit 1\n', encoding="utf-8"
+        Path("check_msg.py").write_text(
+            "import sys\nsys.exit(0 if open(sys.argv[1]).read().startswith('feat') else 1)\n",
+            encoding="utf-8",
         )
-        Path("check-msg.sh").chmod(0o755)
         _write(
             "check.toml",
             '[[hook]]\nid = "cc"\nfrom = "system"\n'
-            'run = "./check-msg.sh {commit-msg}"\npass-files = false\n'
+            'run = "python check_msg.py {commit-msg}"\npass-files = false\n'
             '[group.msg]\nhooks = ["cc"]\non-event = "commit-msg"\n',
         )
         Path("good.txt").write_text("feat: a thing\n", encoding="utf-8")
