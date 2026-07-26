@@ -33,6 +33,10 @@ from collections.abc import Callable
 # gatecheck-rs/Cargo.toml version), not 0.0.0.
 _FIRST_RELEASE_MINOR = 1
 
+# Preview/dev builds use "-dev" (hyphen), not ".dev". The hyphen form is valid SemVer
+# for Cargo AND normalizes to PEP 440's ".dev" for the Python wheels, so one string
+# works for both distributions. ".dev" (dot) is a Cargo version parse error.
+
 PyPILookup = Callable[[str], "tuple[int, int] | None"]
 
 
@@ -100,12 +104,15 @@ class VersionCalculator:
                 # A merge landed on main → the release version.
                 return f"{major}.{new_minor}.0"
             # A feature-branch push → a throwaway dev build (never published).
-            return f"{major}.{new_minor}.0.dev0"
+            return f"{major}.{new_minor}.0-dev0"
 
         # PR build: PATCH is the PR number; TestPyPI previews add the run number.
+        # The dev segment uses a hyphen ("-dev") so the string is valid SemVer (for
+        # gatecheck-rs/Cargo.toml) *and* normalizes to PEP 440 ".dev" for the wheels —
+        # 0.2.59-dev1 == 0.2.59.dev1. A plain "." after the patch is a Cargo parse error.
         version = f"{major}.{new_minor}.{pr_number}"
         if is_testpypi and run_number:
-            version = f"{version}.dev{run_number}"
+            version = f"{version}-dev{run_number}"
         return version
 
 

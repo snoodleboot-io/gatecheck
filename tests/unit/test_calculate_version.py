@@ -7,6 +7,7 @@ package — so it is loaded by path. PyPI lookups are stubbed; no network. AAA s
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 from types import ModuleType
 
@@ -97,8 +98,8 @@ def test_pr_build_uses_pr_number_as_patch_with_dev_run() -> None:
         is_pr=True,
         github_ref="refs/pull/42/merge",
     )
-    # Assert — 0.<minor>.<pr>.dev<run>
-    assert version == "0.3.42.dev99"
+    # Assert — 0.<minor>.<pr>-dev<run>: valid SemVer for Cargo, == PEP 440 0.3.42.dev99
+    assert version == "0.3.42-dev99"
 
 
 def test_push_to_main_is_a_clean_release_version() -> None:
@@ -129,8 +130,8 @@ def test_feature_branch_push_is_a_throwaway_dev_build() -> None:
         is_pr=False,
         github_ref="refs/heads/feat/x",
     )
-    # Assert
-    assert version == "0.1.0.dev0"
+    # Assert — hyphen form (SemVer-valid); never published anyway
+    assert version == "0.1.0-dev0"
 
 
 def test_pr_build_without_a_pr_number_is_fatal() -> None:
@@ -146,6 +147,31 @@ def test_pr_build_without_a_pr_number_is_fatal() -> None:
             is_pr=True,
             github_ref="refs/pull//merge",
         )
+
+
+def test_preview_version_is_valid_in_both_ecosystems() -> None:
+    """The preview version must parse as PEP 440 (Python wheels) and as SemVer (Cargo).
+
+    Guards the '-dev' hyphen form: a '.dev' dot is a Cargo parse error, and a bare
+    SemVer '-dev' still normalizes to PEP 440 '.dev'.
+    """
+    # Arrange
+    from packaging.version import Version
+
+    calculator = _calculator((0, 2))
+    # Act
+    version = calculator.calculate_version(
+        major=0,
+        pr_number="42",
+        run_number="99",
+        is_testpypi=True,
+        is_pr=True,
+        github_ref="refs/pull/42/merge",
+    )
+    # Assert — PEP 440 normalization collapses the hyphen to the dot form...
+    assert str(Version(version)) == "0.3.42.dev99"
+    # ...and it is valid SemVer: MAJOR.MINOR.PATCH with a hyphen-delimited prerelease.
+    assert re.fullmatch(r"\d+\.\d+\.\d+-[0-9A-Za-z.]+", version)
 
 
 # ── PR-number extraction ──────────────────────────────────────────
