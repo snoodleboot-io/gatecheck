@@ -1,12 +1,13 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "gatecheck"
-# Version is intentionally absent from this file.
-# It is computed from git tags by the CI pipeline via scripts/compute_version.py.
-# At build time, hatchling reads it from the SCM tag via hatch-vcs.
+# Version is dynamic: sourced from src/gatecheck/__about__.py and injected by CI/CD.
+# The release pipeline computes MAJOR.MINOR.PATCH from PyPI history + PR context
+# (see .github/scripts/calculate_version.py) and rewrites __about__.py before build.
+# Local and editable installs use its 0.0.0.dev0 placeholder.
 dynamic = ["version"]
 description = "The next-generation runner for git pre-commit actions — real package sources, monorepo support, and Rust-powered parallel execution."
 readme = "README.md"
@@ -69,8 +70,7 @@ Changelog = "https://gatecheck.dev/changelog/"
 Issues = "https://github.com/snoodleboot-io/gatecheck/issues"
 
 [tool.hatch.version]
-source = "vcs"
-tag-pattern = "v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+.*)"
+path = "src/gatecheck/__about__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gatecheck"]

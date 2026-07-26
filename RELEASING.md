@@ -10,52 +10,88 @@ gatecheck publishes **two** distributions to PyPI:
 `pip install gatecheck` pulls the host, which pulls the matching core wheel for the
 user's platform.
 
-Publishing is automated by [`.github/workflows/release.yml`](.github/workflows/release.yml):
-build both distributions → smoke-test them on Linux/macOS/Windows → **wait for manual
-approval** → publish via PyPI Trusted Publishing (OIDC, no tokens) → create the GitHub
-release.
+Releases are **trunk-based** — there are no version tags to cut. The version is
+computed in CI and everything flows from merging to `main`. See
+[`.github/workflows/release.yml`](.github/workflows/release.yml).
+
+---
+
+## How versioning works
+
+The version is `MAJOR.MINOR.PATCH[.devN]`, computed at build time by
+[`.github/scripts/calculate_version.py`](.github/scripts/calculate_version.py) and
+injected into both distributions by
+[`.github/scripts/inject_version.sh`](.github/scripts/inject_version.sh) — into
+`src/gatecheck/__about__.py` (host), `gatecheck-rs/Cargo.toml` (core), and the host's
+`gatecheck-core==` pin. **Both packages always share one version.**
+
+| Segment | Source |
+|---|---|
+| `MAJOR` | the `MAJOR_VERSION` env in the workflow — the **only** place it can be bumped. Currently `0`. |
+| `MINOR` | the latest `MINOR` for that `MAJOR` on PyPI, **+ 1**. First release starts at `0.1.0`. |
+| `PATCH` | the PR number on PR builds; `0` on a push to main. |
+| `.devN` | the GitHub run number — TestPyPI previews only. |
+
+Because MINOR is read from PyPI and incremented, **every merge to main is a new
+MINOR** (`0.1.0`, `0.2.0`, …). There is no manual version file to edit.
+
+To bump MAJOR (e.g. the first stable `1.0.0`), change `MAJOR_VERSION` in
+`release.yml`. MINOR then restarts at `1` for the new major.
+
+---
+
+## The flow
+
+| Event | Version | Publishes to | Gated? |
+|---|---|---|---|
+| Open / update a PR to `main` | `0.<minor>.<PR>.dev<run>` | **TestPyPI** | no |
+| Merge the PR (push to `main`) | `0.<minor>.0` | **PyPI** | **yes — manual approval** |
+| `workflow_dispatch` | `0.<minor>.0` | your chosen target | pypi target is gated |
+
+Every build (both events) runs the full two-distribution build + the Linux/macOS/Windows
+smoke test first. Only then does a publish job run.
+
+The **push-to-main → PyPI** publish pauses on the `release` GitHub environment and waits
+for a human to approve it in the Actions run. That is the checkpoint before anything
+reaches real PyPI.
+
+Publishing uses PyPI Trusted Publishing (OIDC) — no API tokens are stored anywhere. The
+workflow mints a short-lived token per run.
 
 ---
 
 ## One-time setup
 
-These cannot be scripted from CI — they need PyPI accounts and repo-admin rights. Do
-them once, before the first release.
+These need PyPI accounts and repo-admin rights. Do them once, before the first release.
 
-### 1. Create both PyPI projects with a Trusted Publisher
+### 1. Trusted Publishers on PyPI (and TestPyPI)
 
 For **each** of `gatecheck` and `gatecheck-core`, on PyPI → the project → *Publishing* →
-*Add a new pending publisher* (or *Manage → Publishing* if the project already exists):
+*Add a new pending publisher*:
 
-| Field | Value |
-|---|---|
-| Owner | `snoodleboot-io` |
-| Repository | `gatecheck` |
-| Workflow name | `release.yml` |
-| Environment | `release` |
+| Field | PyPI value | TestPyPI value |
+|---|---|---|
+| Owner | `snoodleboot-io` | `snoodleboot-io` |
+| Repository | `gatecheck` | `gatecheck` |
+| Workflow name | `release.yml` | `release.yml` |
+| Environment | `release` | `testpypi` |
 
-Do the same on [TestPyPI](https://test.pypi.org/) if you want to rehearse (recommended
-for the first release — see below).
+The PR-preview publish runs in the `testpypi` environment; the real publish runs in
+`release`. Bind each accordingly.
 
-No API tokens are stored anywhere. The workflow mints a short-lived OIDC token per run,
-which PyPI trusts because of the binding above.
+### 2. GitHub environments
 
-### 2. The `release` GitHub environment
+- **`release`** — must **require a reviewer**. This is the human gate before PyPI.
+- **`testpypi`** — no reviewer needed (previews should be automatic on every PR).
 
-Already created, and it **requires a reviewer** — the publish job pauses until someone
-with access approves it in the Actions run. That is the human checkpoint before
-anything reaches PyPI.
-
-To change reviewers: repo → Settings → Environments → `release`.
+Configure both at repo → Settings → Environments.
 
 ---
 
-## Cutting a release
+## Rehearsing
 
-### Rehearse on TestPyPI first (recommended for the first real release)
-
-Actions → **release** → *Run workflow* → target `testpypi`. This builds everything,
-smoke-tests it, waits for your approval, then publishes to TestPyPI. Verify:
+Open a PR to `main`: it builds everything and publishes a `.devN` preview to TestPyPI
+automatically. Verify:
 
 ```bash
 pip install --index-url https://test.pypi.org/simple/ \
@@ -65,49 +101,14 @@ gatecheck --version
 
 (The extra index is needed because the runtime deps live on real PyPI, not TestPyPI.)
 
-### Publish for real
-
-1. **Decide the version.** `scripts/compute_version.py` reads the conventional-commit
-   history since the last tag and prints the next version:
-
-   ```bash
-   python scripts/compute_version.py
-   ```
-
-   `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch, `BREAKING CHANGE:` → major,
-   `docs:`/`chore:`/`ci:` alone → no release.
-
-2. **Tag and push.** The tag is the version:
-
-   ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
-   ```
-
-3. **Approve.** The workflow builds, smoke-tests, then pauses on the `release`
-   environment. Approve it in the Actions run.
-
-4. Done — both packages are on PyPI and a GitHub release exists with the wheels
-   attached and auto-generated notes.
+`Actions → release → Run workflow` also lets you rehearse on demand (target `testpypi`).
 
 ---
 
-## Versioning the two packages
+## Cutting a real release
 
-They version **independently**, on purpose:
-
-- `gatecheck` takes its version from the **git tag** (hatch-vcs). Every tag ships a new
-  host.
-- `gatecheck-core` takes its version from **`gatecheck-rs/Cargo.toml`**. It only needs
-  republishing when the Rust changes.
-
-The core publish uses `skip-existing`, so tagging a Python-only release doesn't error on
-the already-published core.
-
-> **When you change the Rust core, bump `version` in `gatecheck-rs/Cargo.toml`** (and,
-> if the host needs the new core, the `gatecheck-core>=…` floor in `pyproject.toml`).
-> Because `skip-existing` swallows a duplicate, forgetting the bump means the new core
-> is silently *not* published — so treat a Cargo version bump as part of any core change.
+There is nothing to tag. **Merge a PR to `main`**, then approve the `release`
+environment when the run pauses. Both packages land on PyPI at `0.<minor>.0`.
 
 ---
 

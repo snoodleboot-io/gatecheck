@@ -1,72 +1,80 @@
-# Release — build both distributions, smoke-test them, and publish to PyPI.
+# Release — trunk-based, PyPI-derived versioning (STY-0044 / GAT-53).
 #
-# gatecheck ships as TWO packages:
-#   • gatecheck-core — the PyO3 extension, built by maturin as a platform wheel
-#     matrix (per-Python cp311/cp312; no abi3). Version from gatecheck-rs/Cargo.toml.
-#   • gatecheck      — the pure-Python host, built by hatchling. One universal wheel.
-#     Version from the git tag via hatch-vcs. Depends on gatecheck-core.
+# There are no version tags. The version is COMPUTED at build time from PyPI history
+# plus the GitHub event (see .github/scripts/calculate_version.py) and injected into
+# both distributions before they build (.github/scripts/inject_version.sh):
+#   • gatecheck-core — the PyO3 extension, built by maturin as a platform wheel matrix
+#     (per-Python cp311/cp312; no abi3). Version from gatecheck-rs/Cargo.toml.
+#   • gatecheck      — the pure-Python host, built by hatchling from __about__.py.
+#     Pins gatecheck-core==<same version>.
 #
-# `pip install gatecheck` then resolves the right core wheel for the platform.
+# Flow:
+#   • PR → main (opened/synchronized)  → build 0.<minor>.<PR>.dev<run> → TestPyPI.
+#   • push → main (a merge landed)     → build 0.<minor>.0            → PyPI, but only
+#     after manual approval of the `release` environment (the human checkpoint).
+#   • workflow_dispatch                → rehearse; choose testpypi (default) or pypi.
 #
-# Publishing uses PyPI Trusted Publishing (OIDC) — no API tokens in the repo — and is
-# gated behind the `release` environment, which must require manual approval (the PRD's
-# human checkpoint before a public release). See RELEASING.md for the one-time PyPI and
-# environment setup.
-#
-# Trigger:
-#   • push a tag vX.Y.Z          → publish to PyPI
-#   • workflow_dispatch          → rehearse; choose testpypi (default) or pypi
+# Publishing uses PyPI Trusted Publishing (OIDC) — no API tokens. See RELEASING.md.
 
 name: release
 
 on:
+  pull_request:
+    branches: [main]
   push:
-    tags:
-      - "v*.*.*"
+    branches: [main]
   workflow_dispatch:
     inputs:
       target:
-        description: "Publish target"
+        description: "Publish target (rehearsal)"
         type: choice
         options: [testpypi, pypi]
         default: testpypi
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 env:
+  PACKAGE_NAME: gatecheck
+  # MAJOR is pinned here — the only place it can be bumped. gatecheck stays on 0.x.
+  MAJOR_VERSION: "0"
   # cp311/cp312 wheels — must track [project].requires-python and the CI test matrix.
   PYTHON_INTERPRETERS: "3.11 3.12"
 
 jobs:
   # ── version ──────────────────────────────────────────────────────
-  # The tag is the version. A manual run has no tag, so it builds a dev version and
-  # can only target TestPyPI.
+  # Computed once, up front, so every build job injects the identical version and no
+  # two matrix legs race PyPI to different answers.
   version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
-      is_tag: ${{ steps.v.outputs.is_tag }}
+      should_publish_testpypi: ${{ steps.v.outputs.should_publish_testpypi }}
+      should_publish_pypi: ${{ steps.v.outputs.should_publish_pypi }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - id: v
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME#v}"
-            if [[ ! "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+([abrc.].*)?$ ]]; then
-              echo "::error::tag '${GITHUB_REF_NAME}' is not a valid X.Y.Z version"
-              exit 1
-            fi
-            echo "version=$tag" >> "$GITHUB_OUTPUT"
-            echo "is_tag=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=(dev, from workflow_dispatch)" >> "$GITHUB_OUTPUT"
-            echo "is_tag=false" >> "$GITHUB_OUTPUT"
-          fi
+        run: python .github/scripts/calculate_version.py
+        env:
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          MAJOR_VERSION: ${{ env.MAJOR_VERSION }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          GITHUB_EVENT_ACTION: ${{ github.event.action || '' }}
 
   # ── build gatecheck-core (compiled) ──────────────────────────────
   build-core:
     name: core ${{ matrix.target }} (${{ matrix.runner }})
+    needs: version
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -85,6 +93,10 @@ jobs:
           python-version: |
             3.11
             3.12
+
+      - name: Inject version
+        shell: bash
+        run: bash .github/scripts/inject_version.sh "${{ needs.version.outputs.version }}"
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
@@ -105,9 +117,13 @@ jobs:
 
   build-core-sdist:
     name: core sdist
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Inject version
+        shell: bash
+        run: bash .github/scripts/inject_version.sh "${{ needs.version.outputs.version }}"
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
@@ -122,14 +138,16 @@ jobs:
   # ── build gatecheck (pure Python host) ───────────────────────────
   build-host:
     name: host wheel + sdist
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # hatch-vcs needs the tag history to derive the version
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Inject version
+        shell: bash
+        run: bash .github/scripts/inject_version.sh "${{ needs.version.outputs.version }}"
       - run: pip install build
       - run: python -m build --outdir dist
       - uses: actions/upload-artifact@v4
@@ -176,10 +194,42 @@ jobs:
           gc --version
           python -c "import gatecheck_core; print('gatecheck_core import OK')"
 
-  # ── publish to PyPI (manual approval) ────────────────────────────
-  publish:
-    name: publish (${{ github.event.inputs.target || 'pypi' }})
+  # ── publish to TestPyPI (PR previews) ────────────────────────────
+  publish-testpypi:
+    name: publish TestPyPI
     needs: [version, smoke]
+    if: >-
+      needs.version.outputs.should_publish_testpypi == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'testpypi')
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/gatecheck/
+    permissions:
+      id-token: write # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Stage distributions
+        run: |
+          mkdir -p dist
+          find artifacts \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp {} dist/ \;
+          ls -1 dist
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  # ── publish to PyPI (push to main, behind manual approval) ───────
+  publish-pypi:
+    name: publish PyPI
+    needs: [version, smoke]
+    if: >-
+      needs.version.outputs.should_publish_pypi == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi')
     runs-on: ubuntu-latest
     # The release environment must require a manual reviewer — this is the gate.
     environment:
@@ -192,7 +242,7 @@ jobs:
         with:
           path: artifacts
 
-      # gatecheck-core: every platform wheel + the sdist, into one directory.
+      # gatecheck-core: every platform wheel + the sdist.
       - name: Stage gatecheck-core
         run: |
           mkdir -p dist-core
@@ -207,46 +257,17 @@ jobs:
           find artifacts -path '*host-dist*/*' \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp {} dist-host/ \;
           ls -1 dist-host
 
-      # Publish the core first so the host's dependency resolves for anyone who
-      # installs the instant the host lands. skip-existing: the core only changes when
-      # its Cargo version bumps, so re-tagging a Python-only release must not error.
+      # Publish the core first so the host's dependency resolves for anyone who installs
+      # the instant the host lands. skip-existing: the core wheels only change when the
+      # unified version bumps, so a re-run must not error on an already-present file.
       - name: Publish gatecheck-core
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist-core
           skip-existing: true
-          repository-url: ${{ (github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/') || '' }}
 
       - name: Publish gatecheck
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist-host
-          repository-url: ${{ (github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/') || '' }}
-
-  # ── GitHub release ───────────────────────────────────────────────
-  github-release:
-    name: github release
-    needs: [version, publish]
-    if: needs.version.outputs.is_tag == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # create the release + upload assets
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Collect assets
-        run: |
-          mkdir -p release-assets
-          find artifacts \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp {} release-assets/ \;
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes \
-            release-assets/*
+          skip-existing: true
