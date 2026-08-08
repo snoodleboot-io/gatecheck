@@ -3,14 +3,14 @@
 This is the ATDD suite for STY-0003.  Tests are written before the
 implementation exists (red-green-refactor): the module-level import of
 ``dump_config`` will produce an ``ImportError`` at collection time until
-``gatecheck.config.dumper`` is created and ``dump_config`` is exported from
-``gatecheck.config``.  That is the expected red state.
+``hooksmith.config.dumper`` is created and ``dump_config`` is exported from
+``hooksmith.config``.  That is the expected red state.
 
 Once ``dump_config`` is implemented, all tests in this file must pass
 without modification.
 
 Contract under test:
-    dump_config(config: GatecheckConfig, path: Path) -> None
+    dump_config(config: HooksmithConfig, path: Path) -> None
 
     * Serialises ``config`` to a valid TOML file at ``path``.
     * Round-trip: load_config(p) → dump_config(result, p2) → load_config(p2)
@@ -26,10 +26,10 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from gatecheck.config import (
-    GatecheckConfig,
+from hooksmith.config import (
     GroupDef,
     HookDef,
+    HooksmithConfig,
     dump_config,
     load_config,
 )
@@ -43,13 +43,13 @@ FIXTURE_DIR: Path = Path(__file__).resolve().parents[1] / "fixtures"
 # ---------------------------------------------------------------------------
 
 
-def _make_minimal_config_with_hooks(n: int) -> GatecheckConfig:
-    """Return a GatecheckConfig with *n* minimal hooks and no other tables."""
+def _make_minimal_config_with_hooks(n: int) -> HooksmithConfig:
+    """Return a HooksmithConfig with *n* minimal hooks and no other tables."""
     hooks = [
         HookDef.model_validate({"id": f"hook-{i}", "from": "project", "run": f"cmd-{i}"})
         for i in range(n)
     ]
-    return GatecheckConfig(hook=hooks)
+    return HooksmithConfig(hook=hooks)
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ def _make_minimal_config_with_hooks(n: int) -> GatecheckConfig:
 def test_dump_and_reload_repo_check_toml(tmp_path: Path) -> None:
     """Given the repo's own check.toml,
     When it is loaded, dumped to a temporary path, and reloaded,
-    Then the reloaded GatecheckConfig is equal to the original.
+    Then the reloaded HooksmithConfig is equal to the original.
 
     Covers STY-0003 acceptance criterion: full round-trip on real-world config.
     """
@@ -69,9 +69,9 @@ def test_dump_and_reload_repo_check_toml(tmp_path: Path) -> None:
     output_path: Path = tmp_path / "check.toml"
 
     # Act
-    original: GatecheckConfig = load_config(source_path)
+    original: HooksmithConfig = load_config(source_path)
     dump_config(original, output_path)
-    reloaded: GatecheckConfig = load_config(output_path)
+    reloaded: HooksmithConfig = load_config(output_path)
 
     # Assert
     assert reloaded == original
@@ -80,7 +80,7 @@ def test_dump_and_reload_repo_check_toml(tmp_path: Path) -> None:
 def test_dump_and_reload_sample_fixture(tmp_path: Path) -> None:
     """Given the tests/fixtures/check.toml.sample fixture,
     When it is loaded, dumped to a temporary path, and reloaded,
-    Then the reloaded GatecheckConfig is equal to the original.
+    Then the reloaded HooksmithConfig is equal to the original.
 
     Covers STY-0003 acceptance criterion: round-trip on the comprehensive
     fixture that exercises every field shape.
@@ -90,9 +90,9 @@ def test_dump_and_reload_sample_fixture(tmp_path: Path) -> None:
     output_path: Path = tmp_path / "check.toml"
 
     # Act
-    original: GatecheckConfig = load_config(source_path)
+    original: HooksmithConfig = load_config(source_path)
     dump_config(original, output_path)
-    reloaded: GatecheckConfig = load_config(output_path)
+    reloaded: HooksmithConfig = load_config(output_path)
 
     # Assert
     assert reloaded == original
@@ -113,7 +113,7 @@ def test_dumped_toml_is_valid_toml(tmp_path: Path) -> None:
     # Arrange
     source_path: Path = FIXTURE_DIR / "check.toml.sample"
     output_path: Path = tmp_path / "check.toml"
-    original: GatecheckConfig = load_config(source_path)
+    original: HooksmithConfig = load_config(source_path)
 
     # Act
     dump_config(original, output_path)
@@ -129,14 +129,14 @@ def test_dumped_toml_is_valid_toml(tmp_path: Path) -> None:
 
 
 def test_hook_sections_use_aot_syntax(tmp_path: Path) -> None:
-    """Given a GatecheckConfig with three hooks,
+    """Given a HooksmithConfig with three hooks,
     When dump_config writes it to disk,
     Then the output contains exactly three ``[[hook]]`` array-of-tables headers.
 
     Covers STY-0003 acceptance criterion: array-of-tables syntax for hooks.
     """
     # Arrange
-    config: GatecheckConfig = _make_minimal_config_with_hooks(3)
+    config: HooksmithConfig = _make_minimal_config_with_hooks(3)
     output_path: Path = tmp_path / "check.toml"
 
     # Act
@@ -150,14 +150,14 @@ def test_hook_sections_use_aot_syntax(tmp_path: Path) -> None:
 
 
 def test_group_sections_use_dotted_header(tmp_path: Path) -> None:
-    """Given a GatecheckConfig with groups named 'lint' and 'full',
+    """Given a HooksmithConfig with groups named 'lint' and 'full',
     When dump_config writes it to disk,
     Then the output contains ``[group.lint]`` and ``[group.full]`` headers.
 
     Covers STY-0003 acceptance criterion: dotted-table syntax for groups.
     """
     # Arrange
-    config: GatecheckConfig = GatecheckConfig(
+    config: HooksmithConfig = HooksmithConfig(
         hook=[
             HookDef.model_validate({"id": "ruff", "from": "project", "run": "ruff check"}),
         ],
@@ -178,7 +178,7 @@ def test_group_sections_use_dotted_header(tmp_path: Path) -> None:
 
 
 def test_when_is_inline_table(tmp_path: Path) -> None:
-    """Given a GatecheckConfig whose hook has ``when = HookWhen(env_not='SKIP_MYPY')``,
+    """Given a HooksmithConfig whose hook has ``when = HookWhen(env_not='SKIP_MYPY')``,
     When dump_config writes it to disk,
     Then the output contains ``when = {`` (inline-table syntax) and does NOT
     contain a bracketed sub-table header such as ``[hook`` + ``.when]``.
@@ -195,7 +195,7 @@ def test_when_is_inline_table(tmp_path: Path) -> None:
             "when": {"env-not": "SKIP_MYPY"},
         }
     )
-    config: GatecheckConfig = GatecheckConfig(hook=[hook])
+    config: HooksmithConfig = HooksmithConfig(hook=[hook])
     output_path: Path = tmp_path / "check.toml"
 
     # Act

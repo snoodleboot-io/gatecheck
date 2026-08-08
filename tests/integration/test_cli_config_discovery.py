@@ -2,7 +2,7 @@
 
 Via click's ``CliRunner`` in an isolated filesystem: a command run from a
 subdirectory finds the ``check.toml`` in a parent, a ``pyproject.toml`` is read from
-its ``[tool.gatecheck]`` table, and a run with no config anywhere is a clear error
+its ``[tool.hooksmith]`` table, and a run with no config anywhere is a clear error
 rather than a click usage message.
 """
 
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 pytestmark = pytest.mark.integration
 
@@ -48,13 +48,13 @@ def test_discovers_check_toml_from_a_subdirectory() -> None:
 
 
 @pytest.mark.skipif(not _has_echo(), reason="echo not on PATH")
-def test_reads_pyproject_tool_gatecheck() -> None:
+def test_reads_pyproject_tool_hooksmith() -> None:
     # Arrange — config only in pyproject.toml
     runner = CliRunner()
     with runner.isolated_filesystem():
         Path("pyproject.toml").write_text(
-            "[tool.gatecheck]\n"
-            "[[tool.gatecheck.hook]]\n"
+            "[tool.hooksmith]\n"
+            "[[tool.hooksmith.hook]]\n"
             'id = "say"\nfrom = "system"\nrun = "echo"\npass-files = false\n',
             encoding="utf-8",
         )

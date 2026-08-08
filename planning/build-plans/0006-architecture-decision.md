@@ -21,12 +21,12 @@ date: 2026-07-05
 
 ---
 
-## §1 Placement — new leaf package `gatecheck.registry` (LOCKED)
+## §1 Placement — new leaf package `hooksmith.registry` (LOCKED)
 
 ### Decision
 
-The network resolver lands in a **new leaf package** `src/gatecheck/registry/`,
-**not** inside `gatecheck.sources`. `gatecheck.sources` was built by STY-0004/0005
+The network resolver lands in a **new leaf package** `src/hooksmith/registry/`,
+**not** inside `hooksmith.sources`. `hooksmith.sources` was built by STY-0004/0005
 as a **pure, dependency-light, no-I/O leaf** (its ACs assert "no network, no
 subprocess, no writes"). STY-0006 is the opposite concern: it performs network
 I/O (`urllib`) and depends on `packaging`. Landing it in `sources` would
@@ -35,11 +35,11 @@ into a leaf that the parser/resolver keep pure.
 
 This yields a clean three-way split of FEAT-0002 + Environments:
 
-- **`gatecheck.sources`** — classify a `from` spec (`parse_source`) and locate the
+- **`hooksmith.sources`** — classify a `from` spec (`parse_source`) and locate the
   local kinds (`resolve_source`). Pure, no I/O. **Unchanged by this story.**
-- **`gatecheck.registry`** — query an index and pin a `pypi:` requirement to a
+- **`hooksmith.registry`** — query an index and pin a `pypi:` requirement to a
   concrete distribution. Network + `packaging`. **New, this story.**
-- **`gatecheck.env`** — build/cache the uv venv from the pinned descriptor
+- **`hooksmith.env`** — build/cache the uv venv from the pinned descriptor
   (Environments). Consumes this story's output. Not built here.
 
 ### Justification
@@ -57,26 +57,26 @@ This yields a clean three-way split of FEAT-0002 + Environments:
    / network / malformed) carry `requirement`/`index_url` diagnostics, not
    `tool`/`kind`. A dedicated package + error type (SRP) keeps the two domains
    apart.
-4. **Import direction stays acyclic.** `registry` imports `gatecheck.sources`
-   (`PyPISource`) and `gatecheck.config` (`SourceSpec`) — both already leaves.
+4. **Import direction stays acyclic.** `registry` imports `hooksmith.sources`
+   (`PyPISource`) and `hooksmith.config` (`SourceSpec`) — both already leaves.
    Nothing imports `registry` back. See §8.
 
 ---
 
-## §2 Module layout — `src/gatecheck/registry/` (LOCKED)
+## §2 Module layout — `src/hooksmith/registry/` (LOCKED)
 
 One class / function-group per file (core conventions: filename = snake_case of
 the class). Names follow the story's file table verbatim.
 
 | File | Status | Single responsibility |
 |---|---|---|
-| `src/gatecheck/registry/resolved_pypi_source.py` | **NEW** | `ResolvedPyPISource` frozen pydantic model (the pinned descriptor). |
-| `src/gatecheck/registry/registry_error.py` | **NEW** | `RegistryError(ValueError)` with structured `requirement` / `index_url` / `reason`. |
-| `src/gatecheck/registry/registry_client.py` | **NEW** | `RegistryClient` Protocol (the network seam) + `ProjectPage` / `ProjectFile` value objects + fetch-failure signals (`PackageNotFound`, `MalformedIndexResponse`) + `UrllibRegistryClient` default impl (stdlib `urllib`, PEP 691 JSON + PEP 503 HTML fallback). |
-| `src/gatecheck/registry/index_resolver.py` | **NEW** | `resolve_index_url(...)` — alias → index-URL resolution against a `SourceSpec \| None`. No class. |
-| `src/gatecheck/registry/pypi_resolver.py` | **NEW** | `resolve_pypi_source(...) -> ResolvedPyPISource` + private version-selection helpers. No class. |
-| `src/gatecheck/registry/__init__.py` | **NEW** | Facade — export the public symbols; set `__all__`. |
-| `src/gatecheck/config/source_spec.py` | **EDIT** | Add `extra_registries` field (§7). Carved as TSK-001; may land as its own reviewable commit. |
+| `src/hooksmith/registry/resolved_pypi_source.py` | **NEW** | `ResolvedPyPISource` frozen pydantic model (the pinned descriptor). |
+| `src/hooksmith/registry/registry_error.py` | **NEW** | `RegistryError(ValueError)` with structured `requirement` / `index_url` / `reason`. |
+| `src/hooksmith/registry/registry_client.py` | **NEW** | `RegistryClient` Protocol (the network seam) + `ProjectPage` / `ProjectFile` value objects + fetch-failure signals (`PackageNotFound`, `MalformedIndexResponse`) + `UrllibRegistryClient` default impl (stdlib `urllib`, PEP 691 JSON + PEP 503 HTML fallback). |
+| `src/hooksmith/registry/index_resolver.py` | **NEW** | `resolve_index_url(...)` — alias → index-URL resolution against a `SourceSpec \| None`. No class. |
+| `src/hooksmith/registry/pypi_resolver.py` | **NEW** | `resolve_pypi_source(...) -> ResolvedPyPISource` + private version-selection helpers. No class. |
+| `src/hooksmith/registry/__init__.py` | **NEW** | Facade — export the public symbols; set `__all__`. |
+| `src/hooksmith/config/source_spec.py` | **EDIT** | Add `extra_registries` field (§7). Carved as TSK-001; may land as its own reviewable commit. |
 
 ### Why split the client, the index resolver, and the pypi resolver
 
@@ -95,21 +95,21 @@ the class). Names follow the story's file table verbatim.
 
 ### `__init__.py` exports / `__all__` (LOCKED)
 
-Alphabetical, uppercase before lowercase (matching `gatecheck.sources` §2 style).
+Alphabetical, uppercase before lowercase (matching `hooksmith.sources` §2 style).
 
 ```python
-"""Public facade for gatecheck.registry (BUILD-0006-ARCH §2)."""
+"""Public facade for hooksmith.registry (BUILD-0006-ARCH §2)."""
 from __future__ import annotations
 
-from gatecheck.registry.pypi_resolver import resolve_pypi_source
-from gatecheck.registry.registry_client import (
+from hooksmith.registry.pypi_resolver import resolve_pypi_source
+from hooksmith.registry.registry_client import (
     ProjectFile,
     ProjectPage,
     RegistryClient,
     UrllibRegistryClient,
 )
-from gatecheck.registry.registry_error import RegistryError
-from gatecheck.registry.resolved_pypi_source import ResolvedPyPISource
+from hooksmith.registry.registry_error import RegistryError
+from hooksmith.registry.resolved_pypi_source import ResolvedPyPISource
 
 __all__ = [
     "ProjectFile",
@@ -122,7 +122,7 @@ __all__ = [
 ]
 ```
 
-AC-18 requires `from gatecheck.registry import resolve_pypi_source,
+AC-18 requires `from hooksmith.registry import resolve_pypi_source,
 ResolvedPyPISource, RegistryClient, RegistryError` to work — satisfied above.
 `ProjectPage` / `ProjectFile` / `UrllibRegistryClient` are also exported so test
 lanes can construct fixtures / the concrete client through the facade.
@@ -202,10 +202,10 @@ value object, not a member of `ParsedSource`.
 
 ```python
 # pypi_resolver.py
-from gatecheck.config import SourceSpec
-from gatecheck.registry.registry_client import RegistryClient
-from gatecheck.registry.resolved_pypi_source import ResolvedPyPISource
-from gatecheck.sources import PyPISource
+from hooksmith.config import SourceSpec
+from hooksmith.registry.registry_client import RegistryClient
+from hooksmith.registry.resolved_pypi_source import ResolvedPyPISource
+from hooksmith.sources import PyPISource
 
 
 def resolve_pypi_source(
@@ -224,7 +224,7 @@ def resolve_pypi_source(
 
 - **`source`** — the `PyPISource` from `parse_source(hook.from_)`, carrying the
   verbatim `requirement` and the optional registry `alias` (`registry`).
-- **`sources`** — the parsed `[sources]` table (`GatecheckConfig.sources`, may be
+- **`sources`** — the parsed `[sources]` table (`HooksmithConfig.sources`, may be
   `None`). Supplies `default_registry` and the new `extra_registries` alias map.
 - **`client`** — the injectable network seam (§5). `None` → `UrllibRegistryClient()`
   (constructed **inside** the body, never a mutable default). Tests pass a fake.
@@ -418,7 +418,7 @@ class RegistryError(ValueError):
 
 ## §7 Config schema change — `SourceSpec.extra_registries` (LOCKED)
 
-### Exact edit to `src/gatecheck/config/source_spec.py`
+### Exact edit to `src/hooksmith/config/source_spec.py`
 
 ```python
 """SourceSpec model — `[sources]` table (BUILD-0001-ARCH §3.1, BUILD-0006-ARCH §7)."""
@@ -521,14 +521,14 @@ load-time exception — but that is explicitly deferred here.
   (`urllib`, `json`, `html.parser`) — **no** `httpx`/`requests`.
 - **mypy for `packaging`:** `packaging` **ships `py.typed`** (PEP 561, confirmed on
   the local install) and is fully typed. **No mypy override is needed** — unlike
-  the `gatecheck_core` Rust extension (which has no stubs and carries an
+  the `hooksmith_core` Rust extension (which has no stubs and carries an
   `ignore_missing_imports` override). `SpecifierSet` / `Version` / `Requirement` /
   `canonicalize_name` / `parse_wheel_filename` / `parse_sdist_filename` all type
   cleanly under `--strict`.
 - **`from __future__ import annotations`** in every new module; every function and
   the `RegistryClient` Protocol / `ResolvedPyPISource` / `ProjectPage` /
   `ProjectFile` models fully annotated. Target: `mypy --strict
-  src/gatecheck/registry/` passes with **no new errors and no `# type: ignore`**
+  src/hooksmith/registry/` passes with **no new errors and no `# type: ignore`**
   (AC-19). `parse_wheel_filename` returns a 4-tuple whose first element is a
   `NormalizedName` and `parse_sdist_filename` a 2-tuple — both destructured with
   explicit types; no `Any` leaks.
@@ -572,13 +572,13 @@ succeeds with no `ConfigError`).
 
 ## §11 Import direction / no cycle (LOCKED)
 
-- `gatecheck.registry` imports: stdlib (`urllib`, `json`, `html.parser`, `re`,
+- `hooksmith.registry` imports: stdlib (`urllib`, `json`, `html.parser`, `re`,
   `typing`), `pydantic`, `packaging`, and — from **other leaves** —
-  `gatecheck.sources.PyPISource` and `gatecheck.config.SourceSpec`.
-- Nothing imports `gatecheck.registry` back (it is a new leaf consumed later by
-  `gatecheck.env` / the runner). **No cycle.**
-- **`gatecheck.sources` gains no network I/O** and is not modified (AC-21).
-  `gatecheck.config` gains only the `extra_registries` field (§7); no import of
+  `hooksmith.sources.PyPISource` and `hooksmith.config.SourceSpec`.
+- Nothing imports `hooksmith.registry` back (it is a new leaf consumed later by
+  `hooksmith.env` / the runner). **No cycle.**
+- **`hooksmith.sources` gains no network I/O** and is not modified (AC-21).
+  `hooksmith.config` gains only the `extra_registries` field (§7); no import of
   `registry`.
 - Import direction: `config` → `sources` (existing); `registry` → `sources` +
   `config`; `env`/runner → `registry` (later). Acyclic.
@@ -619,25 +619,25 @@ succeeds with no `ConfigError`).
   - `0005-architecture-decision.md` — `SourceResolutionError` shape, injected-seam
     idiom, frozen-model idiom, `__all__` ordering, "does NOT map to `ConfigError`"
     reasoning (mirrored here for `RegistryError`).
-  - `0004-architecture-decision.md` — `gatecheck.sources` package, `PyPISource`
+  - `0004-architecture-decision.md` — `hooksmith.sources` package, `PyPISource`
     model, `ParsedSource` union, import direction.
 - Consumed (unchanged) code:
-  - `src/gatecheck/sources/pypi_source.py` — `PyPISource(requirement, registry)`
+  - `src/hooksmith/sources/pypi_source.py` — `PyPISource(requirement, registry)`
     (the resolver's input).
-  - `src/gatecheck/sources/resolver.py` — `resolve_source`'s `PyPISource` rejection
+  - `src/hooksmith/sources/resolver.py` — `resolve_source`'s `PyPISource` rejection
     message points here; **not modified** (AC-21).
-  - `src/gatecheck/config/gatecheck_config.py` — `GatecheckConfig.sources`.
-  - `src/gatecheck/config/dumper.py` — `dump_config` round-trip (§7).
-  - `src/gatecheck/config/_error_translator.py` / `loader.py` — pydantic →
+  - `src/hooksmith/config/hooksmith_config.py` — `HooksmithConfig.sources`.
+  - `src/hooksmith/config/dumper.py` — `dump_config` round-trip (§7).
+  - `src/hooksmith/config/_error_translator.py` / `loader.py` — pydantic →
     `ConfigError` translation the `extra_registries` validator rides on (§7); no
     new pass added (§8 defers TSK-008).
 - Docs (updated by TSK-013, not this doc):
   - `docs/config/reference.md § [sources]` — the `extra-registries` example must be
     corrected from "list of `{alias = url}`" to the `dict`/table form (see §
     Deviations in the charter).
-- New code (red): `src/gatecheck/registry/{__init__,resolved_pypi_source,
+- New code (red): `src/hooksmith/registry/{__init__,resolved_pypi_source,
   registry_error,registry_client,index_resolver,pypi_resolver}.py`;
-  edit `src/gatecheck/config/source_spec.py`.
+  edit `src/hooksmith/config/source_spec.py`.
 - New tests (red): `tests/unit/test_pypi_resolver.py`,
   `tests/unit/test_registry_client.py`,
   `tests/integration/test_pypi_resolution_acceptance.py`.

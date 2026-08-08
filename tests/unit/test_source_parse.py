@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.sources.parse_source (STY-0004 / TSK-006).
+"""Unit tests for hooksmith.sources.parse_source (STY-0004 / TSK-006).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0004-architecture-decision.md``:
@@ -9,7 +9,7 @@ Contract under test is LOCKED by
   message table (assertions here pin the LOCKED text so any code drift fails).
 - §5: ``SourceSpecError(ValueError)`` with message
   ``invalid source spec '<spec>': <reason>``.
-- §7: public import surface from ``gatecheck.sources``.
+- §7: public import surface from ``hooksmith.sources``.
 
 ``parse_source`` is a pure function (§4 "Purity", AC-9): these tests use NO
 mocks. AAA structure throughout. Assertions on error messages use
@@ -25,7 +25,7 @@ import re
 import pydantic
 import pytest
 
-from gatecheck.sources import (
+from hooksmith.sources import (
     ParsedSource,
     ProjectSource,
     PyPISource,
@@ -396,27 +396,27 @@ def test_pypi_source_defaults_registry_to_none() -> None:
 
 
 def test_public_import_surface() -> None:
-    # AC-10: the locked seven-symbol facade is importable from gatecheck.sources.
+    # AC-10: the locked seven-symbol facade is importable from hooksmith.sources.
     # Arrange / Act
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         ParsedSource as _ParsedSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         ProjectSource as _ProjectSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         PyPISource as _PyPISource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         SourceSpecError as _SourceSpecError,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         SystemSource as _SystemSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         UnsupportedSource as _UnsupportedSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         parse_source as _parse_source,
     )
 

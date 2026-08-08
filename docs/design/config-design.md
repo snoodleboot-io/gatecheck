@@ -4,7 +4,7 @@ Why `check.toml` looks the way it does, and how it's loaded.
 
 ## TOML, not YAML
 
-pre-commit uses YAML. gatecheck uses TOML, on purpose.
+pre-commit uses YAML. hooksmith uses TOML, on purpose.
 
 YAML's flexibility is its problem: the [Norway
 problem](https://hitchdev.com/strictyaml/why/implicit-typing-removed/) (`no` becomes
@@ -13,7 +13,7 @@ write the same structure. A configuration file that a tool *and* a human both ed
 should have exactly one obvious spelling for each thing. TOML has that; it was designed
 for it.
 
-The cost is that deeply nested structures are more verbose in TOML. gatecheck's config
+The cost is that deeply nested structures are more verbose in TOML. hooksmith's config
 is deliberately shallow — a flat list of hooks, a flat set of groups — so that cost
 never really lands.
 
@@ -23,7 +23,7 @@ Every model is `extra="forbid"`. An unknown key is an **error**, not a silently
 ignored line:
 
 ```console
-$ gatecheck run
+$ hooksmith run
 Error: check.toml:12:1: Extra inputs are not permitted (field: pass_filenames)
 ```
 
@@ -52,7 +52,7 @@ internally, which is the one place the seam shows.
 ## Value objects are frozen
 
 Every parsed structure is a frozen pydantic model or a frozen dataclass. Config is read
-once and never mutated; downstream code takes a `GatecheckConfig` and can't
+once and never mutated; downstream code takes a `HooksmithConfig` and can't
 accidentally reach back and change it. Immutability also makes the content-addressed
 cache honest — a `ResolvedPyPISource` can't change out from under the key derived from
 it.
@@ -61,7 +61,7 @@ it.
 
 `load_config` and `dump_config` are inverses: anything loaded can be dumped, and the
 result loads back to an equal config. This is what makes
-[`gatecheck migrate`](../cli/migrate.md) trustworthy — it builds a `GatecheckConfig` in
+[`hooksmith migrate`](../cli/migrate.md) trustworthy — it builds a `HooksmithConfig` in
 memory and serializes it through the *same* dumper any hand-written config uses, so
 migration output is a first-class config file, not a second-class generated one.
 

@@ -12,8 +12,8 @@ on-event    = "commit"
 ```
 
 ```bash
-gatecheck run lint     # just this group
-gatecheck run          # every hook, ignoring groups
+hooksmith run lint     # just this group
+hooksmith run          # every hook, ignoring groups
 ```
 
 | Field | Type | Default | Effect |
@@ -46,7 +46,7 @@ run        = "ruff format {files}"
 depends-on = ["ruff"]        # fix lint errors before reformatting
 ```
 
-gatecheck topologically sorts the selected hooks into levels. Hooks with no dependency
+hooksmith topologically sorts the selected hooks into levels. Hooks with no dependency
 between them can run concurrently; a hook waits only for what it actually depends on.
 
 A **cycle** is a config error, reported with the hooks involved. A `depends-on`
@@ -85,7 +85,7 @@ max-workers = 2      # never more than 2 subprocesses at once
 ```
 
 Raise `max-workers` on a big CI box; lower it if the hooks are memory-hungry or you're
-sharing the machine. An all-hooks run (`gatecheck run` with no group) is unbounded.
+sharing the machine. An all-hooks run (`hooksmith run` with no group) is unbounded.
 
 !!! note "Results stay deterministic"
 
@@ -140,13 +140,13 @@ on-event = "commit-msg"
 | `commit-msg` | `.git/hooks/commit-msg` |
 
 Only these three values are accepted; anything else is rejected at load.
-[`gatecheck install`](../cli/install.md) writes the scripts. Groups without an
+[`hooksmith install`](../cli/install.md) writes the scripts. Groups without an
 `on-event` never fire automatically — run them by name.
 
 A `commit-msg` group checks the commit message instead of the changeset. Git passes
-the path of the pending message file, which gatecheck forwards to the group's hooks
+the path of the pending message file, which hooksmith forwards to the group's hooks
 via the [`{commit-msg}`](../cli/run.md#message-check-mode) placeholder — see
-[`gatecheck run`](../cli/run.md#message-check-mode).
+[`hooksmith run`](../cli/run.md#message-check-mode).
 
 Several groups can share an event; they run in declared order, and the first failure
 stops the commit.
@@ -172,10 +172,10 @@ fail-fast   = false
 on-event    = "push"
 ```
 
-Commit stays fast; push is thorough; CI runs `gatecheck run full --base main`.
+Commit stays fast; push is thorough; CI runs `hooksmith run full --base main`.
 
 ## See also
 
 - [Conditions & Filters](conditions.md) — deciding whether a hook runs at all.
-- [`gatecheck run`](../cli/run.md) — the execution pipeline end to end.
-- [`gatecheck install`](../cli/install.md) — wiring `on-event` to git.
+- [`hooksmith run`](../cli/run.md) — the execution pipeline end to end.
+- [`hooksmith install`](../cli/install.md) — wiring `on-event` to git.

@@ -1,4 +1,4 @@
-"""Unit tests for the workspace schema + gatecheck.workspace.discover_workspace (STY-0016 / GAT-18).
+"""Unit tests for the workspace schema + hooksmith.workspace.discover_workspace (STY-0016 / GAT-18).
 
 Hermetic — real ``check.toml`` files under ``tmp_path``; no network. Covers the
 `[workspace]`/`[package]` schema validation and package discovery (glob expansion,
@@ -13,8 +13,8 @@ from pathlib import Path
 import pydantic
 import pytest
 
-from gatecheck.config import ConfigError, PackageSpec, WorkspaceSpec
-from gatecheck.workspace import Workspace, discover_workspace
+from hooksmith.config import ConfigError, PackageSpec, WorkspaceSpec
+from hooksmith.workspace import Workspace, discover_workspace
 
 # ── schema ────────────────────────────────────────────────────────
 

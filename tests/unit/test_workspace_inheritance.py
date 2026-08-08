@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.workspace.effective_config (STY-0017 / GAT-22).
+"""Unit tests for hooksmith.workspace.effective_config (STY-0017 / GAT-22).
 
 Pure config layering; no I/O. Covers merge (id override in place, new appended, group
 merge, sources fallback), override + none ignoring the root, and the per-package
@@ -7,8 +7,8 @@ inherit override of the workspace default. AAA structure throughout.
 
 from __future__ import annotations
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.workspace import effective_config
+from hooksmith.config import HooksmithConfig
+from hooksmith.workspace import effective_config
 
 
 def _cfg(
@@ -18,7 +18,7 @@ def _cfg(
     inherit_pkg: str | None = None,
     groups: dict[str, list[str]] | None = None,
     sources: dict[str, object] | None = None,
-) -> GatecheckConfig:
+) -> HooksmithConfig:
     data: dict[str, object] = {
         "hook": [{"id": h, "from": "system", "run": h} for h in hooks],
     }
@@ -30,10 +30,10 @@ def _cfg(
         data["workspace"] = {"packages": ["x"], "inherit": inherit_ws}
     if inherit_pkg is not None:
         data["package"] = {"inherit": inherit_pkg}
-    return GatecheckConfig.model_validate(data)
+    return HooksmithConfig.model_validate(data)
 
 
-def _ids(config: GatecheckConfig) -> list[str]:
+def _ids(config: HooksmithConfig) -> list[str]:
     return [h.id for h in config.hook]
 
 

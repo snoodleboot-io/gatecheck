@@ -5,17 +5,17 @@ up; the rest you use day to day.
 
 | Command | What it does |
 |---|---|
-| [`gatecheck run`](run.md) | Execute hooks against the changeset. The one you'll use most. |
-| [`gatecheck install`](install.md) | Write the git hook scripts that fire `run` on commit/push. |
-| [`gatecheck sync`](sync.md) | Build every hook's environment ahead of time. |
-| [`gatecheck cache`](cache.md) | Explain (`why`) and reclaim (`clear`) the environment cache. |
-| [`gatecheck migrate`](migrate.md) | Convert a `.pre-commit-config.yaml` into a `check.toml`. |
+| [`hooksmith run`](run.md) | Execute hooks against the changeset. The one you'll use most. |
+| [`hooksmith install`](install.md) | Write the git hook scripts that fire `run` on commit/push. |
+| [`hooksmith sync`](sync.md) | Build every hook's environment ahead of time. |
+| [`hooksmith cache`](cache.md) | Explain (`why`) and reclaim (`clear`) the environment cache. |
+| [`hooksmith migrate`](migrate.md) | Convert a `.pre-commit-config.yaml` into a `check.toml`. |
 
 ## Global options
 
 ```console
-$ gatecheck --help
-$ gatecheck --version
+$ hooksmith --help
+$ hooksmith --version
 ```
 
 `-h` works everywhere `--help` does.
@@ -23,8 +23,8 @@ $ gatecheck --version
 ## Conventions
 
 **`--config`** — every command that reads configuration accepts `--config PATH`. When
-omitted, gatecheck searches **upward** from the current directory for a `check.toml`
-(or a `pyproject.toml` with `[tool.gatecheck]`), stopping at the repository root — so
+omitted, hooksmith searches **upward** from the current directory for a `check.toml`
+(or a `pyproject.toml` with `[tool.hooksmith]`), stopping at the repository root — so
 commands work from any subdirectory. In a monorepo, the config that's found determines
 which workspace root is discovered.
 
@@ -39,11 +39,11 @@ Python traceback, that's a bug worth reporting.
 ## A typical session
 
 ```bash
-gatecheck migrate     # coming from pre-commit? convert first
-gatecheck sync        # build the environments
-gatecheck install     # wire up the git hooks
-gatecheck run         # check what's staged, right now
+hooksmith migrate     # coming from pre-commit? convert first
+hooksmith sync        # build the environments
+hooksmith install     # wire up the git hooks
+hooksmith run         # check what's staged, right now
 ```
 
-After that, the git hooks run on their own — running `gatecheck run` by hand is for
+After that, the git hooks run on their own — running `hooksmith run` by hand is for
 when you want to check *before* committing.

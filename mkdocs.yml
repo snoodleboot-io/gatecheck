@@ -1,12 +1,12 @@
-site_name: gatecheck
+site_name: hooksmith
 site_description: A modern pre-commit replacement with real package sources, monorepo support, and Rust-powered parallel execution.
 # The docs are served under /docs/ of the site root (the marketing landing page is at
-# the root). On GitHub Pages that root is /gatecheck/; swap for https://gatecheck.dev/docs/
+# the root). On GitHub Pages that root is /hooksmith/; swap for https://hooksmith.dev/docs/
 # once the custom domain is wired up. Internal nav links are relative, so navigation
 # works regardless — site_url only sets the canonical URL and the sitemap.
-site_url: https://snoodleboot-io.github.io/gatecheck/docs/
-repo_url: https://github.com/snoodleboot-io/gatecheck
-repo_name: snoodleboot-io/gatecheck
+site_url: https://snoodleboot-io.github.io/hooksmith/docs/
+repo_url: https://github.com/snoodleboot-io/hooksmith
+repo_name: snoodleboot-io/hooksmith
 edit_uri: edit/main/docs/
 
 theme:
@@ -19,12 +19,12 @@ theme:
     code: JetBrains Mono
   palette:
     - media: "(prefers-color-scheme: light)"
-      scheme: gatecheck-light
+      scheme: hooksmith-light
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
-      scheme: gatecheck-dark
+      scheme: hooksmith-dark
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -95,7 +95,7 @@ markdown_extensions:
       normalize_issue_symbols: true
       repo_url_shorthand: true
       user: snoodleboot-io
-      repo: gatecheck
+      repo: hooksmith
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.snippets:
@@ -137,11 +137,11 @@ nav:
     - Writing Custom Hooks: guides/custom-hooks.md
   - CLI Reference:
     - cli/index.md
-    - gatecheck run: cli/run.md
-    - gatecheck install: cli/install.md
-    - gatecheck sync: cli/sync.md
-    - gatecheck cache: cli/cache.md
-    - gatecheck migrate: cli/migrate.md
+    - hooksmith run: cli/run.md
+    - hooksmith install: cli/install.md
+    - hooksmith sync: cli/sync.md
+    - hooksmith cache: cli/cache.md
+    - hooksmith migrate: cli/migrate.md
   - Design:
     - design/index.md
     - Architecture Overview: design/architecture.md
@@ -160,9 +160,9 @@ extra:
     default: stable
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/snoodleboot-io/gatecheck
+      link: https://github.com/snoodleboot-io/hooksmith
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/gatecheck/
+      link: https://pypi.org/project/hooksmith/
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY

@@ -141,7 +141,7 @@ skipping a package the change actually broke is not.
 ## Running
 
 ```bash
-gatecheck run --affected --base main
+hooksmith run --affected --base main
 ```
 
 Results are prefixed with the package name:
@@ -165,4 +165,4 @@ There is no separate `workspace` command; `run --affected` is the whole interfac
 ## See also
 
 - [Monorepo Setup](../guides/monorepo.md) — the task-shaped walkthrough.
-- [`gatecheck run`](../cli/run.md) — `--affected`, `--base`, `--json`.
+- [`hooksmith run`](../cli/run.md) — `--affected`, `--base`, `--json`.

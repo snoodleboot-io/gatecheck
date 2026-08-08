@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.migration.map_precommit (STY-0020 / GAT-23).
+"""Unit tests for hooksmith.migration.map_precommit (STY-0020 / GAT-23).
 
 Pure mapping; a round-trip through dump_config/load_config confirms the output is a
 valid check.toml. Covers known repos, rev pinning, args, unknown-repo + files
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gatecheck.config import dump_config, load_config
-from gatecheck.migration import PreCommitConfig, map_precommit
+from hooksmith.config import dump_config, load_config
+from hooksmith.migration import PreCommitConfig, map_precommit
 
 
 def _precommit(repos: list[dict[str, object]]) -> PreCommitConfig:
@@ -146,7 +146,7 @@ def test_pass_filenames_true_is_default() -> None:
     )
     # Act
     config, _ = map_precommit(precommit)
-    # Assert — the gatecheck default (True) is retained
+    # Assert — the hooksmith default (True) is retained
     assert _by_id(config)["black"].pass_files is True
 
 
@@ -188,7 +188,7 @@ def test_shellcheck_py_runs_shellcheck() -> None:
 
 
 def test_prettier_mirror_maps_to_system_with_warning() -> None:
-    # Arrange — a node tool gatecheck cannot source from PyPI
+    # Arrange — a node tool hooksmith cannot source from PyPI
     precommit = _precommit(
         [
             {

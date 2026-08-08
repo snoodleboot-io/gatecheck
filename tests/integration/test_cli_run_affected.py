@@ -1,4 +1,4 @@
-"""Integration test for `gatecheck run --affected` (STY-0018 / GAT-24).
+"""Integration test for `hooksmith run --affected` (STY-0018 / GAT-24).
 
 End-to-end in a real monorepo git repo: two packages, a change staged in one, and
 only that package's hooks run. Marked ``integration`` and skipped without git/echo.
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 pytestmark = pytest.mark.integration
 

@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config import load_config
-from gatecheck.env import EnvManager
-from gatecheck.venv import bin_dir_name
+from hooksmith.config import load_config
+from hooksmith.env import EnvManager
+from hooksmith.venv import bin_dir_name
 
 _CONFIG = """
 [[hook]]

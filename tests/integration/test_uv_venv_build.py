@@ -10,7 +10,7 @@ Three shapes are covered deliberately:
 * ``ruff`` — a compiled tool shipping **one wheel per platform**.
 * ``detect-secrets`` — a tool **with dependencies** (pyyaml, requests, …). This is the
   shape that BUG-0006 broke: installing with ``--require-hashes`` demanded every
-  transitive dependency also be pinned+hashed, which gatecheck can't provide, so any
+  transitive dependency also be pinned+hashed, which hooksmith can't provide, so any
   package with deps failed. ``ruff`` and ``pip`` have no deps, so they alone could
   never catch it — which is exactly why it shipped unnoticed.
 """
@@ -23,8 +23,8 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvManager, ResolvedEnv
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import EnvManager, ResolvedEnv
 
 pytestmark = [pytest.mark.integration, pytest.mark.network]
 

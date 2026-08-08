@@ -38,5 +38,5 @@ Task-shaped walkthroughs. For field-by-field detail, see
 2. [Python Projects](python.md) — a realistic config to copy.
 3. [CI Integration](ci.md) — make it a gate, not just a local convenience.
 
-Already on pre-commit? [`gatecheck migrate`](../cli/migrate.md) converts your config,
+Already on pre-commit? [`hooksmith migrate`](../cli/migrate.md) converts your config,
 and [Why not pre-commit](../design/why-not-precommit.md) covers what changes.

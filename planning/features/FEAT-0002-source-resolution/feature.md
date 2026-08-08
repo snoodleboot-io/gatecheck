@@ -16,7 +16,7 @@ Turn each hook's `from` source spec — `pypi:ruff>=0.4`, `pypi+internal:my-lint
 
 ## Why
 
-`pypi:` is the source of truth for hooks (PRD-0001 § Goals 1) and reusing the project's own venv via `from = "project"` (PRD-0001 § Goals 2) are two of the headline reasons `gatecheck` exists. The config loader only validates that a `from` string is non-empty; nothing yet understands what `pypi+internal:my-linter==1.0` *means*. This feature gives that string semantics. See [PRD-0001 § Scope — Sources](../../prd/0001-gatecheck.md#scope) ("PyPI / private registries / project venv / system binary resolution") and [ADR-0001](../../adr/0001-python-host-rust-core.md), which places package resolution and environment management on the Python host side.
+`pypi:` is the source of truth for hooks (PRD-0001 § Goals 1) and reusing the project's own venv via `from = "project"` (PRD-0001 § Goals 2) are two of the headline reasons `hooksmith` exists. The config loader only validates that a `from` string is non-empty; nothing yet understands what `pypi+internal:my-linter==1.0` *means*. This feature gives that string semantics. See [PRD-0001 § Scope — Sources](../../prd/0001-hooksmith.md#scope) ("PyPI / private registries / project venv / system binary resolution") and [ADR-0001](../../adr/0001-python-host-rust-core.md), which places package resolution and environment management on the Python host side.
 
 ## User-facing surface
 
@@ -31,7 +31,7 @@ The contract is the `from` field documented in [docs/config/reference.md § Sour
 
 `local:`, `git:`, and `docker:` specs also appear in the reference table; FEAT-0002 covers only the four forms above. The others are recognized as a typed "unsupported source kind" and produce a clear error rather than a crash; full support for them is out of scope for this feature.
 
-Errors in a `from` spec surface through the existing `gatecheck.config.ConfigError` `path:line:col: message` mechanism where the spec originates from a loaded `check.toml`, so users get the same IDE-parseable diagnostics they already get for the rest of the config.
+Errors in a `from` spec surface through the existing `hooksmith.config.ConfigError` `path:line:col: message` mechanism where the spec originates from a loaded `check.toml`, so users get the same IDE-parseable diagnostics they already get for the rest of the config.
 
 ## Out of scope
 

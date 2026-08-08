@@ -23,7 +23,7 @@ depends-on = ["ruff"]
 [[hook]]
 id         = "mypy"
 from       = "project"
-run        = "mypy src/gatecheck"
+run        = "mypy src/hooksmith"
 pass-files = false
 when       = { env-not = "SKIP_MYPY" }
 

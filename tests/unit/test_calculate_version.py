@@ -29,7 +29,7 @@ calc = _load()
 
 def _calculator(pypi: tuple[int, int] | None) -> object:
     """A VersionCalculator whose PyPI lookup returns a fixed (major, minor) or None."""
-    return calc.VersionCalculator(package_name="gatecheck", pypi_lookup=lambda _name: pypi)
+    return calc.VersionCalculator(package_name="hooksmith", pypi_lookup=lambda _name: pypi)
 
 
 # ── MINOR derivation ──────────────────────────────────────────────

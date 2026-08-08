@@ -1,4 +1,4 @@
-// gatecheck docs — extra JavaScript
+// hooksmith docs — extra JavaScript
 // Loaded after MkDocs Material's own scripts.
 
 document$.subscribe(function () {
@@ -12,7 +12,7 @@ document$.subscribe(function () {
       navigator.clipboard.writeText(cmd).then(function () {
         const original = installEl.innerHTML;
         installEl.innerHTML = installEl.innerHTML.replace(
-          'pip install gatecheck',
+          'pip install hooksmith',
           '<span style="color:#3aad6a">✓ Copied!</span>'
         );
         setTimeout(function () {
@@ -33,6 +33,6 @@ document$.subscribe(function () {
   // ── Version badge in nav ────────────────────────────────────
   const versionSelector = document.querySelector('.md-version__current');
   if (versionSelector) {
-    versionSelector.style.color = 'var(--gc-rust-300)';
+    versionSelector.style.color = 'var(--hs-rust-300)';
   }
 });

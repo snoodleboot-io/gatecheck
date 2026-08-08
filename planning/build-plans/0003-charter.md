@@ -11,24 +11,24 @@ date: 2026-05-29
 
 ## Goal
 
-Deliver a synchronous `dump_config(config: GatecheckConfig, path: Path) -> None`
+Deliver a synchronous `dump_config(config: HooksmithConfig, path: Path) -> None`
 function — the write-side complement to `load_config` — that serializes a
-`GatecheckConfig` back to a valid, human-readable `check.toml` on disk. The
+`HooksmithConfig` back to a valid, human-readable `check.toml` on disk. The
 function uses `tomlkit` document-building primitives to produce the idiomatic
 TOML structural conventions (`[[hook]]` array-of-tables headers, dotted
 `[group.<name>]` headers, inline `when = { … }` tables) that the project's
-own `check.toml` uses. This is the primitive that `gatecheck migrate` will
+own `check.toml` uses. This is the primitive that `hooksmith migrate` will
 call to produce its output, unblocking the migration story without coupling
 serialization logic to the CLI layer. See
 [STY-0003](../features/FEAT-0001-config-loader/stories/STY-0003-round-trip-dump.md),
 [FEAT-0001](../features/FEAT-0001-config-loader/feature.md), and
-[PRD-0001 § Migration](../prd/0001-gatecheck.md#scope).
+[PRD-0001 § Migration](../prd/0001-hooksmith.md#scope).
 
 ## In-scope for this build
 
-- New `src/gatecheck/config/dumper.py` with
-  `dump_config(config: GatecheckConfig, path: Path) -> None`.
-- Export `dump_config` from `src/gatecheck/config/__init__.py`; update
+- New `src/hooksmith/config/dumper.py` with
+  `dump_config(config: HooksmithConfig, path: Path) -> None`.
+- Export `dump_config` from `src/hooksmith/config/__init__.py`; update
   `__all__`.
 - Acceptance tests in `tests/integration/test_config_dump_acceptance.py`
   (4–6 tests).
@@ -37,7 +37,7 @@ serialization logic to the CLI layer. See
 
 ## Out of scope (deferred)
 
-- Full `gatecheck migrate` YAML→TOML transform — `migrate.py` stub is left
+- Full `hooksmith migrate` YAML→TOML transform — `migrate.py` stub is left
   unchanged; the complete migration story is a separate, later story.
 - Atomic write / crash-safe semantics (direct write is sufficient for
   STY-0003).
@@ -57,14 +57,14 @@ Verbatim from [STY-0003](../features/FEAT-0001-config-loader/stories/STY-0003-ro
 - [ ] AC-5: `when = { … }` is serialized as an inline table, not a sub-table.
 - [ ] AC-6: `None` fields are absent from dumped output.
 - [ ] AC-7: Fields at their default values are absent from dumped output.
-- [ ] AC-8: `from gatecheck.config import dump_config, load_config` works.
-- [ ] AC-9: `mypy --strict src/gatecheck/config/` passes with no new errors.
+- [ ] AC-8: `from hooksmith.config import dump_config, load_config` works.
+- [ ] AC-9: `mypy --strict src/hooksmith/config/` passes with no new errors.
 - [ ] AC-10: No new runtime dependencies added.
 
 ## Stakeholder dependencies
 
 - **[STY-0001](../features/FEAT-0001-config-loader/stories/STY-0001-load-check-toml.md)**
-  — already merged into `main`; provides `GatecheckConfig`, `HookDef`,
+  — already merged into `main`; provides `HooksmithConfig`, `HookDef`,
   `GroupDef`, `SourceSpec`, and `load_config`. No blocker.
 - **[STY-0002](../features/FEAT-0001-config-loader/stories/STY-0002-surface-error-context.md)**
   — already merged into `main`; provides `ConfigError` and adds

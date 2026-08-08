@@ -40,8 +40,8 @@ on-event    = "push"
 ```
 
 ```bash
-gatecheck sync      # build the environments once
-gatecheck install   # wire up pre-commit and pre-push
+hooksmith sync      # build the environments once
+hooksmith install   # wire up pre-commit and pre-push
 ```
 
 ## Why it's shaped like that
@@ -49,7 +49,7 @@ gatecheck install   # wire up pre-commit and pre-push
 **ruff comes from `pypi:`, mypy from `project`.**
 
 This is the one decision that matters. `ruff` is self-contained — it reads your files
-and needs nothing else — so gatecheck installs a pinned copy in an isolated venv.
+and needs nothing else — so hooksmith installs a pinned copy in an isolated venv.
 Everyone on the team and CI gets byte-identical behaviour, with no "works on my
 machine".
 
@@ -123,11 +123,11 @@ a reason.
 ## Src layout and imports
 
 `from = "project"` looks in `$VIRTUAL_ENV` first, then `<root>/.venv`. If your team
-uses a different venv location, activate it before running gatecheck, or install the
+uses a different venv location, activate it before running hooksmith, or install the
 tool from `pypi:` instead where that's viable.
 
 For a `src/` layout, make sure the package is installed (`pip install -e .`) so mypy
-and pytest can import it — that's a project-setup concern, not a gatecheck one, but
+and pytest can import it — that's a project-setup concern, not a hooksmith one, but
 it's the usual cause of "works in my editor, fails in the hook".
 
 ## See also

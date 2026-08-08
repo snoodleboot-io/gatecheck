@@ -1,35 +1,35 @@
 /* ============================================================
-   gatecheck — marketing site
+   hooksmith — marketing site
    Standalone styles. Mirrors the rust-orange palette used by
    the MkDocs Material theme in ../docs/stylesheets/extra.css.
    ============================================================ */
 
 /* ── Color tokens ─────────────────────────────────────────── */
 :root {
-  --gc-rust-50:  #fdf2ee;
-  --gc-rust-100: #fbe0d6;
-  --gc-rust-200: #f6bba6;
-  --gc-rust-300: #ee8f6d;
-  --gc-rust-400: #e05e32;
-  --gc-rust-500: #c74a20;
-  --gc-rust-600: #a63a18;
-  --gc-rust-700: #852e13;
-  --gc-rust-800: #5c1f0c;
-  --gc-rust-900: #3a1207;
+  --hs-rust-50:  #fdf2ee;
+  --hs-rust-100: #fbe0d6;
+  --hs-rust-200: #f6bba6;
+  --hs-rust-300: #ee8f6d;
+  --hs-rust-400: #e05e32;
+  --hs-rust-500: #c74a20;
+  --hs-rust-600: #a63a18;
+  --hs-rust-700: #852e13;
+  --hs-rust-800: #5c1f0c;
+  --hs-rust-900: #3a1207;
 
-  --gc-black:      #0e0e0e;
-  --gc-near-black: #1a1a1a;
-  --gc-charcoal:   #2a2a2a;
-  --gc-mid:        #444444;
-  --gc-muted:      #888888;
-  --gc-light:      #d8d8d8;
-  --gc-near-white: #f5f5f5;
-  --gc-white:      #ffffff;
+  --hs-black:      #0e0e0e;
+  --hs-near-black: #1a1a1a;
+  --hs-charcoal:   #2a2a2a;
+  --hs-mid:        #444444;
+  --hs-muted:      #888888;
+  --hs-light:      #d8d8d8;
+  --hs-near-white: #f5f5f5;
+  --hs-white:      #ffffff;
 
-  --fg:        var(--gc-near-black);
-  --fg-muted:  var(--gc-mid);
-  --bg:        var(--gc-white);
-  --bg-alt:    var(--gc-near-white);
+  --fg:        var(--hs-near-black);
+  --fg-muted:  var(--hs-mid);
+  --bg:        var(--hs-white);
+  --bg-alt:    var(--hs-near-white);
 
   --max-width: 1080px;
 }
@@ -38,8 +38,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 img        { max-width: 100%; display: block; }
-a          { color: var(--gc-rust-500); text-decoration: none; }
-a:hover    { color: var(--gc-rust-400); }
+a          { color: var(--hs-rust-500); text-decoration: none; }
+a:hover    { color: var(--hs-rust-400); }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -77,15 +77,15 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 }
 
 .section--dark {
-  background: var(--gc-near-white);
+  background: var(--hs-near-white);
 }
 
 .section h2 {
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--gc-rust-500);
-  border-bottom: 2px solid var(--gc-rust-400);
+  color: var(--hs-rust-500);
+  border-bottom: 2px solid var(--hs-rust-400);
   padding-bottom: 0.3em;
   margin-bottom: 1.5rem;
 }
@@ -99,20 +99,20 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 
 /* ── Header ───────────────────────────────────────────────── */
 .site-header {
-  background: var(--gc-black);
-  color: var(--gc-white);
+  background: var(--hs-black);
+  color: var(--hs-white);
   padding: 0.85rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--gc-rust-700);
+  border-bottom: 1px solid var(--hs-rust-700);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  color: var(--gc-white);
+  color: var(--hs-white);
   font-weight: 800;
   letter-spacing: -0.02em;
   font-size: 1.15rem;
@@ -127,20 +127,20 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 }
 
 .site-nav a {
-  color: var(--gc-light);
+  color: var(--hs-light);
   font-weight: 600;
 }
 
 .site-nav a:hover {
-  color: var(--gc-rust-300);
+  color: var(--hs-rust-300);
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */
 .hero {
   padding: 5rem 1.5rem 4rem;
   text-align: center;
-  background: var(--gc-black);
-  color: var(--gc-white);
+  background: var(--hs-black);
+  color: var(--hs-white);
   position: relative;
   overflow: hidden;
 }
@@ -151,7 +151,7 @@ h1, h2, h3 { margin: 0 0 0.5em; }
   inset: 0;
   background: radial-gradient(
     ellipse 60% 40% at 50% 0%,
-    color-mix(in srgb, var(--gc-rust-600) 25%, transparent),
+    color-mix(in srgb, var(--hs-rust-600) 25%, transparent),
     transparent 70%
   );
   pointer-events: none;
@@ -172,11 +172,11 @@ h1, h2, h3 { margin: 0 0 0.5em; }
   margin-bottom: 1rem;
 }
 
-.hero__title span { color: var(--gc-rust-400); }
+.hero__title span { color: var(--hs-rust-400); }
 
 .hero__tagline {
   font-size: clamp(1rem, 2.2vw, 1.25rem);
-  color: var(--gc-light);
+  color: var(--hs-light);
   max-width: 52ch;
   margin: 0 auto 2.5rem;
   line-height: 1.55;
@@ -194,23 +194,23 @@ h1, h2, h3 { margin: 0 0 0.5em; }
   display: inline-flex;
   align-items: center;
   gap: 1rem;
-  background: var(--gc-near-black);
-  border: 1px solid var(--gc-charcoal);
+  background: var(--hs-near-black);
+  border: 1px solid var(--hs-charcoal);
   border-radius: 8px;
   padding: 0.85rem 1.25rem;
   margin: 0 auto 2rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
-  color: var(--gc-rust-300);
+  color: var(--hs-rust-300);
 }
 
-.install__prefix { color: var(--gc-muted); }
-.install__cmd    { color: var(--gc-rust-300); }
+.install__prefix { color: var(--hs-muted); }
+.install__cmd    { color: var(--hs-rust-300); }
 
 .install__copy {
   background: transparent;
-  color: var(--gc-muted);
-  border: 1px solid var(--gc-charcoal);
+  color: var(--hs-muted);
+  border: 1px solid var(--hs-charcoal);
   border-radius: 4px;
   padding: 0.15rem 0.5rem;
   font: inherit;
@@ -220,8 +220,8 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 }
 
 .install__copy:hover {
-  color: var(--gc-rust-300);
-  border-color: var(--gc-rust-600);
+  color: var(--hs-rust-300);
+  border-color: var(--hs-rust-600);
 }
 
 /* ── Buttons ──────────────────────────────────────────────── */
@@ -242,13 +242,13 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 .btn:hover { transform: translateY(-1px); opacity: 0.92; }
 
 .btn--primary {
-  background: var(--gc-rust-400);
-  color: var(--gc-white);
+  background: var(--hs-rust-400);
+  color: var(--hs-white);
 }
 
 .btn--secondary {
   background: transparent;
-  color: var(--gc-white);
+  color: var(--hs-white);
   border: 1.5px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -261,14 +261,14 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 
 .feature {
   background: var(--bg-alt);
-  border: 1px solid color-mix(in srgb, var(--gc-rust-400) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hs-rust-400) 20%, transparent);
   border-radius: 10px;
   padding: 1.5rem;
   transition: border-color 0.2s, transform 0.2s;
 }
 
 .feature:hover {
-  border-color: var(--gc-rust-400);
+  border-color: var(--hs-rust-400);
   transform: translateY(-2px);
 }
 
@@ -299,15 +299,15 @@ h1, h2, h3 { margin: 0 0 0.5em; }
   width: 100%;
   border-collapse: collapse;
   font-size: 0.92rem;
-  background: var(--gc-white);
+  background: var(--hs-white);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .compare th {
-  background: var(--gc-near-black);
-  color: var(--gc-white);
+  background: var(--hs-near-black);
+  color: var(--hs-white);
   padding: 0.85rem 1rem;
   text-align: left;
   font-weight: 600;
@@ -324,14 +324,14 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 
 .ok  { color: #3aad6a; font-size: 1.1em; font-weight: 700; }
 .no  { color: #cc3333; font-size: 1.1em; font-weight: 700; }
-.mid { color: var(--gc-rust-400); font-size: 1.1em; font-weight: 700; }
+.mid { color: var(--hs-rust-400); font-size: 1.1em; font-weight: 700; }
 
 /* ── Code block ───────────────────────────────────────────── */
 .code {
-  background: var(--gc-near-black);
+  background: var(--hs-near-black);
   color: #e8ddd8;
   border-radius: 8px;
-  border-left: 3px solid var(--gc-rust-600);
+  border-left: 3px solid var(--hs-rust-600);
   padding: 1.25rem 1.5rem;
   overflow-x: auto;
   font-size: 0.85rem;
@@ -353,8 +353,8 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 
 /* ── Footer ───────────────────────────────────────────────── */
 .site-footer {
-  background: var(--gc-near-black);
-  color: var(--gc-light);
+  background: var(--hs-near-black);
+  color: var(--hs-light);
   padding: 2rem 0;
   font-size: 0.88rem;
 }
@@ -373,11 +373,11 @@ h1, h2, h3 { margin: 0 0 0.5em; }
 }
 
 .site-footer a {
-  color: var(--gc-light);
+  color: var(--hs-light);
 }
 
 .site-footer a:hover {
-  color: var(--gc-rust-300);
+  color: var(--hs-rust-300);
 }
 
 /* ── Responsive ───────────────────────────────────────────── */

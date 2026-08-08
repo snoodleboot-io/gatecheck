@@ -5,7 +5,7 @@ Mirrors AC-8 from
 and the LOCKED integration contract in
 ``planning/build-plans/0004-architecture-decision.md`` §6:
 
-  After a successful ``GatecheckConfig.model_validate``, ``load_config`` parses
+  After a successful ``HooksmithConfig.model_validate``, ``load_config`` parses
   each hook's ``from`` eagerly; a ``SourceSpecError`` is re-raised as a
   ``ConfigError`` whose first line matches ``^check\\.toml:\\d+:\\d+:`` and which
   names both the bad spec and the offending hook (``(hook: <id>)``).
@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config import ConfigError, load_config
+from hooksmith.config import ConfigError, load_config
 
 IDE_PREFIX_RE: re.Pattern[str] = re.compile(r"^check\.toml:\d+:\d+:")
 

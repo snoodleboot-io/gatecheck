@@ -17,10 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvManager, ResolvedEnv
-from gatecheck.registry import RegistryError
-from gatecheck.venv import bin_dir_name
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import EnvManager, ResolvedEnv
+from hooksmith.registry import RegistryError
+from hooksmith.venv import bin_dir_name
 
 
 @pytest.fixture(autouse=True)

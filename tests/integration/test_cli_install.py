@@ -1,4 +1,4 @@
-"""Integration tests for `gatecheck install` (STY-0022 / GAT-21).
+"""Integration tests for `hooksmith install` (STY-0022 / GAT-21).
 
 End-to-end via ``CliRunner`` in a real git repo: installs a managed ``pre-commit``
 hook, is idempotent on re-install, and refuses to clobber an unmanaged hook. Marked
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 pytestmark = pytest.mark.integration
 
@@ -51,8 +51,8 @@ def test_install_writes_managed_pre_commit_hook() -> None:
         hook = Path(".git/hooks/pre-commit")
         assert hook.exists() and os.access(hook, os.X_OK)
         body = hook.read_text(encoding="utf-8")
-        assert "gatecheck-managed" in body
-        assert "gatecheck run checks" in body
+        assert "hooksmith-managed" in body
+        assert "hooksmith run checks" in body
         assert "installed" in result.output
 
 
@@ -73,7 +73,7 @@ def test_reinstall_is_idempotent() -> None:
 
 @_skip
 def test_install_skips_unmanaged_hook() -> None:
-    # Arrange — a pre-existing non-gatecheck hook
+    # Arrange — a pre-existing non-hooksmith hook
     runner = CliRunner()
     with runner.isolated_filesystem():
         _init_repo()

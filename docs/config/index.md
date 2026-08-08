@@ -59,17 +59,17 @@ could otherwise run simultaneously, so output stays deterministic.
 
 ## `pyproject.toml`
 
-Config can also live under `[tool.gatecheck]` in `pyproject.toml`, for projects that
+Config can also live under `[tool.hooksmith]` in `pyproject.toml`, for projects that
 prefer a single config file. The schema is identical — just prefix each table:
 
 ```toml title="pyproject.toml"
-[[tool.gatecheck.hook]]
+[[tool.hooksmith.hook]]
 id    = "ruff"
 from  = "pypi:ruff==0.4.9"
 run   = "ruff check {files}"
 files = "*.py"
 
-[tool.gatecheck.group.lint]
+[tool.hooksmith.group.lint]
 hooks    = ["ruff"]
 on-event = "commit"
 ```
@@ -80,7 +80,7 @@ A dedicated `check.toml` takes precedence over `pyproject.toml` when both are pr
 
 Commands search **upward** from the current directory (so they work from any
 subdirectory), checking each level for a `check.toml`, then a `pyproject.toml` with a
-`[tool.gatecheck]` table, and stopping at the repository root. Override with
+`[tool.hooksmith]` table, and stopping at the repository root. Override with
 `--config PATH`. See the [reference](reference.md#locating-the-file).
 
 ## Validating your config
@@ -89,7 +89,7 @@ There's no separate `validate` command — every command that reads configuratio
 validates it first, so the fastest check is:
 
 ```bash
-gatecheck sync        # loads the config and resolves every environment
+hooksmith sync        # loads the config and resolves every environment
 ```
 
 A malformed file gives you a single actionable line with `path:line:col`, not a

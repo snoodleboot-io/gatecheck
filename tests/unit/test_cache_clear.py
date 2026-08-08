@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.env.cache_clear (STY-0027 / GAT-29).
+"""Unit tests for hooksmith.env.cache_clear (STY-0027 / GAT-29).
 
 Hermetic — operates on a fake cache tree under ``tmp_path``. Covers slot removal
 with count/bytes reporting, ``include_uv`` dropping the bootstrapped uv, ``dry_run``
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gatecheck.env import ClearOutcome, clear_cache
+from hooksmith.env import ClearOutcome, clear_cache
 
 
 def _make_slot(cache_root: Path, key: str, *, payload: bytes = b"x" * 1024) -> Path:

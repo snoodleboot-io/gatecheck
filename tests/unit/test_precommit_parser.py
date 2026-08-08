@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.migration.parse_precommit_config (STY-0019 / GAT-19).
+"""Unit tests for hooksmith.migration.parse_precommit_config (STY-0019 / GAT-19).
 
 Hermetic — real YAML fixtures written under ``tmp_path``. Covers a valid config
 (repos + hook fields), empty file, and the ``MigrationError``s for malformed YAML,
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.migration import MigrationError, PreCommitConfig, parse_precommit_config
+from hooksmith.migration import MigrationError, PreCommitConfig, parse_precommit_config
 
 _VALID = """
 repos:

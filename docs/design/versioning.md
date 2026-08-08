@@ -1,6 +1,6 @@
 # Versioning & Stability
 
-gatecheck follows [Semantic Versioning 2.0.0](https://semver.org/) with one strict constraint:
+hooksmith follows [Semantic Versioning 2.0.0](https://semver.org/) with one strict constraint:
 
 > **The MAJOR version can only be bumped through CI.**
 
@@ -14,7 +14,7 @@ version by editing a file — the pipeline decides it.
 ## How versions are computed
 
 The version is `MAJOR.MINOR.PATCH[.devN]`, produced by
-[`.github/scripts/calculate_version.py`](https://github.com/snoodleboot-io/gatecheck/blob/main/.github/scripts/calculate_version.py):
+[`.github/scripts/calculate_version.py`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/scripts/calculate_version.py):
 
 | Segment | Source |
 |---|---|
@@ -29,17 +29,17 @@ MINOR** (`0.1.0`, `0.2.0`, …). Nothing to remember, nothing to sync.
 ## The MAJOR bump special case
 
 Bumping MAJOR — for example cutting the first stable `1.0.0` — is a deliberate edit to
-`MAJOR_VERSION` in [`release.yml`](https://github.com/snoodleboot-io/gatecheck/blob/main/.github/workflows/release.yml).
+`MAJOR_VERSION` in [`release.yml`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/workflows/release.yml).
 MINOR then restarts at `1` for the new major. This is intentional friction: a MAJOR bump
 means committing to a backwards-incompatible change, so it lives in a reviewed change to
 the release workflow rather than falling out of a commit message.
 
 ## Both distributions, one version
 
-gatecheck ships two packages — the `gatecheck` host and the compiled `gatecheck-core`.
-[`inject_version.sh`](https://github.com/snoodleboot-io/gatecheck/blob/main/.github/scripts/inject_version.sh)
-writes the single computed version into `src/gatecheck/__about__.py` (host),
-`gatecheck-rs/Cargo.toml` (core), and the host's `gatecheck-core==` pin, so a given
+hooksmith ships two packages — the `hooksmith` host and the compiled `hooksmith-core`.
+[`inject_version.sh`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/scripts/inject_version.sh)
+writes the single computed version into `src/hooksmith/__about__.py` (host),
+`hooksmith-rs/Cargo.toml` (core), and the host's `hooksmith-core==` pin, so a given
 release is always the *same* version across both.
 
 ## Commit message policy
@@ -71,7 +71,7 @@ warnings are emitted at runtime for at least one minor version before removal.
 
 ## Release cadence
 
-gatecheck does not follow a fixed release calendar. Because a release *is* a merge to
+hooksmith does not follow a fixed release calendar. Because a release *is* a merge to
 `main` (behind a manual approval before PyPI), features and fixes ship when their PR
 lands. There are no "release trains" or scheduled dates.
 
@@ -81,15 +81,15 @@ The package version is read at runtime from the installed package metadata, fall
 to the injected placeholder when running from an uninstalled checkout:
 
 ```python
-# src/gatecheck/__init__.py
+# src/hooksmith/__init__.py
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("gatecheck")
+    __version__ = version("hooksmith")
 except PackageNotFoundError:
-    from gatecheck.__about__ import __version__  # source checkout, uninstalled
+    from hooksmith.__about__ import __version__  # source checkout, uninstalled
 ```
 
-`src/gatecheck/__about__.py` holds a `0.0.0.dev0` placeholder locally; CI rewrites it to
-the computed version at build time. See [Releasing gatecheck](https://github.com/snoodleboot-io/gatecheck/blob/main/RELEASING.md)
+`src/hooksmith/__about__.py` holds a `0.0.0.dev0` placeholder locally; CI rewrites it to
+the computed version at build time. See [Releasing hooksmith](https://github.com/snoodleboot-io/hooksmith/blob/main/RELEASING.md)
 for the full flow.

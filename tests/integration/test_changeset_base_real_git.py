@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.runner import resolve_changeset
+from hooksmith.runner import resolve_changeset
 
 pytestmark = pytest.mark.integration
 

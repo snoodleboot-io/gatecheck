@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.sources.resolve_source (STY-0005 / TSK-005).
+"""Unit tests for hooksmith.sources.resolve_source (STY-0005 / TSK-005).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0005-architecture-decision.md``:
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.sources import (
+from hooksmith.sources import (
     ProjectSource,
     PyPISource,
     ResolvedTool,
@@ -36,7 +36,7 @@ from gatecheck.sources import (
     UnsupportedSource,
     resolve_source,
 )
-from gatecheck.venv import bin_dir_name
+from hooksmith.venv import bin_dir_name
 
 # ---------------------------------------------------------------------------
 # Helpers — build hermetic fake executables under tmp_path.
@@ -633,37 +633,37 @@ def test_result_origin_is_matchable(tmp_path: Path) -> None:
 
 
 def test_public_import_surface() -> None:
-    # AC-14: the three new symbols import from gatecheck.sources, and the
+    # AC-14: the three new symbols import from hooksmith.sources, and the
     # STY-0004 symbols still import (no regression to the facade).
     # Arrange / Act
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         ParsedSource as _ParsedSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         ProjectSource as _ProjectSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         PyPISource as _PyPISource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         ResolvedTool as _ResolvedTool,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         SourceResolutionError as _SourceResolutionError,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         SourceSpecError as _SourceSpecError,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         SystemSource as _SystemSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         UnsupportedSource as _UnsupportedSource,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         parse_source as _parse_source,
     )
-    from gatecheck.sources import (
+    from hooksmith.sources import (
         resolve_source as _resolve_source,
     )
 

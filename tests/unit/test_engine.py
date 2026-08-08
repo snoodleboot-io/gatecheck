@@ -1,6 +1,6 @@
-"""Unit tests for gatecheck.runner.run_plan — the Rust-backed engine (STY-0014 / GAT-16).
+"""Unit tests for hooksmith.runner.run_plan — the Rust-backed engine (STY-0014 / GAT-16).
 
-Exercises the real ``gatecheck_core.run_graph`` dynamic scheduler, but with the
+Exercises the real ``hooksmith_core.run_graph`` dynamic scheduler, but with the
 environment and subprocess behind dependency-injected fakes (no real env resolution,
 no real process). Covers dependency-ordered execution, parallel scheduling, result
 ordering, fail-fast (a hook downstream of a failure never starts), and — via a
@@ -14,10 +14,10 @@ import threading
 import time
 from pathlib import Path
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import ResolvedEnv
-from gatecheck.runner import HookResult, build_plan, run_plan
+from hooksmith.config import HooksmithConfig
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import ResolvedEnv
+from hooksmith.runner import HookResult, build_plan, run_plan
 
 
 class FakeEnvManager:
@@ -38,8 +38,8 @@ class FakeProcessRunner:
         return (1, "boom") if tool in self._fail_ids else (0, "ok")
 
 
-def _config(hooks: list[dict[str, object]]) -> GatecheckConfig:
-    return GatecheckConfig.model_validate({"hook": hooks})
+def _config(hooks: list[dict[str, object]]) -> HooksmithConfig:
+    return HooksmithConfig.model_validate({"hook": hooks})
 
 
 def _hook(hook_id: str, deps: list[str] | None = None) -> dict[str, object]:
@@ -50,7 +50,7 @@ def _hook(hook_id: str, deps: list[str] | None = None) -> dict[str, object]:
     return data
 
 
-def _run(config: GatecheckConfig, **kwargs: object) -> tuple[HookResult, ...]:
+def _run(config: HooksmithConfig, **kwargs: object) -> tuple[HookResult, ...]:
     plan = build_plan(config, environ={})
     return run_plan(
         plan,

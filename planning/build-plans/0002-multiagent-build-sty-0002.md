@@ -9,7 +9,7 @@ target_feature: FEAT-0001
 target_prd: PRD-0001
 target_adrs: [ADR-0001]
 predecessor: BUILD-0001
-issue: snoodleboot-io/gatecheck#4
+issue: snoodleboot-io/hooksmith#4
 ---
 
 # BUILD-0002: Multiagent build plan for STY-0002
@@ -43,11 +43,11 @@ All of the following carry forward unchanged:
 | Item | Change | Owner |
 |---|---|---|
 | Runtime dep | Add `tomlkit>=0.13` to `[project].dependencies` | code-agent (TSK-001) |
-| Public API | Add `ConfigError` to `gatecheck.config.__all__` | code-agent |
-| New source file | `src/gatecheck/config/config_error.py` (`class ConfigError`) | code-agent |
-| New source file | `src/gatecheck/config/_error_translator.py` (private helpers) | code-agent |
-| Modified | `src/gatecheck/config/loader.py` — catch + translate + re-raise | code-agent |
-| Modified | `src/gatecheck/config/__init__.py` — export `ConfigError` | code-agent |
+| Public API | Add `ConfigError` to `hooksmith.config.__all__` | code-agent |
+| New source file | `src/hooksmith/config/config_error.py` (`class ConfigError`) | code-agent |
+| New source file | `src/hooksmith/config/_error_translator.py` (private helpers) | code-agent |
+| Modified | `src/hooksmith/config/loader.py` — catch + translate + re-raise | code-agent |
+| Modified | `src/hooksmith/config/__init__.py` — export `ConfigError` | code-agent |
 | Modified | `docs/config/reference.md` — Error handling subsection | document-agent |
 | Modified | `planning/build-plans/0001-architecture-sketch.md` §5 | architect-agent |
 | New tests | `tests/unit/test_config_error.py` — ConfigError + translator | test-agent |
@@ -170,10 +170,10 @@ side-by-side with `pytest.raises(ConfigError)`.
 ### Lane D — code-agent
 Deliverables in dependency order:
 1. `pyproject.toml`: add `tomlkit>=0.13` to `[project].dependencies`
-2. `src/gatecheck/config/config_error.py`
-3. `src/gatecheck/config/_error_translator.py`
-4. Modify `src/gatecheck/config/loader.py`
-5. Modify `src/gatecheck/config/__init__.py`
+2. `src/hooksmith/config/config_error.py`
+3. `src/hooksmith/config/_error_translator.py`
+4. Modify `src/hooksmith/config/loader.py`
+5. Modify `src/hooksmith/config/__init__.py`
 
 ### Lane E — document-agent
 Deliverable: in-place update to `docs/config/reference.md` "Error handling"
@@ -230,8 +230,8 @@ Same checklist as BUILD-0001 plus:
 Single boundary remains the same as STY-0001: local filesystem read of a
 user-controlled `check.toml`. Verified by running:
 
-- `python -c "from gatecheck.config import load_config; load_config(Path('check.toml'))"` — happy path still works
-- `python -c "from gatecheck.config import load_config, ConfigError; ..." ` against fixtures that trigger each error class — produces `check.toml:LINE:COL: <message>` format
+- `python -c "from hooksmith.config import load_config; load_config(Path('check.toml'))"` — happy path still works
+- `python -c "from hooksmith.config import load_config, ConfigError; ..." ` against fixtures that trigger each error class — produces `check.toml:LINE:COL: <message>` format
 
 Both at G2.
 

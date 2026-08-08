@@ -1,6 +1,6 @@
 # Source Types
 
-A hook's `from` field says where its tool comes from. This is the main thing gatecheck
+A hook's `from` field says where its tool comes from. This is the main thing hooksmith
 does differently from pre-commit: a source is a **package**, not a git repository to
 clone and hope about.
 
@@ -31,7 +31,7 @@ from = "pypi:ruff"             # latest release
 from = "pypi:ruff==0.4.9"      # exactly this
 ```
 
-gatecheck resolves the requirement against the index, builds an isolated venv with
+hooksmith resolves the requirement against the index, builds an isolated venv with
 `uv`, and caches it. The cache is content-addressed on
 `(package, version, index URL)` — so ten hooks (or ten packages in a monorepo)
 pinning `ruff==0.4.9` share **one** venv.
@@ -85,7 +85,7 @@ run        = "mypy src/"
 pass-files = false
 ```
 
-Nothing is installed or cached. gatecheck looks for the tool in:
+Nothing is installed or cached. hooksmith looks for the tool in:
 
 1. `$VIRTUAL_ENV/bin` (or `Scripts\` on Windows), if a venv is active
 2. `<workspace root>/.venv/bin`
@@ -111,7 +111,7 @@ pass-files = false
 Resolved with a `PATH` lookup. No environment management at all.
 
 This is the right choice for non-Python tools your image or machine already provides —
-`cargo`, `shellcheck`, `prettier`, `make` — and for anything gatecheck can't install
+`cargo`, `shellcheck`, `prettier`, `make` — and for anything hooksmith can't install
 for you. The trade-off is that reproducibility becomes your responsibility: the
 version is whatever the machine has.
 
@@ -154,5 +154,5 @@ dependencies, `system` for everything else.**
 ## See also
 
 - [check.toml Reference](reference.md) — every hook field.
-- [`gatecheck sync`](../cli/sync.md) — build the environments ahead of time.
-- [`gatecheck cache why`](../cli/cache.md) — see the resolved version and cache key.
+- [`hooksmith sync`](../cli/sync.md) — build the environments ahead of time.
+- [`hooksmith cache why`](../cli/cache.md) — see the resolved version and cache key.

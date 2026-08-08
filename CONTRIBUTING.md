@@ -1,10 +1,10 @@
-# Contributing to gatecheck
+# Contributing to hooksmith
 
 Thanks for your interest in contributing. This document covers the development workflow, commit conventions, and release process.
 
 ## Development model: Trunk-Based Development
 
-gatecheck uses strict trunk-based development:
+hooksmith uses strict trunk-based development:
 
 - **`main` is always releasable.** Every commit that lands on main must pass all tests.
 - **Feature branches are short-lived.** Open a PR, get review, merge. Don't let branches live longer than a few days.
@@ -25,7 +25,7 @@ All branches merge to `main`. Never merge `main` back into a feature branch — 
 
 ## Commit messages: Conventional Commits
 
-gatecheck uses [Conventional Commits](https://www.conventionalcommits.org/) **strictly**. The CI version computation reads commit messages to determine the next version number.
+hooksmith uses [Conventional Commits](https://www.conventionalcommits.org/) **strictly**. The CI version computation reads commit messages to determine the next version number.
 
 ### Format
 
@@ -97,38 +97,38 @@ feat: add feature    # too vague — describe what the feature is
 
 ```bash
 # Clone and enter
-git clone https://github.com/snoodleboot-io/gatecheck
-cd gatecheck
+git clone https://github.com/snoodleboot-io/hooksmith
+cd hooksmith
 
 # Install Python deps
 uv venv
 uv pip install -e ".[dev]"
 
 # Build the Rust extension (requires Rust toolchain)
-cd gatecheck-rs
+cd hooksmith-rs
 maturin develop --release
 cd ..
 
-# Install gatecheck itself as a git hook runner
-gatecheck install
+# Install hooksmith itself as a git hook runner
+hooksmith install
 
 # Run tests
 pytest tests/ -v
-cargo test --manifest-path gatecheck-rs/Cargo.toml
+cargo test --manifest-path hooksmith-rs/Cargo.toml
 ```
 
 ## Running checks locally
 
 ```bash
 # Everything (what CI runs)
-gatecheck run --all-files
+hooksmith run --all-files
 
 # Just linting (fast)
-gatecheck run lint
+hooksmith run lint
 
 # Just Rust
-cargo test --manifest-path gatecheck-rs/Cargo.toml
-cargo clippy --manifest-path gatecheck-rs/Cargo.toml
+cargo test --manifest-path hooksmith-rs/Cargo.toml
+cargo clippy --manifest-path hooksmith-rs/Cargo.toml
 
 # Just Python
 pytest tests/ -v --tb=short
@@ -139,11 +139,11 @@ pytest tests/ -v --tb=short
 **You never edit a version number in source.** There are no `VERSION` files to bump and
 no tags to cut. The version is **computed in CI at build time** — `MAJOR.MINOR.PATCH`
 where MAJOR is pinned in the workflow, MINOR is the latest on PyPI + 1, and PATCH is the
-PR number (or `0` on a push to main). Both distributions (`gatecheck` and
-`gatecheck-core`) get that one version injected before they build.
+PR number (or `0` on a push to main). Both distributions (`hooksmith` and
+`hooksmith-core`) get that one version injected before they build.
 
-`src/gatecheck/__about__.py` carries a `0.0.0.dev0` placeholder for local installs; CI
-rewrites it (and `gatecheck-rs/Cargo.toml`, and the `gatecheck-core==` pin) per build.
+`src/hooksmith/__about__.py` carries a `0.0.0.dev0` placeholder for local installs; CI
+rewrites it (and `hooksmith-rs/Cargo.toml`, and the `hooksmith-core==` pin) per build.
 See [docs/design/versioning.md](docs/design/versioning.md) and
 [RELEASING.md](RELEASING.md) for the full model.
 

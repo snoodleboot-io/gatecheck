@@ -1,6 +1,6 @@
-# gatecheck marketing site
+# hooksmith marketing site
 
-Static landing page for **gatecheck.dev**. Plain HTML + CSS — no build step, no JS framework, no node_modules. Deploys directly to any static host.
+Static landing page for **hooksmith.dev**. Plain HTML + CSS — no build step, no JS framework, no node_modules. Deploys directly to any static host.
 
 ## Preview locally
 
@@ -22,9 +22,9 @@ website/
 
 ## Why a separate site?
 
-The MkDocs Material site under [`../docs/`](../docs/) is for **technical documentation** — quickstart, config reference, design docs, guides. This site is for **marketing** — the first-touch landing page someone visiting `gatecheck.dev` for the first time should see. Splitting them keeps each surface focused and lets us iterate on marketing copy without rebuilding the docs.
+The MkDocs Material site under [`../docs/`](../docs/) is for **technical documentation** — quickstart, config reference, design docs, guides. This site is for **marketing** — the first-touch landing page someone visiting `hooksmith.dev` for the first time should see. Splitting them keeps each surface focused and lets us iterate on marketing copy without rebuilding the docs.
 
-Both sites share the same rust-orange color palette (`--gc-rust-*` tokens) so the brand is consistent.
+Both sites share the same rust-orange color palette (`--hs-rust-*` tokens) so the brand is consistent.
 
 ## Deploy
 
@@ -32,9 +32,9 @@ The site is intentionally trivial to host:
 
 - **Cloudflare Pages / Netlify / Vercel**: point at the `website/` directory, no build command, publish directory `.`.
 - **GitHub Pages**: serve from `website/` on the gh-pages branch, or via a workflow that copies `website/*` into the deploy artifact.
-- **S3 / Cloudfront**: `aws s3 sync website/ s3://gatecheck.dev/`.
+- **S3 / Cloudfront**: `aws s3 sync website/ s3://hooksmith.dev/`.
 
-The docs at `gatecheck.dev/docs/` (or `docs.gatecheck.dev`) are deployed separately by `mkdocs` per the release process in [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
+The docs at `hooksmith.dev/docs/` (or `docs.hooksmith.dev`) are deployed separately by `mkdocs` per the release process in [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## When to add a build step
 

@@ -1,4 +1,4 @@
-"""Integration tests for `gatecheck sync` (STY-0021 / GAT-20).
+"""Integration tests for `hooksmith sync` (STY-0021 / GAT-20).
 
 End-to-end via ``CliRunner`` with real ``system`` hooks: a tool on PATH resolves to
 ``ready``; a missing tool is an ``error`` with a non-zero exit. Marked ``integration``
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 pytestmark = pytest.mark.integration
 

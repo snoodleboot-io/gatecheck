@@ -37,7 +37,7 @@ the hook.
 !!! note "`from = "system"`, not `local:`"
 
     `local:` is reserved but [not yet implemented](../config/sources.md). Use `system`
-    with a relative command. Hooks inherit gatecheck's working directory — the
+    with a relative command. Hooks inherit hooksmith's working directory — the
     directory you invoked it from, or the package directory under `--affected` — so
     `./scripts/…` resolves relative to that.
 
@@ -129,7 +129,7 @@ exit 0
 ```
 
 `{commit-msg}` expands to the message-file path passed by git; the hook's `files`
-glob is ignored in this mode. See [`gatecheck run`](../cli/run.md#message-check-mode).
+glob is ignored in this mode. See [`hooksmith run`](../cli/run.md#message-check-mode).
 
 ## Quoting and arguments
 
@@ -147,8 +147,8 @@ testable than a long `run` line anyway.
 ## Testing a hook
 
 ```bash
-gatecheck run --all-files            # everything, ignoring what's staged
-git add path/to/file && gatecheck run
+hooksmith run --all-files            # everything, ignoring what's staged
+git add path/to/file && hooksmith run
 ```
 
 Remember a passing hook's output isn't printed — only failures are. To see what a hook
@@ -169,10 +169,10 @@ receives, make it fail temporarily, or run the command by hand.
 A hook that rewrites files (`ruff --fix`, `prettier --write`) works fine, with two
 things to know:
 
-1. **It only sees matched files** — gatecheck skips it entirely when nothing matches,
+1. **It only sees matched files** — hooksmith skips it entirely when nothing matches,
    so it can't wander off across the repo.
 2. **Fixed files are not re-staged.** After an auto-fix during a commit hook, `git add`
-   the changes and commit again. gatecheck deliberately doesn't touch your index.
+   the changes and commit again. hooksmith deliberately doesn't touch your index.
 
 Give auto-fixers their own commit-time group with `fail-fast = true` so you find out
 immediately.

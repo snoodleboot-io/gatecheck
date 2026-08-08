@@ -23,23 +23,23 @@ date: 2026-07-05
 
 ---
 
-## §1 Placement — build out the existing `gatecheck.env` leaf (LOCKED)
+## §1 Placement — build out the existing `hooksmith.env` leaf (LOCKED)
 
 ### Decision
 
 The work lands entirely inside the **existing** leaf package
-`src/gatecheck/env/`. `EnvManager` and `ResolvedEnv` already live in
+`src/hooksmith/env/`. `EnvManager` and `ResolvedEnv` already live in
 `manager.py` (scaffolding); this story builds them out and adds one new sibling
-(`env_error.py`). No new package, no code outside `src/gatecheck/env/`.
+(`env_error.py`). No new package, no code outside `src/hooksmith/env/`.
 
 This completes a clean, acyclic three-way split of source handling +
 environments:
 
-- **`gatecheck.sources`** — classify a `from` spec (`parse_source`) and locate the
+- **`hooksmith.sources`** — classify a `from` spec (`parse_source`) and locate the
   local kinds (`resolve_source`). Pure, no I/O. **Unchanged by this story.**
-- **`gatecheck.registry`** — pin a `pypi:` requirement to a concrete distribution
+- **`hooksmith.registry`** — pin a `pypi:` requirement to a concrete distribution
   (network + `packaging`). **Not consumed here** (STY-0008 consumes it).
-- **`gatecheck.env`** — turn a `HookDef` into an executable environment
+- **`hooksmith.env`** — turn a `HookDef` into an executable environment
   (`EnvManager.resolve`). **This story** — the non-venv path only.
 
 ### Justification
@@ -57,36 +57,36 @@ environments:
    deferred `pypi`, unsupported kind) carry `hook_id` / `reason`, not `tool` /
    `kind` (that is `SourceResolutionError`) nor `requirement` / `index_url` (that is
    `RegistryError`). A dedicated `EnvError` (SRP) keeps the domains apart.
-4. **Import direction stays acyclic.** `gatecheck.env` imports `gatecheck.sources`
+4. **Import direction stays acyclic.** `hooksmith.env` imports `hooksmith.sources`
    (`parse_source`, `resolve_source`, the `ParsedSource` members, the two source
-   errors) and `gatecheck.config` (`HookDef`) — both leaves. Nothing imports
-   `gatecheck.env` back in this slice. See §9.
+   errors) and `hooksmith.config` (`HookDef`) — both leaves. Nothing imports
+   `hooksmith.env` back in this slice. See §9.
 
 ---
 
-## §2 Module layout — `src/gatecheck/env/` (LOCKED)
+## §2 Module layout — `src/hooksmith/env/` (LOCKED)
 
 One class / function-group per file (core conventions: filename = snake_case of
 the class). Names follow the story's file table verbatim.
 
 | File | Status | Single responsibility |
 |---|---|---|
-| `src/gatecheck/env/env_error.py` | **NEW** | `EnvError(ValueError)` with structured `hook_id` / `reason` and the `cannot resolve environment for hook '<id>': <reason>` message. |
-| `src/gatecheck/env/manager.py` | **EDIT (build out)** | `EnvManager` (constructor state + `resolve` dispatch + private `_derive_tool` / `_cache_key`) **and** the `ResolvedEnv` frozen dataclass, which stays here (see §3 / §5). |
-| `src/gatecheck/env/__init__.py` | **EDIT** | Facade — export `EnvError`, `EnvManager`, `ResolvedEnv`; set `__all__` (alphabetical, uppercase-first). |
+| `src/hooksmith/env/env_error.py` | **NEW** | `EnvError(ValueError)` with structured `hook_id` / `reason` and the `cannot resolve environment for hook '<id>': <reason>` message. |
+| `src/hooksmith/env/manager.py` | **EDIT (build out)** | `EnvManager` (constructor state + `resolve` dispatch + private `_derive_tool` / `_cache_key`) **and** the `ResolvedEnv` frozen dataclass, which stays here (see §3 / §5). |
+| `src/hooksmith/env/__init__.py` | **EDIT** | Facade — export `EnvError`, `EnvManager`, `ResolvedEnv`; set `__all__` (alphabetical, uppercase-first). |
 
 ### `__init__.py` exports / `__all__` (LOCKED)
 
-Alphabetical, uppercase before lowercase (matching `gatecheck.sources` §2 /
-`gatecheck.registry` §2 style). All three symbols are classes, so all uppercase.
+Alphabetical, uppercase before lowercase (matching `hooksmith.sources` §2 /
+`hooksmith.registry` §2 style). All three symbols are classes, so all uppercase.
 
 ```python
-"""Public facade for gatecheck.env (BUILD-0007-ARCH §2)."""
+"""Public facade for hooksmith.env (BUILD-0007-ARCH §2)."""
 
 from __future__ import annotations
 
-from gatecheck.env.env_error import EnvError
-from gatecheck.env.manager import EnvManager, ResolvedEnv
+from hooksmith.env.env_error import EnvError
+from hooksmith.env.manager import EnvManager, ResolvedEnv
 
 __all__ = [
     "EnvError",
@@ -95,7 +95,7 @@ __all__ = [
 ]
 ```
 
-AC-14 requires `from gatecheck.env import EnvManager, ResolvedEnv, EnvError` to
+AC-14 requires `from hooksmith.env import EnvManager, ResolvedEnv, EnvError` to
 work — satisfied above. (The current stub's module docstring
 `"""Per-hook environment management (uv-backed venvs)."""` may stay or be kept;
 no behavioural meaning.)
@@ -110,7 +110,7 @@ no behavioural meaning.)
   exception to strict one-class-per-file (the story's file table says *"`ResolvedEnv`
   stays here"*). Rationale: it is the small output value object of `EnvManager`, the
   existing stub already colocates them, and STY-0008 / STY-0009 / the runner import
-  it as `gatecheck.env.ResolvedEnv` via the facade regardless of file. Splitting it
+  it as `hooksmith.env.ResolvedEnv` via the facade regardless of file. Splitting it
   into `resolved_env.py` now would be a gratuitous move of a tracked interface with
   no import-site benefit (the facade re-exports it either way). **Locked: keep it in
   `manager.py`.**
@@ -420,15 +420,15 @@ UTF-8, SHA-256, full 64-char lowercase hex digest. (AC-4)
   `packaging` are **not** involved in this slice (AC-13, story Notes).
 - **`from __future__ import annotations`** at the top of every touched/new module;
   every function, method, and `EnvError.__init__` fully annotated.
-- **`mypy --strict src/gatecheck/env/`** passes with **no new errors and no
+- **`mypy --strict src/hooksmith/env/`** passes with **no new errors and no
   `# type: ignore`** (AC-15). The `match` over `ParsedSource` is exhaustive (§5);
   `resolved.executable.parent` is `Path`; `hashlib.sha256(...).hexdigest()` is
   `str`; `_derive_tool` returns `str`. No `Any` leaks.
 - Import set for `manager.py`: stdlib (`__future__`, `dataclasses`, `hashlib`,
-  `shlex`, `collections.abc.Mapping`, `pathlib.Path`); `gatecheck.config.hook_def
-  .HookDef`; from `gatecheck.sources` — `parse_source`, `resolve_source`,
+  `shlex`, `collections.abc.Mapping`, `pathlib.Path`); `hooksmith.config.hook_def
+  .HookDef`; from `hooksmith.sources` — `parse_source`, `resolve_source`,
   `ProjectSource`, `PyPISource`, `SystemSource`, `UnsupportedSource` (and, if a
-  local annotation is used, `ResolvedTool`); `gatecheck.env.env_error.EnvError`.
+  local annotation is used, `ResolvedTool`); `hooksmith.env.env_error.EnvError`.
   Grouped stdlib → internal per core conventions.
 
 ---
@@ -459,15 +459,15 @@ UTF-8, SHA-256, full 64-char lowercase hex digest. (AC-4)
 
 ## §9 Import direction / no cycle (LOCKED)
 
-- `gatecheck.env` imports: stdlib (`shlex`, `hashlib`, `pathlib`, `dataclasses`,
-  `collections.abc`), and — from **other leaves** — `gatecheck.sources`
+- `hooksmith.env` imports: stdlib (`shlex`, `hashlib`, `pathlib`, `dataclasses`,
+  `collections.abc`), and — from **other leaves** — `hooksmith.sources`
   (`parse_source`, `resolve_source`, `ProjectSource` / `PyPISource` /
   `SystemSource` / `UnsupportedSource`, and the two source errors propagate through
-  it) and `gatecheck.config` (`HookDef`).
-- Nothing imports `gatecheck.env` back in this slice (STY-0008 / STY-0009 / the
+  it) and `hooksmith.config` (`HookDef`).
+- Nothing imports `hooksmith.env` back in this slice (STY-0008 / STY-0009 / the
   runner consume it later). **No cycle.**
-- **`gatecheck.sources` is not modified** (`resolve_source` unchanged);
-  **`gatecheck.config` is not modified** (no `HookDef.tool` field — design gate).
+- **`hooksmith.sources` is not modified** (`resolve_source` unchanged);
+  **`hooksmith.config` is not modified** (no `HookDef.tool` field — design gate).
 - Import direction: `config` → `sources` (existing); `registry` → `sources` +
   `config` (existing); `env` → `sources` + `config` (this story). Acyclic.
 
@@ -481,7 +481,7 @@ UTF-8, SHA-256, full 64-char lowercase hex digest. (AC-4)
   STY-0008 replaces.
 - **Calling `registry.resolve_pypi_source`** — the pinned-dist hand-off is consumed
   in STY-0008, not here.
-- **Cache hit/miss tracing / `gatecheck cache why`** — **STY-0009.** This story
+- **Cache hit/miss tracing / `hooksmith cache why`** — **STY-0009.** This story
   defines the `cache_key` *derivation* only; it stores / explains nothing.
 - **Running the executable** — the runner (argv assembly, changed-file passing,
   output streaming, exit codes).
@@ -492,7 +492,7 @@ UTF-8, SHA-256, full 64-char lowercase hex digest. (AC-4)
   dataclass.
 - **`HookDef.tool` schema field / any `HookDef` change** — locked out; tool name is
   derived from `hook.run` (design gate).
-- **Modifying `resolve_source` / `gatecheck.sources`** — unchanged.
+- **Modifying `resolve_source` / `hooksmith.sources`** — unchanged.
 
 ---
 
@@ -511,18 +511,18 @@ UTF-8, SHA-256, full 64-char lowercase hex digest. (AC-4)
   - `0004-architecture-decision.md` — `ParsedSource` union, the four source models,
     import direction.
 - Consumed (unchanged) code:
-  - `src/gatecheck/sources/parser.py` — `parse_source` (may raise `SourceSpecError`).
-  - `src/gatecheck/sources/resolver.py` — `resolve_source(source, tool, *,
+  - `src/hooksmith/sources/parser.py` — `parse_source` (may raise `SourceSpecError`).
+  - `src/hooksmith/sources/resolver.py` — `resolve_source(source, tool, *,
     workspace_root=None, environ=None) -> ResolvedTool`; **not modified**.
-  - `src/gatecheck/sources/resolved_tool.py` — `ResolvedTool(tool, executable,
+  - `src/hooksmith/sources/resolved_tool.py` — `ResolvedTool(tool, executable,
     origin)` (the `_cache_key` / `bin_dir` inputs).
-  - `src/gatecheck/sources/parsed_source.py` + the four member models — the `match`
+  - `src/hooksmith/sources/parsed_source.py` + the four member models — the `match`
     dispatch.
-  - `src/gatecheck/sources/source_resolution_error.py` /
+  - `src/hooksmith/sources/source_resolution_error.py` /
     `source_spec_error.py` — the two errors that propagate unwrapped.
-  - `src/gatecheck/config/hook_def.py` — `HookDef.id` / `.from_` / `.run`.
-- New code (red): `src/gatecheck/env/env_error.py`; build out
-  `src/gatecheck/env/manager.py`; edit `src/gatecheck/env/__init__.py`.
+  - `src/hooksmith/config/hook_def.py` — `HookDef.id` / `.from_` / `.run`.
+- New code (red): `src/hooksmith/env/env_error.py`; build out
+  `src/hooksmith/env/manager.py`; edit `src/hooksmith/env/__init__.py`.
 - New tests (red): `tests/unit/test_env_manager.py` (currently a skipped scaffold),
   `tests/integration/test_env_resolution_acceptance.py`.
 - Docs (updated by TSK-009, not this doc): a "Environments — resolving a hook to an

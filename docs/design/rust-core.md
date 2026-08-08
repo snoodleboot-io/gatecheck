@@ -1,17 +1,17 @@
 # Rust Core
 
-gatecheck is a **Python host** around a **Rust core**. This page describes what
+hooksmith is a **Python host** around a **Rust core**. This page describes what
 actually crosses the boundary today, and where the boundary is headed.
 
-The rationale for the split is [ADR-0001](https://github.com/snoodleboot-io/gatecheck/blob/main/planning/adr/0001-python-host-rust-core.md);
+The rationale for the split is [ADR-0001](https://github.com/snoodleboot-io/hooksmith/blob/main/planning/adr/0001-python-host-rust-core.md);
 the short version: config, packaging and CLI want Python's ecosystem, while
 hot-path subprocess scheduling wants compiled parallelism, and neither half should
 have to be written in the other's language.
 
 ## What's actually in Rust today
 
-One thing: **the parallel execution engine**, `gatecheck_core.run_graph`, in
-[`gatecheck-rs/src/runner.rs`](https://github.com/snoodleboot-io/gatecheck/blob/main/gatecheck-rs/src/runner.rs).
+One thing: **the parallel execution engine**, `hooksmith_core.run_graph`, in
+[`hooksmith-rs/src/runner.rs`](https://github.com/snoodleboot-io/hooksmith/blob/main/hooksmith-rs/src/runner.rs).
 
 ```rust
 #[pyfunction]
@@ -86,9 +86,9 @@ The core is a separate crate, exposed via [PyO3](https://pyo3.rs/) and built wit
 [maturin](https://www.maturin.rs/):
 
 ```bash
-maturin develop --release -m gatecheck-rs/Cargo.toml   # build + install into the venv
-cargo test --manifest-path gatecheck-rs/Cargo.toml     # test without Python
-cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings
+maturin develop --release -m hooksmith-rs/Cargo.toml   # build + install into the venv
+cargo test --manifest-path hooksmith-rs/Cargo.toml     # test without Python
+cargo clippy --manifest-path hooksmith-rs/Cargo.toml -- -D warnings
 ```
 
 The crate is independently testable with `cargo test` — no Python runtime required —
@@ -96,7 +96,7 @@ which is one of the reasons the boundary is kept this narrow.
 
 ## Distribution
 
-Because the core is compiled, gatecheck ships as **platform wheels** (Linux
+Because the core is compiled, hooksmith ships as **platform wheels** (Linux
 x86_64/aarch64, macOS x86_64/arm64, Windows x86_64), not a universal sdist. A user
 runs `pip install` and gets both halves; no Rust toolchain on their machine. The
 wheel-matrix release pipeline is the last piece of that story still being built.

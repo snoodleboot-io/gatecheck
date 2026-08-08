@@ -151,7 +151,7 @@ Online it's a no-op. Checked first, so it's the reason you see when it applies.
 ## When context is missing, conditions fail open
 
 The branch and `files-match` conditions need git context. Where that isn't available,
-the condition is **skipped and the hook runs** — gatecheck won't skip your checks
+the condition is **skipped and the hook runs** — hooksmith won't skip your checks
 because it couldn't determine something.
 
 ---
@@ -171,10 +171,10 @@ Runs when: `SKIP_MYPY` is unset **and** this isn't CI **and** the branch isn't
 `release/*`.
 
 ```console
-$ SKIP_MYPY=1 gatecheck run
+$ SKIP_MYPY=1 hooksmith run
 skip  mypy  (env SKIP_MYPY is set)
 
-$ git switch release/2.0 && gatecheck run
+$ git switch release/2.0 && hooksmith run
 skip  mypy  (branch 'release/2.0' matches branch-not 'release/*')
 ```
 

@@ -3,9 +3,9 @@ hide:
   - toc
 ---
 
-# gatecheck documentation
+# hooksmith documentation
 
-Technical reference for [**gatecheck**](https://gatecheck.dev) — the next-generation runner for your git pre-commit actions, with real package sources, monorepo support, and a Rust-powered parallel runner.
+Technical reference for [**hooksmith**](https://hooksmith.dev) — the next-generation runner for your git pre-commit actions, with real package sources, monorepo support, and a Rust-powered parallel runner.
 
 !!! tip "New here?"
     The [Quick Start](getting-started/quickstart.md) gets you a working install and your first hook running in two minutes.
@@ -16,11 +16,11 @@ Technical reference for [**gatecheck**](https://gatecheck.dev) — the next-gene
 
 -   **[Quick Start](getting-started/quickstart.md)**
 
-    Install gatecheck, write your first `check.toml`, and run a hook.
+    Install hooksmith, write your first `check.toml`, and run a hook.
 
 -   **[Importing your existing hooks](getting-started/migration.md)**
 
-    `gatecheck migrate` reads your existing hook config and writes a working `check.toml`.
+    `hooksmith migrate` reads your existing hook config and writes a working `check.toml`.
 
 -   **[Installation](getting-started/installation.md)**
 
@@ -74,13 +74,13 @@ Technical reference for [**gatecheck**](https://gatecheck.dev) — the next-gene
 
 ## Design
 
-The [design docs](design/index.md) explain how gatecheck is put together — useful when you want to extend it, debug a surprising behavior, or understand a tradeoff.
+The [design docs](design/index.md) explain how hooksmith is put together — useful when you want to extend it, debug a surprising behavior, or understand a tradeoff.
 
 - [Architecture overview](design/architecture.md) — the Python host / Rust core split, data flow per command.
-- [Design rationale](design/why-not-precommit.md) — the constraints that drove gatecheck to exist.
+- [Design rationale](design/why-not-precommit.md) — the constraints that drove hooksmith to exist.
 - [Versioning](design/versioning.md) — how the CI computes versions from conventional commits.
 - [Rust core internals](design/rust-core.md) — the DAG solver, runner, and cache.
 
 ## Looking for the marketing page?
 
-The landing page lives at the root of [**gatecheck.dev**](https://gatecheck.dev). This site is the technical reference behind it.
+The landing page lives at the root of [**hooksmith.dev**](https://hooksmith.dev). This site is the technical reference behind it.

@@ -1,8 +1,8 @@
-"""Unit tests for gatecheck.config.discover_config (GAT-48).
+"""Unit tests for hooksmith.config.discover_config (GAT-48).
 
 Hermetic — real directory trees under ``tmp_path``; no CWD dependence (``start`` is
 passed explicitly). Covers finding a ``check.toml`` in the start dir and in a parent,
-the ``pyproject.toml`` fallback (only when it carries ``[tool.gatecheck]``), the
+the ``pyproject.toml`` fallback (only when it carries ``[tool.hooksmith]``), the
 check.toml-wins precedence, stopping at the repo root, and the not-found result.
 """
 
@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gatecheck.config import discover_config
+from hooksmith.config import discover_config
 
 _HOOK = '[[hook]]\nid = "a"\nfrom = "system"\nrun = "echo"\n'
-_PYPROJECT = '[tool.gatecheck]\n[[tool.gatecheck.hook]]\nid = "a"\nfrom = "system"\nrun = "echo"\n'
+_PYPROJECT = '[tool.hooksmith]\n[[tool.hooksmith.hook]]\nid = "a"\nfrom = "system"\nrun = "echo"\n'
 
 
 def _write(path: Path, body: str) -> Path:
@@ -39,16 +39,16 @@ def test_walks_up_to_a_parent(tmp_path: Path) -> None:
 
 
 def test_pyproject_fallback_when_it_has_the_table(tmp_path: Path) -> None:
-    # Arrange — only a pyproject.toml, carrying [tool.gatecheck]
+    # Arrange — only a pyproject.toml, carrying [tool.hooksmith]
     cfg = _write(tmp_path / "pyproject.toml", _PYPROJECT)
     # Act / Assert
     assert discover_config(tmp_path) == cfg
 
 
 def test_pyproject_without_the_table_is_ignored(tmp_path: Path) -> None:
-    # Arrange — a pyproject.toml with no [tool.gatecheck]
+    # Arrange — a pyproject.toml with no [tool.hooksmith]
     _write(tmp_path / "pyproject.toml", '[tool.poetry]\nname = "x"\n')
-    # Act / Assert — not a gatecheck config, nothing else present
+    # Act / Assert — not a hooksmith config, nothing else present
     assert discover_config(tmp_path) is None
 
 

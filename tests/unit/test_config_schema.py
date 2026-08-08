@@ -6,7 +6,7 @@ These tests exercise the four pydantic models defined by BUILD-0001-ARCH §3:
 * ``HookDef``         — ``[[hook]]`` table entry
 * ``HookWhen``        — nested inline-table model (lives in ``hook_def.py``)
 * ``GroupDef``        — ``[group.<name>]`` table
-* ``GatecheckConfig`` — top-level document
+* ``HooksmithConfig`` — top-level document
 
 They lock the schema contract that Lane D's implementation MUST satisfy. In
 particular, every hyphenated TOML alias from BUILD-0001-ARCH §7 is exercised
@@ -14,7 +14,7 @@ alongside its Python attribute form, so the alias scheme cannot regress
 without breaking a test.
 
 These tests intentionally fail on import while the new module files in
-``src/gatecheck/config/`` do not yet exist — that is the RED state that
+``src/hooksmith/config/`` do not yet exist — that is the RED state that
 Lane D will turn GREEN.
 """
 
@@ -23,10 +23,10 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from gatecheck.config.gatecheck_config import GatecheckConfig
-from gatecheck.config.group_def import GroupDef
-from gatecheck.config.hook_def import HookDef, HookWhen
-from gatecheck.config.source_spec import SourceSpec
+from hooksmith.config.group_def import GroupDef
+from hooksmith.config.hook_def import HookDef, HookWhen
+from hooksmith.config.hooksmith_config import HooksmithConfig
+from hooksmith.config.source_spec import SourceSpec
 
 # ──────────────────────────────────────────────────────────────────────────
 # SourceSpec
@@ -506,7 +506,7 @@ def test_group_def_on_event_accepts_each_supported_event(event: str) -> None:
 def test_group_def_on_event_literal_rejects_unknown_value() -> None:
     """Given an ``on_event`` value not in the locked Literal set, When GroupDef is built,
     Then ValidationError is raised."""
-    # Act / Assert — 'merge' is not a supported git event for gatecheck
+    # Act / Assert — 'merge' is not a supported git event for hooksmith
     with pytest.raises(ValidationError):
         GroupDef(hooks=["a"], on_event="merge")
 
@@ -526,18 +526,18 @@ def test_group_def_rejects_extra_field() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# GatecheckConfig
+# HooksmithConfig
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def test_gatecheck_config_empty() -> None:
-    """Given no inputs, When GatecheckConfig() is built, Then all top-level fields take
+def test_hooksmith_config_empty() -> None:
+    """Given no inputs, When HooksmithConfig() is built, Then all top-level fields take
     their documented defaults."""
     # Arrange
     # (no inputs)
 
     # Act
-    cfg = GatecheckConfig()
+    cfg = HooksmithConfig()
 
     # Assert
     assert cfg.hook == []
@@ -545,8 +545,8 @@ def test_gatecheck_config_empty() -> None:
     assert cfg.sources is None
 
 
-def test_gatecheck_config_full() -> None:
-    """Given a hook, a group, and a sources table, When GatecheckConfig is built, Then
+def test_hooksmith_config_full() -> None:
+    """Given a hook, a group, and a sources table, When HooksmithConfig is built, Then
     every nested model is validated and accessible."""
     # Arrange
     payload = {
@@ -563,7 +563,7 @@ def test_gatecheck_config_full() -> None:
     }
 
     # Act
-    cfg = GatecheckConfig(**payload)
+    cfg = HooksmithConfig(**payload)
 
     # Assert
     assert len(cfg.hook) == 1
@@ -578,29 +578,29 @@ def test_gatecheck_config_full() -> None:
     assert cfg.sources.default_registry == "https://pypi.org/simple"
 
 
-def test_gatecheck_config_rejects_extra_field() -> None:
-    """Given an unknown top-level key, When GatecheckConfig is built, Then ValidationError
+def test_hooksmith_config_rejects_extra_field() -> None:
+    """Given an unknown top-level key, When HooksmithConfig is built, Then ValidationError
     is raised (extra='forbid')."""
     # Arrange
     # (inline kwargs below)
 
     # Act / Assert
     with pytest.raises(ValidationError) as exc_info:
-        GatecheckConfig(unknown="x")
+        HooksmithConfig(unknown="x")
 
     errors = exc_info.value.errors()
     assert any("unknown" in str(err.get("loc", ())) for err in errors)
 
 
-def test_gatecheck_config_validates_nested_hook() -> None:
-    """Given an incomplete hook (missing ``from`` and ``run``), When GatecheckConfig is
+def test_hooksmith_config_validates_nested_hook() -> None:
+    """Given an incomplete hook (missing ``from`` and ``run``), When HooksmithConfig is
     built, Then ValidationError surfaces the nested error path mentioning ``hook[0]``."""
     # Arrange
     payload = {"hook": [{"id": "a"}]}
 
     # Act / Assert
     with pytest.raises(ValidationError) as exc_info:
-        GatecheckConfig(**payload)
+        HooksmithConfig(**payload)
 
     errors = exc_info.value.errors()
     error_locs = [str(err.get("loc", ())) for err in errors]

@@ -34,7 +34,7 @@ where the extra ~10 ms is invisible. Bench: `/tmp/bench_strategy.py`.
 ## 2. `ConfigError` shape
 
 ```python
-# src/gatecheck/config/config_error.py
+# src/hooksmith/config/config_error.py
 class ConfigError(ValueError):
     path: Path
     errors: list[tuple[int, int, str]]
@@ -61,7 +61,7 @@ Contract:
 ## 3. Translator function signatures
 
 ```python
-# src/gatecheck/config/_error_translator.py
+# src/hooksmith/config/_error_translator.py
 def _parse_toml_error(err: tomllib.TOMLDecodeError) -> tuple[int, int, str]: ...
 
 def _locate_validation_errors(
@@ -140,7 +140,7 @@ except tomllib.TOMLDecodeError as e:
     raise ConfigError(path, [_parse_toml_error(e)]) from e
 
 try:
-    return GatecheckConfig.model_validate(data)
+    return HooksmithConfig.model_validate(data)
 except pydantic.ValidationError as e:
     toml_doc = tomlkit.parse(source) # only on error (Option B)
     raise ConfigError(path, _locate_validation_errors(e, source, toml_doc)) from e
@@ -156,13 +156,13 @@ because Option B needs `source` in scope for the translator.
 
 ## 6. Public API delta
 
-`src/gatecheck/config/__init__.py`:
+`src/hooksmith/config/__init__.py`:
 
 ```python
-__all__ = ["ConfigError", "GatecheckConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]
+__all__ = ["ConfigError", "HooksmithConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]
 ```
 
-Plus `from gatecheck.config.config_error import ConfigError`.
+Plus `from hooksmith.config.config_error import ConfigError`.
 
 ---
 
@@ -170,8 +170,8 @@ Plus `from gatecheck.config.config_error import ConfigError`.
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/config/config_error.py` | `class ConfigError` only. |
-| `src/gatecheck/config/_error_translator.py` | `_parse_toml_error` + `_locate_validation_errors` only. Private — never imported from `__init__.py`. |
+| `src/hooksmith/config/config_error.py` | `class ConfigError` only. |
+| `src/hooksmith/config/_error_translator.py` | `_parse_toml_error` + `_locate_validation_errors` only. Private — never imported from `__init__.py`. |
 
 Both honour python.md one-class-per-file / one-concern-per-module
 (BUILD-0001 G-4). Translator has no class — rule satisfied by

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>gatecheck — modern pre-commit actions, blazing fast.</title>
+    <title>hooksmith — modern pre-commit actions, blazing fast.</title>
     <meta
       name="description"
       content="The next-generation runner for your pre-commit actions — real package sources, monorepo-aware execution, and a Rust-powered parallel runner that starts in under 10ms."
@@ -12,13 +12,13 @@
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
 
     <!-- Open Graph / social -->
-    <meta property="og:title" content="gatecheck — modern pre-commit actions, blazing fast." />
+    <meta property="og:title" content="hooksmith — modern pre-commit actions, blazing fast." />
     <meta
       property="og:description"
       content="The next-generation runner for your pre-commit actions — real package sources, monorepo support, and Rust-powered parallel execution."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://gatecheck.dev" />
+    <meta property="og:url" content="https://hooksmith.dev" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,12 +34,12 @@
     <header class="site-header">
       <a class="brand" href="./">
         <img src="assets/logo.svg" alt="" width="32" height="32" />
-        <span>gatecheck</span>
+        <span>hooksmith</span>
       </a>
       <nav class="site-nav">
         <a href="docs/getting-started/quickstart/">Docs</a>
-        <a href="https://github.com/snoodleboot-io/gatecheck">GitHub</a>
-        <a href="https://pypi.org/project/gatecheck/">PyPI</a>
+        <a href="https://github.com/snoodleboot-io/hooksmith">GitHub</a>
+        <a href="https://pypi.org/project/hooksmith/">PyPI</a>
       </nav>
     </header>
 
@@ -50,19 +50,19 @@
           <span>blazing fast.</span>
         </h1>
         <p class="hero__tagline">
-          gatecheck is the next-generation runner for your pre-commit actions —
+          hooksmith is the next-generation runner for your pre-commit actions —
           real package sources, monorepo-aware execution, and a Rust-powered
           parallel runner that starts in under 10ms.
         </p>
 
         <div class="install">
           <span class="install__prefix">$</span>
-          <span class="install__cmd">pip install gatecheck</span>
+          <span class="install__cmd">pip install hooksmith</span>
           <button
             class="install__copy"
             type="button"
             aria-label="Copy install command"
-            onclick="navigator.clipboard.writeText('pip install gatecheck'); this.textContent='copied';"
+            onclick="navigator.clipboard.writeText('pip install hooksmith'); this.textContent='copied';"
           >
             copy
           </button>
@@ -85,10 +85,10 @@
 
     <section class="section">
       <div class="container">
-        <h2>Why gatecheck?</h2>
+        <h2>Why hooksmith?</h2>
         <p class="section__lede">
           Pre-commit actions should be fast, reproducible, and monorepo-aware.
-          gatecheck is built for the way modern teams ship — PyPI-native package
+          hooksmith is built for the way modern teams ship — PyPI-native package
           sources, a dependency-aware DAG runner, and a Rust core that gets out
           of your way.
         </p>
@@ -124,7 +124,7 @@
             <h3 class="feature__title">Lockfile reproducibility</h3>
             <p class="feature__body">
               <code>check.lock</code> pins every resolved dependency with content
-              hashes. <code>gatecheck sync</code> installs exactly what's locked.
+              hashes. <code>hooksmith sync</code> installs exactly what's locked.
             </p>
           </article>
           <article class="feature">
@@ -132,14 +132,14 @@
             <h3 class="feature__title">Composable groups</h3>
             <p class="feature__body">
               Named groups with explicit parallelism, ordering, and git event
-              bindings. <code>gatecheck run lint</code> just works.
+              bindings. <code>hooksmith run lint</code> just works.
             </p>
           </article>
           <article class="feature">
             <span class="feature__icon" aria-hidden="true">🔍</span>
             <h3 class="feature__title">Transparent cache</h3>
             <p class="feature__body">
-              <code>gatecheck cache why black</code> tells you exactly why a
+              <code>hooksmith cache why black</code> tells you exactly why a
               rebuild was triggered. No more debugging opaque invalidations.
             </p>
           </article>
@@ -175,7 +175,7 @@
             <thead>
               <tr>
                 <th>Capability</th>
-                <th>gatecheck</th>
+                <th>hooksmith</th>
               </tr>
             </thead>
             <tbody>
@@ -189,7 +189,7 @@
               <tr><td>Branch / env / CI conditions</td><td><span class="ok">✓</span> rich <code>when:</code></td></tr>
               <tr><td>Cache debugging</td><td><span class="ok">✓</span> <code>cache why</code></td></tr>
               <tr><td>Startup time</td><td><span class="ok">✓</span> ~8 ms</td></tr>
-              <tr><td>Import existing hooks</td><td><span class="ok">✓</span> <code>gatecheck migrate</code></td></tr>
+              <tr><td>Import existing hooks</td><td><span class="ok">✓</span> <code>hooksmith migrate</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -236,11 +236,11 @@ on-event = "commit"</code></pre>
 
     <footer class="site-footer">
       <div class="container site-footer__row">
-        <span>© gatecheck contributors · MIT</span>
+        <span>© hooksmith contributors · MIT</span>
         <nav>
           <a href="docs/">Docs</a>
-          <a href="https://github.com/snoodleboot-io/gatecheck">GitHub</a>
-          <a href="https://pypi.org/project/gatecheck/">PyPI</a>
+          <a href="https://github.com/snoodleboot-io/hooksmith">GitHub</a>
+          <a href="https://pypi.org/project/hooksmith/">PyPI</a>
           <a href="docs/changelog/">Changelog</a>
         </nav>
       </div>

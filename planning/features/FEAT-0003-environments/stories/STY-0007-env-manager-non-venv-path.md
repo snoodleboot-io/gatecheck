@@ -13,7 +13,7 @@ adrs: [ADR-0001]
 
 ## As a / I want / So that
 
-As a **gatecheck developer**, I want **`EnvManager.resolve(hook)` to turn a
+As a **hooksmith developer**, I want **`EnvManager.resolve(hook)` to turn a
 `HookDef` whose `from` is `project` or `system` into a `ResolvedEnv(bin_dir,
 cache_key)` by classifying the spec (`parse_source`) and locating the tool named
 by `hook.run` (`resolve_source`), with a deterministic `cache_key`** so that
@@ -33,7 +33,7 @@ with `SourceResolutionError("pypi source resolution is delegated to Environments
 (STY-0006), not handled here")`.
 
 This story builds out the existing `EnvManager` stub
-(`src/gatecheck/env/manager.py`, currently `resolve` raises `NotImplementedError`)
+(`src/hooksmith/env/manager.py`, currently `resolve` raises `NotImplementedError`)
 to light up the **non-venv path only**:
 
 - Establish the `EnvManager` contract, constructor state, the `ResolvedEnv`
@@ -56,7 +56,7 @@ Explicitly **out of scope** (deferred to later stories in FEAT-0003):
   **STY-0008**. This story only *routes* `pypi` to a deferred error.
 - **Calling `registry.resolve_pypi_source`.** The pinned-dist hand-off is consumed
   in STY-0008, not here.
-- **Cache hit/miss tracing and `gatecheck cache why`** (PRD-0001 § Scope — Cache)
+- **Cache hit/miss tracing and `hooksmith cache why`** (PRD-0001 § Scope — Cache)
   — **STY-0009**. This story defines the `cache_key` *derivation* but stores /
   explains nothing.
 - **Running the executable** — the runner's job.
@@ -199,16 +199,16 @@ map to `ConfigError` / carry a `line:col`.
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/env/manager.py` | Build out `EnvManager` (constructor state + `resolve` dispatch + `_cache_key`); `ResolvedEnv` stays here. (Existing file.) |
-| `src/gatecheck/env/env_error.py` | `EnvError(ValueError)` with structured `hook_id` / `reason` and the `cannot resolve environment for hook '<id>': <reason>` message. (New.) |
-| `src/gatecheck/env/__init__.py` | Facade — export `EnvManager`, `ResolvedEnv`, `EnvError`; set `__all__` (alphabetical). (Existing file — extend.) |
+| `src/hooksmith/env/manager.py` | Build out `EnvManager` (constructor state + `resolve` dispatch + `_cache_key`); `ResolvedEnv` stays here. (Existing file.) |
+| `src/hooksmith/env/env_error.py` | `EnvError(ValueError)` with structured `hook_id` / `reason` and the `cannot resolve environment for hook '<id>': <reason>` message. (New.) |
+| `src/hooksmith/env/__init__.py` | Facade — export `EnvManager`, `ResolvedEnv`, `EnvError`; set `__all__` (alphabetical). (Existing file — extend.) |
 
 ## Tasks
 
-- [ ] TSK-001: Add `src/gatecheck/env/env_error.py` — `EnvError(ValueError)` with
+- [ ] TSK-001: Add `src/hooksmith/env/env_error.py` — `EnvError(ValueError)` with
   structured `hook_id` / `reason` fields and message `cannot resolve environment for
   hook '<hook_id>': <reason>`, mirroring `SourceResolutionError`'s shape.
-- [ ] TSK-002: Build out `EnvManager` in `src/gatecheck/env/manager.py` — add
+- [ ] TSK-002: Build out `EnvManager` in `src/hooksmith/env/manager.py` — add
   `__init__(self, workspace_root: Path | None = None, environ: Mapping[str, str] |
   None = None)` storing both; keep the `ResolvedEnv` dataclass.
 - [ ] TSK-003: Implement the tool-name derivation helper (`shlex.split(hook.run)[0]`;
@@ -221,7 +221,7 @@ map to `ConfigError` / carry a `line:col`.
 - [ ] TSK-005: Implement the private `_cache_key(resolved: ResolvedTool) -> str`
   helper — `sha256("env-v1\n" + origin + "\n" + str(executable))` hexdigest; define
   `_CACHE_KEY_SCHEME = "env-v1"`.
-- [ ] TSK-006: Update `src/gatecheck/env/__init__.py` to export `EnvError` alongside
+- [ ] TSK-006: Update `src/hooksmith/env/__init__.py` to export `EnvError` alongside
   `EnvManager` / `ResolvedEnv` (`__all__`, alphabetical).
 - [ ] TSK-007: Write `tests/unit/test_env_manager.py` (hermetic — no subprocess, no
   network; inject `workspace_root` + `environ`, use `tmp_path` fake venv / fake
@@ -278,8 +278,8 @@ map to `ConfigError` / carry a `line:col`.
 - [ ] AC-13: The entire story runs with **no subprocess and no network** — the unit
   and integration suites are hermetic (a `subprocess` spy asserts nothing is
   spawned); `resolve` is a deterministic function of its injected inputs.
-- [ ] AC-14: `from gatecheck.env import EnvManager, ResolvedEnv, EnvError` works.
-- [ ] AC-15: `mypy --strict src/gatecheck/env/` passes with no new errors; the
+- [ ] AC-14: `from hooksmith.env import EnvManager, ResolvedEnv, EnvError` works.
+- [ ] AC-15: `mypy --strict src/hooksmith/env/` passes with no new errors; the
   `match` over `ParsedSource` is exhaustive.
 - [ ] AC-16: `EnvManager.resolve` never creates, writes, or mutates any directory —
   `bin_dir` is always an already-existing directory for the resolved kinds.

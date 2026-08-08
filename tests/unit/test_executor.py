@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.run_hook (STY-0013 / GAT-15).
+"""Unit tests for hooksmith.runner.run_hook (STY-0013 / GAT-15).
 
 Hermetic — the environment and the subprocess are dependency-injected fakes; no real
 env resolution and no real process. Covers passed/failed status, argv assembly
@@ -11,9 +11,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvError, ResolvedEnv
-from gatecheck.runner import run_hook
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import EnvError, ResolvedEnv
+from hooksmith.runner import run_hook
 
 
 class FakeEnvManager:

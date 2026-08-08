@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.install.install_hooks (STY-0022 / GAT-21).
+"""Unit tests for hooksmith.install.install_hooks (STY-0022 / GAT-21).
 
 Hermetic — the hooks directory is a ``tmp_path`` behind a fake ``HooksLocator``; no
 real repo. Covers event→hook mapping, grouping several groups into one hook script,
@@ -11,8 +11,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.install import has_on_event_groups, install_hooks
+from hooksmith.config import HooksmithConfig
+from hooksmith.install import has_on_event_groups, install_hooks
 
 
 class FakeLocator:
@@ -27,13 +27,13 @@ class FakeLocator:
 
 def _config(
     groups: dict[str, dict[str, object]], hooks: list[str] | None = None
-) -> GatecheckConfig:
+) -> HooksmithConfig:
     hook_ids = hooks or ["a", "b"]
     data = {
         "hook": [{"id": h, "from": "system", "run": h} for h in hook_ids],
         "group": groups,
     }
-    return GatecheckConfig.model_validate(data)
+    return HooksmithConfig.model_validate(data)
 
 
 def test_installs_pre_commit_for_commit_event(tmp_path: Path) -> None:
@@ -45,7 +45,7 @@ def test_installs_pre_commit_for_commit_event(tmp_path: Path) -> None:
     assert [(o.git_hook, o.status) for o in outcomes] == [("pre-commit", "installed")]
     script = tmp_path / "pre-commit"
     assert script.exists()
-    assert "gatecheck run lint" in script.read_text(encoding="utf-8")
+    assert "hooksmith run lint" in script.read_text(encoding="utf-8")
     assert os.access(script, os.X_OK)
 
 
@@ -68,7 +68,7 @@ def test_commit_msg_event_maps_to_commit_msg_and_forwards_the_message_file(
     # Assert — the commit-msg hook forwards git's $1 (the message-file path)
     assert [(o.git_hook, o.status) for o in outcomes] == [("commit-msg", "installed")]
     script = (tmp_path / "commit-msg").read_text(encoding="utf-8")
-    assert 'gatecheck run msg --commit-msg-file "$1"' in script
+    assert 'hooksmith run msg --commit-msg-file "$1"' in script
 
 
 def test_non_commit_msg_hooks_do_not_forward_a_message_file(tmp_path: Path) -> None:
@@ -93,8 +93,8 @@ def test_groups_sharing_an_event_share_one_hook(tmp_path: Path) -> None:
     # Assert — one pre-commit hook running both groups in order
     assert len(outcomes) == 1
     script = (tmp_path / "pre-commit").read_text(encoding="utf-8")
-    assert "gatecheck run lint" in script
-    assert "gatecheck run fmt" in script
+    assert "hooksmith run lint" in script
+    assert "hooksmith run fmt" in script
 
 
 def test_reinstall_overwrites_managed_hook(tmp_path: Path) -> None:

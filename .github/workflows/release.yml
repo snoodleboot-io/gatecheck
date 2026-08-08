@@ -3,10 +3,10 @@
 # There are no version tags. The version is COMPUTED at build time from PyPI history
 # plus the GitHub event (see .github/scripts/calculate_version.py) and injected into
 # both distributions before they build (.github/scripts/inject_version.sh):
-#   • gatecheck-core — the PyO3 extension, built by maturin as a platform wheel matrix
-#     (per-Python cp311/cp312; no abi3). Version from gatecheck-rs/Cargo.toml.
-#   • gatecheck      — the pure-Python host, built by hatchling from __about__.py.
-#     Pins gatecheck-core==<same version>.
+#   • hooksmith-core — the PyO3 extension, built by maturin as a platform wheel matrix
+#     (per-Python cp311/cp312; no abi3). Version from hooksmith-rs/Cargo.toml.
+#   • hooksmith      — the pure-Python host, built by hatchling from __about__.py.
+#     Pins hooksmith-core==<same version>.
 #
 # Flow:
 #   • PR → main (opened/synchronized)  → build 0.<minor>.<PR>.dev<run> → TestPyPI.
@@ -39,8 +39,8 @@ permissions:
   contents: read
 
 env:
-  PACKAGE_NAME: gatecheck
-  # MAJOR is pinned here — the only place it can be bumped. gatecheck stays on 0.x.
+  PACKAGE_NAME: hooksmith
+  # MAJOR is pinned here — the only place it can be bumped. hooksmith stays on 0.x.
   MAJOR_VERSION: "0"
   # cp311/cp312 wheels — must track [project].requires-python and the CI test matrix.
   PYTHON_INTERPRETERS: "3.11 3.12"
@@ -71,7 +71,7 @@ jobs:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           GITHUB_EVENT_ACTION: ${{ github.event.action || '' }}
 
-  # ── build gatecheck-core (compiled) ──────────────────────────────
+  # ── build hooksmith-core (compiled) ──────────────────────────────
   build-core:
     name: core ${{ matrix.target }} (${{ matrix.runner }})
     needs: version
@@ -106,7 +106,7 @@ jobs:
           args: >-
             --release
             --out dist
-            --manifest-path gatecheck-rs/Cargo.toml
+            --manifest-path hooksmith-rs/Cargo.toml
             --interpreter ${{ env.PYTHON_INTERPRETERS }}
 
       - uses: actions/upload-artifact@v4
@@ -128,14 +128,14 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist --manifest-path gatecheck-rs/Cargo.toml
+          args: --out dist --manifest-path hooksmith-rs/Cargo.toml
       - uses: actions/upload-artifact@v4
         with:
           name: core-sdist
           path: dist/*.tar.gz
           if-no-files-found: error
 
-  # ── build gatecheck (pure Python host) ───────────────────────────
+  # ── build hooksmith (pure Python host) ───────────────────────────
   build-host:
     name: host wheel + sdist
     needs: version
@@ -189,10 +189,10 @@ jobs:
           set -euo pipefail
           python -m pip install --upgrade pip
           # --find-links for our wheels; PyPI still reachable for runtime deps.
-          pip install --find-links wheelhouse gatecheck
-          gatecheck --version
+          pip install --find-links wheelhouse hooksmith
+          hooksmith --version
           gc --version
-          python -c "import gatecheck_core; print('gatecheck_core import OK')"
+          python -c "import hooksmith_core; print('hooksmith_core import OK')"
 
   # ── publish to TestPyPI (PR previews) ────────────────────────────
   publish-testpypi:
@@ -204,7 +204,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/gatecheck/
+      url: https://test.pypi.org/project/hooksmith/
     permissions:
       id-token: write # OIDC token for Trusted Publishing
     steps:
@@ -234,7 +234,7 @@ jobs:
     # The release environment must require a manual reviewer — this is the gate.
     environment:
       name: release
-      url: https://pypi.org/project/gatecheck/
+      url: https://pypi.org/project/hooksmith/
     permissions:
       id-token: write # OIDC token for Trusted Publishing
     steps:
@@ -242,16 +242,16 @@ jobs:
         with:
           path: artifacts
 
-      # gatecheck-core: every platform wheel + the sdist.
-      - name: Stage gatecheck-core
+      # hooksmith-core: every platform wheel + the sdist.
+      - name: Stage hooksmith-core
         run: |
           mkdir -p dist-core
           find artifacts -path '*core-wheels*/*.whl' -exec cp {} dist-core/ \;
           find artifacts -path '*core-sdist*/*.tar.gz' -exec cp {} dist-core/ \;
           ls -1 dist-core
 
-      # gatecheck: the universal wheel + sdist.
-      - name: Stage gatecheck
+      # hooksmith: the universal wheel + sdist.
+      - name: Stage hooksmith
         run: |
           mkdir -p dist-host
           find artifacts -path '*host-dist*/*' \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp {} dist-host/ \;
@@ -260,13 +260,13 @@ jobs:
       # Publish the core first so the host's dependency resolves for anyone who installs
       # the instant the host lands. skip-existing: the core wheels only change when the
       # unified version bumps, so a re-run must not error on an already-present file.
-      - name: Publish gatecheck-core
+      - name: Publish hooksmith-core
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist-core
           skip-existing: true
 
-      - name: Publish gatecheck
+      - name: Publish hooksmith
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist-host

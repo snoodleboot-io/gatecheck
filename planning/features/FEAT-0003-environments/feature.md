@@ -23,7 +23,7 @@ distribution installed, isolated per pinned dist.
 
 ## Why
 
-Two of `gatecheck`'s headline goals live here: **"Reuse the project's own venv"**
+Two of `hooksmith`'s headline goals live here: **"Reuse the project's own venv"**
 for tools that already exist (PRD-0001 § Goals 2) and **uv-backed, cached,
 isolated environments** for `pypi:` hooks so the same tool is never built twice
 (PRD-0001 § Goals 1, § Success metrics — cached `run` under 250 ms). FEAT-0002
@@ -31,7 +31,7 @@ stops at a *description* of a source: `resolve_source` locates the local kinds a
 `registry.resolve_pypi_source` pins a `pypi:` requirement to
 `name==version --index-url <url>`, but nothing yet turns either into a directory
 of runnable executables. This feature is that bridge. See
-[PRD-0001 § Scope — Environments](../../prd/0001-gatecheck.md#scope) ("uv-backed
+[PRD-0001 § Scope — Environments](../../prd/0001-hooksmith.md#scope) ("uv-backed
 venv creation, caching, isolation") and § Cache ("SHA-256 keying, hit/miss
 explainability"), and [ADR-0001](../../adr/0001-python-host-rust-core.md), which
 places package resolution and environment management on the Python host side.
@@ -41,7 +41,7 @@ places package resolution and environment management on the Python host side.
 The runner-facing contract is a single entry point on `EnvManager`:
 
 ```python
-from gatecheck.env import EnvManager, ResolvedEnv
+from hooksmith.env import EnvManager, ResolvedEnv
 
 env: ResolvedEnv = EnvManager(workspace_root=root, environ=os.environ).resolve(hook)
 # env.bin_dir  -> Path to the directory containing the hook's executable
@@ -49,7 +49,7 @@ env: ResolvedEnv = EnvManager(workspace_root=root, environ=os.environ).resolve(h
 ```
 
 `EnvManager.resolve(hook)` dispatches on the hook's `from` spec (classified by
-`gatecheck.sources.parse_source`) and the tool named by `hook.run`:
+`hooksmith.sources.parse_source`) and the tool named by `hook.run`:
 
 | `from` spec | Handling | Environment produced |
 |---|---|---|
@@ -59,7 +59,7 @@ env: ResolvedEnv = EnvManager(workspace_root=root, environ=os.environ).resolve(h
 | `local:` / `git:` / `docker:` (unsupported) | rejected with a typed error (same as `resolve_source`) | — |
 
 `ResolvedEnv` is the existing frozen dataclass
-(`src/gatecheck/env/manager.py`): `bin_dir: Path`, `cache_key: str`.
+(`src/hooksmith/env/manager.py`): `bin_dir: Path`, `cache_key: str`.
 
 ## uv is an external runtime dependency (flag)
 
@@ -98,7 +98,7 @@ filesystem); then cache explainability.
 
 - [ ] [STY-0007 — `EnvManager` skeleton + the non-venv path (`project` / `system` → `ResolvedEnv`); `pypi` deferred](stories/STY-0007-env-manager-non-venv-path.md)
 - [ ] STY-0008 — uv-backed venv creation for `pypi:` / `pypi+alias:` sources: shell out to `uv venv` + `uv pip install name==version --index-url <url>` (with `--require-hashes` when `sha256` present) into a content-addressed cache dir; return its `bin/` (subprocess + filesystem + network) (not yet written)
-- [ ] STY-0009 — Cache management + explainability: SHA-256 keying, hit/miss trace, `gatecheck cache why <hook>` (PRD-0001 § Scope — Cache) (not yet written)
+- [ ] STY-0009 — Cache management + explainability: SHA-256 keying, hit/miss trace, `hooksmith cache why <hook>` (PRD-0001 § Scope — Cache) (not yet written)
 
 ## Acceptance
 

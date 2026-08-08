@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.build_plan (STY-0012 / GAT-14).
+"""Unit tests for hooksmith.runner.build_plan (STY-0012 / GAT-14).
 
 Pure config → plan; hermetic (no filesystem, no git, injected ``environ``). Covers
 all-vs-group selection, the unknown-group / unknown-hook / unknown-dep / cycle
@@ -11,17 +11,17 @@ from __future__ import annotations
 
 import pytest
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.runner import ExecutionPlan, PlanError, build_plan
+from hooksmith.config import HooksmithConfig
+from hooksmith.runner import ExecutionPlan, PlanError, build_plan
 
 
 def _config(
     hooks: list[dict[str, object]], groups: dict[str, object] | None = None
-) -> GatecheckConfig:
+) -> HooksmithConfig:
     data: dict[str, object] = {"hook": hooks}
     if groups is not None:
         data["group"] = groups
-    return GatecheckConfig.model_validate(data)
+    return HooksmithConfig.model_validate(data)
 
 
 def _hook(hook_id: str, **extra: object) -> dict[str, object]:
@@ -297,7 +297,7 @@ def test_hook_runs_when_the_changeset_matches() -> None:
 
 
 def test_empty_changeset_skips_every_file_consuming_hook() -> None:
-    # Arrange — nothing staged, the common `gatecheck run` case
+    # Arrange — nothing staged, the common `hooksmith run` case
     config = _config([_hook("a"), _hook("b", files="*.py")])
     # Act
     plan = build_plan(config, environ={}, changed_files=[])
@@ -365,7 +365,7 @@ def test_requires_network_skips_when_offline() -> None:
     # Arrange
     config = _config([_hook("a", when={"requires-network": True})])
     # Act — offline
-    plan = build_plan(config, environ={"GATECHECK_OFFLINE": "1"})
+    plan = build_plan(config, environ={"HOOKSMITH_OFFLINE": "1"})
     # Assert — skipped, not run, with a distinct network reason
     assert plan.levels == ()
     assert [s.hook_id for s in plan.skipped] == ["a"]
@@ -386,7 +386,7 @@ def test_requires_network_reason_takes_precedence_offline() -> None:
     # Arrange — offline AND a branch that would also skip; network reason wins
     config = _config([_hook("a", when={"requires-network": True, "branch": "main"})])
     # Act
-    plan = build_plan(config, environ={"GATECHECK_OFFLINE": "1"}, branch="dev")
+    plan = build_plan(config, environ={"HOOKSMITH_OFFLINE": "1"}, branch="dev")
     # Assert
     assert [s.hook_id for s in plan.skipped] == ["a"]
     assert "network" in plan.skipped[0].reason

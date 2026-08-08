@@ -1,27 +1,27 @@
 # Air-gapped / Offline Runs
 
-gatecheck can run in a no-egress environment — a sandboxed CI job, a locked-down
+hooksmith can run in a no-egress environment — a sandboxed CI job, a locked-down
 build agent, or a fully air-gapped network. The model is **two phases**:
 
-1. **Warm the cache online.** In a step that *does* have network, run `gatecheck sync`
+1. **Warm the cache online.** In a step that *does* have network, run `hooksmith sync`
    to pin every `pypi:` hook and build its uv-backed environment into the
    content-addressed cache.
-2. **Run offline.** In the no-egress step, run `gatecheck run --offline`. Nothing
+2. **Run offline.** In the no-egress step, run `hooksmith run --offline`. Nothing
    touches the network; every environment is served from the warm cache, and a cache
    miss is a clear, immediate error instead of a hang.
 
 ## Offline mode
 
-Offline mode is a single signal: the `GATECHECK_OFFLINE` environment variable (set by
+Offline mode is a single signal: the `HOOKSMITH_OFFLINE` environment variable (set by
 `--offline`). When it is active:
 
 - **`pypi:` hooks** are resolved **locally**. The package index is never queried, so a
   hook must carry an **exact pin** (`from = "pypi:ruff==0.4.9"`). A range or bare name
   (`pypi:ruff`, `pypi:ruff>=0.4`) cannot be resolved without the index and raises a
-  clear error telling you to pin it or run `gatecheck sync` online first.
+  clear error telling you to pin it or run `hooksmith sync` online first.
 - A **cache hit** runs with zero network — no index query, no `uv`, no download.
 - A **cache miss** fails fast: *"offline: no cached environment for `ruff==0.4.9`; run
-  `gatecheck sync` while online first to warm the cache."*
+  `hooksmith sync` while online first to warm the cache."*
 - **`system:` / `project:` hooks** are unaffected — they reuse a binary already on the
   machine and never needed the network.
 
@@ -39,7 +39,7 @@ run = "my-audit"
 when = { requires-network = true }
 ```
 
-Online, the hook runs normally. Offline (`GATECHECK_OFFLINE` / `run --offline`), it is
+Online, the hook runs normally. Offline (`HOOKSMITH_OFFLINE` / `run --offline`), it is
 skipped — not failed — and shown distinctly in the report:
 
 ```
@@ -55,10 +55,10 @@ The exit code stays `0`: a network-skip is a skip, not a failure.
 # check.toml → from = "pypi:ruff==0.4.9"
 
 # online prep step
-gatecheck sync
+hooksmith sync
 
 # no-egress step
-gatecheck run --offline        # or: GATECHECK_OFFLINE=1 gatecheck run
+hooksmith run --offline        # or: HOOKSMITH_OFFLINE=1 hooksmith run
 ```
 
 ## The cache
@@ -67,7 +67,7 @@ Environments live under the user cache dir, keyed by a SHA-256 of
 `(scheme, package, version, index-url)`:
 
 ```
-$XDG_CACHE_HOME/gatecheck/        # ~/.cache/gatecheck by default
+$XDG_CACHE_HOME/hooksmith/        # ~/.cache/hooksmith by default
 ├── env-v1/<sha256>/…             # one uv-backed venv per pinned environment
 └── bin/uv                        # the bootstrapped uv (if auto-bootstrapped)
 ```
@@ -81,7 +81,7 @@ it in the sandboxed job and run offline:
 
 ```yaml
 jobs:
-  gatecheck:
+  hooksmith:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -89,24 +89,24 @@ jobs:
       # Restore (or later save) the content-addressed environment cache.
       - uses: actions/cache@v4
         with:
-          path: ~/.cache/gatecheck
-          key: gatecheck-${{ runner.os }}-${{ hashFiles('check.toml') }}
+          path: ~/.cache/hooksmith
+          key: hooksmith-${{ runner.os }}-${{ hashFiles('check.toml') }}
 
       # Network-enabled: pin + build any missing environments.
-      - run: gatecheck sync
+      - run: hooksmith sync
 
       # No-egress: everything is served from the warm cache.
-      - run: gatecheck run --offline --all-files
+      - run: hooksmith run --offline --all-files
 ```
 
 The cache key is `check.toml`'s hash, so it invalidates exactly when your pinned tools
-change. On a hit, `gatecheck sync` finds every environment already present and builds
-nothing; `gatecheck run --offline` then executes with no network.
+change. On a hit, `hooksmith sync` finds every environment already present and builds
+nothing; `hooksmith run --offline` then executes with no network.
 
 ## Internal indexes
 
 If your air-gapped network has an **internal mirror** rather than no network at all,
-you do not need offline mode — point gatecheck at the mirror instead:
+you do not need offline mode — point hooksmith at the mirror instead:
 
 ```toml
 [sources]
@@ -121,14 +121,14 @@ See [Private Registries](private-registries.md).
 
 ## uv bootstrap
 
-Building a `pypi:` environment needs `uv`. gatecheck auto-bootstraps a pinned `uv` into
+Building a `pypi:` environment needs `uv`. hooksmith auto-bootstraps a pinned `uv` into
 the cache on first use — a one-time network download. In an air-gapped runner this must
 already be present:
 
-- Warm it in the online `gatecheck sync` step (it lands at `~/.cache/gatecheck/bin/uv`
+- Warm it in the online `hooksmith sync` step (it lands at `~/.cache/hooksmith/bin/uv`
   and is restored with the rest of the cache), **or**
-- Provide `uv` yourself and set `GATECHECK_UV=/path/to/uv`, **or**
-- Set `GATECHECK_NO_BOOTSTRAP=1` to forbid the download (a missing `uv` then becomes a
+- Provide `uv` yourself and set `HOOKSMITH_UV=/path/to/uv`, **or**
+- Set `HOOKSMITH_NO_BOOTSTRAP=1` to forbid the download (a missing `uv` then becomes a
   clear error rather than an attempted fetch).
 
 In `--offline` runs a cache hit never needs `uv` at all, so a fully warm cache sidesteps

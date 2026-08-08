@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.registry.UrllibRegistryClient (STY-0006 / TSK-011).
+"""Unit tests for hooksmith.registry.UrllibRegistryClient (STY-0006 / TSK-011).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0006-architecture-decision.md`` §5. These exercise the REAL
@@ -31,8 +31,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-from gatecheck.registry import ProjectPage, UrllibRegistryClient
-from gatecheck.registry.registry_client import MalformedIndexResponse, PackageNotFound
+from hooksmith.registry import ProjectPage, UrllibRegistryClient
+from hooksmith.registry.registry_client import MalformedIndexResponse, PackageNotFound
 
 _JSON_CONTENT_TYPE = "application/vnd.pypi.simple.v1+json"
 

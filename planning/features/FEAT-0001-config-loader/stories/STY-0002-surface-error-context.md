@@ -11,7 +11,7 @@ feature: FEAT-0001
 
 ## As a / I want / So that
 
-As a **gatecheck user editing my `check.toml`**, I want **error messages that
+As a **hooksmith user editing my `check.toml`**, I want **error messages that
 include `check.toml:LINE:COL:` prefixes** so that **my IDE and shell pipelines
 (grep, sed, vim quickfix) can jump straight to the offending line — same
 ergonomics as a compiler error**.
@@ -25,7 +25,7 @@ IDE error matchers expect. This story:
 1. Adds **`tomlkit>=0.13`** as a runtime dependency. `tomlkit` parses TOML
    while preserving source positions on every element — required for exact
    `line:col` reporting on deeply nested `ValidationError`s.
-2. Adds a `ConfigError` exception in `gatecheck.config` that carries one or
+2. Adds a `ConfigError` exception in `hooksmith.config` that carries one or
    more `(line, col, message)` tuples.
 3. Catches `TOMLDecodeError` and `ValidationError` inside `load_config`,
    translates each into one or more `ConfigError` entries, and re-raises a
@@ -70,18 +70,18 @@ benchmark cost.
 - Translation of `from`-string spec errors (`pypi:`, `git:`, etc.) — those
   errors don't exist until the source-resolver story ships.
 - Coloured/styled output. The format is plain text so it works in CI logs and
-  IDE matchers. `gatecheck run` may layer Rich-style colouring on top later.
+  IDE matchers. `hooksmith run` may layer Rich-style colouring on top later.
 
 ## Tasks
 
 - [ ] TSK-001 Add `tomlkit>=0.13` to `[project].dependencies` in
   `pyproject.toml`.
 - [ ] TSK-002 Define `class ConfigError(ValueError)` in
-  `src/gatecheck/config/config_error.py`. Carries `path: Path`, `errors:
+  `src/hooksmith/config/config_error.py`. Carries `path: Path`, `errors:
   list[tuple[int, int, str]]`. `__str__` joins entries as
   `f"{path}:{line}:{col}: {msg}"` separated by newlines.
 - [ ] TSK-003 Implement `_parse_toml_error(err: TOMLDecodeError) -> tuple[int,
-  int, str]` in `src/gatecheck/config/_error_translator.py` (private module —
+  int, str]` in `src/hooksmith/config/_error_translator.py` (private module —
   leading underscore). Regex-match `at line (\d+), column (\d+)` from
   `str(err)`; fall back to `(1, 1, str(err))`.
 - [ ] TSK-004 Implement `_locate_validation_error(err: ValidationError,
@@ -99,7 +99,7 @@ benchmark cost.
   - Catch `TOMLDecodeError` → raise `ConfigError(path, [_parse_toml_error(e)])`
   - Catch `ValidationError` → raise `ConfigError(path, _locate_validation_error(e, doc))`
 - [ ] TSK-006 Update `__init__.py` to export `ConfigError`. New public API:
-  `["ConfigError", "GatecheckConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]`.
+  `["ConfigError", "HooksmithConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]`.
 - [ ] TSK-007 Update `docs/config/reference.md` "Error handling" subsection to
   reflect the new `ConfigError` exception (and that older callers catching
   `ValueError` still work).
@@ -120,10 +120,10 @@ benchmark cost.
   surfaces both, separated by newline. `str(exc).count("\n") >= 1`.
 - [ ] `ConfigError` subclasses `ValueError` — existing `except ValueError:`
   callers continue to work without code changes.
-- [ ] `from gatecheck.config import ConfigError, load_config` works.
+- [ ] `from hooksmith.config import ConfigError, load_config` works.
 - [ ] `pytest tests/unit/test_config_error.py` (new file) ≥ 90 % line coverage
-  on `gatecheck.config._error_translator` and `gatecheck.config.config_error`.
-- [ ] `mypy --strict src/gatecheck/config/` continues to pass.
+  on `hooksmith.config._error_translator` and `hooksmith.config.config_error`.
+- [ ] `mypy --strict src/hooksmith/config/` continues to pass.
 - [ ] Runtime dependency added: **only** `tomlkit>=0.13` (no other new deps).
 - [ ] All STY-0001 tests still pass — including the **raw-exception-layer
   tests**, which now assert that `ConfigError`'s `__cause__` is the raw

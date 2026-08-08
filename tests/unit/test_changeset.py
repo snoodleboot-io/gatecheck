@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.resolve_changeset (STY-0011 / GAT-13).
+"""Unit tests for hooksmith.runner.resolve_changeset (STY-0011 / GAT-13).
 
 Hermetic — the git boundary is a dependency-injected ``FakeGitClient``; no real
 repository. Covers staged (default) vs ``all_files``, the ``files`` glob filter,
@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.runner import Changeset, resolve_changeset
+from hooksmith.config.hook_def import HookDef
+from hooksmith.runner import Changeset, resolve_changeset
 
 
 class FakeGitClient:

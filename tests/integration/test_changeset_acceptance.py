@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.runner import SubprocessGitClient, resolve_changeset
+from hooksmith.config.hook_def import HookDef
+from hooksmith.runner import SubprocessGitClient, resolve_changeset
 
 pytestmark = pytest.mark.integration
 

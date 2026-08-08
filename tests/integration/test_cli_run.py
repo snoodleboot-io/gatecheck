@@ -1,4 +1,4 @@
-"""Integration tests for `gatecheck run` (STY-0015 / GAT-17).
+"""Integration tests for `hooksmith run` (STY-0015 / GAT-17).
 
 End-to-end via click's ``CliRunner`` in an isolated filesystem with a real git repo
 and real ``system`` hooks (``echo`` / ``false``). Marked ``integration`` and skipped
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 pytestmark = pytest.mark.integration
 
@@ -69,9 +69,9 @@ def test_run_offline_flag_runs_system_hooks() -> None:
             assert result.exit_code == 0, result.output
             assert "1 passed" in result.output
     finally:
-        # `run --offline` sets GATECHECK_OFFLINE in the process env; clear the mutation
+        # `run --offline` sets HOOKSMITH_OFFLINE in the process env; clear the mutation
         # so it cannot leak into later in-process tests.
-        os.environ.pop("GATECHECK_OFFLINE", None)
+        os.environ.pop("HOOKSMITH_OFFLINE", None)
 
 
 @_skip

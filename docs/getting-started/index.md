@@ -1,6 +1,6 @@
 # Getting Started
 
-gatecheck runs your linters, formatters and checks against the files you're about to
+hooksmith runs your linters, formatters and checks against the files you're about to
 commit — like pre-commit, but with real package sources, a dependency-aware parallel
 scheduler, and a cache you can interrogate.
 
@@ -56,7 +56,7 @@ on, which files changed, whether you're in CI. See
 ## What happens on a run
 
 ```bash
-gatecheck run
+hooksmith run
 ```
 
 1. Ask git what changed (staged by default; `--base main` in CI).
@@ -66,11 +66,11 @@ gatecheck run
 5. Print a report and exit `0` or `1`.
 
 Nothing about that is magic, and every step is inspectable —
-[`gatecheck cache why <hook>`](../cli/cache.md) will show you exactly why an
+[`hooksmith cache why <hook>`](../cli/cache.md) will show you exactly why an
 environment was reused or rebuilt.
 
 ## Coming from pre-commit?
 
 [Why not pre-commit](../design/why-not-precommit.md) explains what's different and
-why. If you just want to move, [`gatecheck migrate`](../cli/migrate.md) converts your
+why. If you just want to move, [`hooksmith migrate`](../cli/migrate.md) converts your
 config and tells you about anything it wasn't sure of.

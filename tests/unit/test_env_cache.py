@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.env.env_cache (STY-0008 / GAT-10).
+"""Unit tests for hooksmith.env.env_cache (STY-0008 / GAT-10).
 
 Pure filesystem — no subprocess, no network. Covers cache-root resolution, the
 per-key venv slot, the health check, and the atomic temp-build-then-``os.replace``
@@ -12,13 +12,13 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.env.env_cache import (
+from hooksmith.env.env_cache import (
     default_cache_root,
     is_healthy,
     publish_atomically,
     venv_slot,
 )
-from gatecheck.venv import bin_dir_name
+from hooksmith.venv import bin_dir_name
 
 
 def _make_venv(dest: Path) -> None:
@@ -35,7 +35,7 @@ def test_default_cache_root_prefers_xdg(tmp_path: Path) -> None:
     # Act
     root = default_cache_root({"XDG_CACHE_HOME": str(xdg)})
     # Assert
-    assert root == xdg / "gatecheck"
+    assert root == xdg / "hooksmith"
 
 
 def test_default_cache_root_falls_back_to_home_cache(tmp_path: Path) -> None:
@@ -44,7 +44,7 @@ def test_default_cache_root_falls_back_to_home_cache(tmp_path: Path) -> None:
     # Act
     root = default_cache_root({"HOME": str(home)})
     # Assert
-    assert root == home / ".cache" / "gatecheck"
+    assert root == home / ".cache" / "hooksmith"
 
 
 # ── venv_slot / is_healthy ────────────────────────────────────────

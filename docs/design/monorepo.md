@@ -102,14 +102,14 @@ without paying to build the same tool ten times.
 ## Why not a build system
 
 Bazel and friends model this far more richly — file-level dependency graphs, remote
-caching, hermetic actions. gatecheck deliberately doesn't: it's a hook runner, and its
+caching, hermetic actions. hooksmith deliberately doesn't: it's a hook runner, and its
 graph is package-level and declared, not inferred from the source. The bet is that
 package-granularity affectedness captures most of the value of "run less" without asking
-you to adopt a build system to get it. If you already have one, keep using it; gatecheck
+you to adopt a build system to get it. If you already have one, keep using it; hooksmith
 sits alongside.
 
 ## See also
 
 - [Monorepo Setup](../guides/monorepo.md) — the walkthrough.
 - [Monorepo / Workspace config](../config/workspace.md) — `[workspace]` and `[package]`.
-- [`gatecheck run --affected`](../cli/run.md) — the command.
+- [`hooksmith run --affected`](../cli/run.md) — the command.

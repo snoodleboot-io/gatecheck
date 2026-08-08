@@ -3,7 +3,7 @@ repository:
   type: multi-language-monorepo
   mappings: {}
 spec:
-  - folder: src/gatecheck
+  - folder: src/hooksmith
     type: backend
     subtype: cli
     language: python
@@ -28,7 +28,7 @@ spec:
       - unittest.mock
     coverage_tool: pytest-cov
     mutation_tool: mutmut
-  - folder: gatecheck-rs
+  - folder: hooksmith-rs
     type: backend
     subtype: library
     language: rust

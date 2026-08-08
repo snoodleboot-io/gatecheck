@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.registry.resolve_pypi_source (STY-0006 / TSK-010).
+"""Unit tests for hooksmith.registry.resolve_pypi_source (STY-0006 / TSK-010).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0006-architecture-decision.md``:
@@ -27,8 +27,8 @@ from urllib.error import URLError
 import pydantic
 import pytest
 
-from gatecheck.config import SourceSpec
-from gatecheck.registry import (
+from hooksmith.config import SourceSpec
+from hooksmith.registry import (
     ProjectFile,
     ProjectPage,
     RegistryClient,
@@ -36,8 +36,8 @@ from gatecheck.registry import (
     ResolvedPyPISource,
     resolve_pypi_source,
 )
-from gatecheck.registry.registry_client import MalformedIndexResponse, PackageNotFound
-from gatecheck.sources import PyPISource
+from hooksmith.registry.registry_client import MalformedIndexResponse, PackageNotFound
+from hooksmith.sources import PyPISource
 
 DEFAULT_INDEX = "https://pypi.org/simple"
 
@@ -707,7 +707,7 @@ def test_resolved_pypi_source_is_frozen() -> None:
 
 def test_resolve_source_still_rejects_pypi_unchanged() -> None:
     # Arrange
-    from gatecheck.sources import SourceResolutionError, resolve_source
+    from hooksmith.sources import SourceResolutionError, resolve_source
 
     # Act / Assert — the local resolver still delegates pypi to Environments.
     with pytest.raises(SourceResolutionError) as exc_info:
@@ -733,28 +733,28 @@ def test_fake_client_satisfies_registry_client_seam() -> None:
 
 
 def test_public_import_surface() -> None:
-    # AC-18: the locked facade symbols import from gatecheck.registry.
+    # AC-18: the locked facade symbols import from hooksmith.registry.
     # Arrange / Act
-    import gatecheck.registry as registry
-    from gatecheck.registry import (
+    import hooksmith.registry as registry
+    from hooksmith.registry import (
         ProjectFile as _ProjectFile,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         ProjectPage as _ProjectPage,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         RegistryClient as _RegistryClient,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         RegistryError as _RegistryError,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         ResolvedPyPISource as _ResolvedPyPISource,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         UrllibRegistryClient as _UrllibRegistryClient,
     )
-    from gatecheck.registry import (
+    from hooksmith.registry import (
         resolve_pypi_source as _resolve_pypi_source,
     )
 

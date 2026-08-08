@@ -1,13 +1,13 @@
-# Releasing gatecheck
+# Releasing hooksmith
 
-gatecheck publishes **two** distributions to PyPI:
+hooksmith publishes **two** distributions to PyPI:
 
 | Package | Built by | Contents |
 |---|---|---|
-| `gatecheck-core` | maturin | the compiled PyO3 extension — a platform wheel matrix (Linux x86_64/aarch64, macOS x86_64/arm64, Windows x64), per Python version (cp311, cp312), plus an sdist |
-| `gatecheck` | hatchling | the pure-Python host — one universal `py3-none-any` wheel + sdist. Depends on `gatecheck-core`. |
+| `hooksmith-core` | maturin | the compiled PyO3 extension — a platform wheel matrix (Linux x86_64/aarch64, macOS x86_64/arm64, Windows x64), per Python version (cp311, cp312), plus an sdist |
+| `hooksmith` | hatchling | the pure-Python host — one universal `py3-none-any` wheel + sdist. Depends on `hooksmith-core`. |
 
-`pip install gatecheck` pulls the host, which pulls the matching core wheel for the
+`pip install hooksmith` pulls the host, which pulls the matching core wheel for the
 user's platform.
 
 Releases are **trunk-based** — there are no version tags to cut. The version is
@@ -22,8 +22,8 @@ The version is `MAJOR.MINOR.PATCH[.devN]`, computed at build time by
 [`.github/scripts/calculate_version.py`](.github/scripts/calculate_version.py) and
 injected into both distributions by
 [`.github/scripts/inject_version.sh`](.github/scripts/inject_version.sh) — into
-`src/gatecheck/__about__.py` (host), `gatecheck-rs/Cargo.toml` (core), and the host's
-`gatecheck-core==` pin. **Both packages always share one version.**
+`src/hooksmith/__about__.py` (host), `hooksmith-rs/Cargo.toml` (core), and the host's
+`hooksmith-core==` pin. **Both packages always share one version.**
 
 | Segment | Source |
 |---|---|
@@ -66,13 +66,13 @@ These need PyPI accounts and repo-admin rights. Do them once, before the first r
 
 ### 1. Trusted Publishers on PyPI (and TestPyPI)
 
-For **each** of `gatecheck` and `gatecheck-core`, on PyPI → the project → *Publishing* →
+For **each** of `hooksmith` and `hooksmith-core`, on PyPI → the project → *Publishing* →
 *Add a new pending publisher*:
 
 | Field | PyPI value | TestPyPI value |
 |---|---|---|
 | Owner | `snoodleboot-io` | `snoodleboot-io` |
-| Repository | `gatecheck` | `gatecheck` |
+| Repository | `hooksmith` | `hooksmith` |
 | Workflow name | `release.yml` | `release.yml` |
 | Environment | `release` | `testpypi` |
 
@@ -95,8 +95,8 @@ automatically. Verify:
 
 ```bash
 pip install --index-url https://test.pypi.org/simple/ \
-            --extra-index-url https://pypi.org/simple/ gatecheck
-gatecheck --version
+            --extra-index-url https://pypi.org/simple/ hooksmith
+hooksmith --version
 ```
 
 (The extra index is needed because the runtime deps live on real PyPI, not TestPyPI.)
@@ -115,5 +115,5 @@ environment when the run pauses. Both packages land on PyPI at `0.<minor>.0`.
 ## After the first successful publish
 
 Update [`docs/getting-started/installation.md`](docs/getting-started/installation.md):
-drop the "not yet published to PyPI" warning and lead with `pip install gatecheck`. The
+drop the "not yet published to PyPI" warning and lead with `pip install hooksmith`. The
 from-source instructions become the contributor path.

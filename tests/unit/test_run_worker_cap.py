@@ -1,18 +1,18 @@
 """Unit tests for the run command's ``_max_workers`` concurrency-cap mapping (STY-0030).
 
-Pure — builds a ``GatecheckConfig`` and asserts the effective worker cap for the
+Pure — builds a ``HooksmithConfig`` and asserts the effective worker cap for the
 all-hooks run vs a serial group vs a parallel group. See the engine tests
 (``test_engine.py``) for the cap's runtime effect.
 """
 
 from __future__ import annotations
 
-from gatecheck.cli.commands.run import _max_workers
-from gatecheck.config import GatecheckConfig
+from hooksmith.cli.commands.run import _max_workers
+from hooksmith.config import HooksmithConfig
 
 
-def _config(groups: dict[str, object]) -> GatecheckConfig:
-    return GatecheckConfig.model_validate(
+def _config(groups: dict[str, object]) -> HooksmithConfig:
+    return HooksmithConfig.model_validate(
         {"hook": [{"id": "a", "from": "system", "run": "a"}], "group": groups}
     )
 

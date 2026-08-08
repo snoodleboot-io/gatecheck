@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Derived version calculator for gatecheck's trunk-based release pipeline.
+"""Derived version calculator for hooksmith's trunk-based release pipeline.
 
 Version schema: ``MAJOR.MINOR.PATCH[.devN]``
 
-- MAJOR  — from the CI environment (``MAJOR_VERSION``); gatecheck stays on 0.x.
+- MAJOR  — from the CI environment (``MAJOR_VERSION``); hooksmith stays on 0.x.
 - MINOR  — the latest MINOR on PyPI for that MAJOR, + 1. First release (nothing on
            PyPI yet) starts at MINOR = 1, so the first published version is 0.1.0.
 - PATCH  — the PR number on PR builds; 0 on a push to main.
 - .devN  — the GitHub run number, appended for TestPyPI preview builds only.
 
-Both distributions (the ``gatecheck`` host and the ``gatecheck-core`` extension)
+Both distributions (the ``hooksmith`` host and the ``hooksmith-core`` extension)
 share the one version this computes; the workflow injects it into
-``src/gatecheck/__about__.py``, ``gatecheck-rs/Cargo.toml``, and the host's
-``gatecheck-core==`` dependency pin before building.
+``src/hooksmith/__about__.py``, ``hooksmith-rs/Cargo.toml``, and the host's
+``hooksmith-core==`` dependency pin before building.
 
-PyPI is queried for the ``gatecheck`` host to find the baseline MINOR. A query
+PyPI is queried for the ``hooksmith`` host to find the baseline MINOR. A query
 failure is fatal (strict mode) — we never want to silently reuse a MINOR and clash
 with an existing release.
 """
@@ -30,7 +30,7 @@ import urllib.request
 from collections.abc import Callable
 
 # First release starts here so the debut version is 0.1.0 (matching the seed
-# gatecheck-rs/Cargo.toml version), not 0.0.0.
+# hooksmith-rs/Cargo.toml version), not 0.0.0.
 _FIRST_RELEASE_MINOR = 1
 
 # Preview/dev builds use "-dev" (hyphen), not ".dev". The hyphen form is valid SemVer
@@ -70,7 +70,7 @@ class VersionCalculator:
     """Computes the build version from PyPI history and the GitHub event context."""
 
     def __init__(
-        self, package_name: str = "gatecheck", pypi_lookup: PyPILookup | None = None
+        self, package_name: str = "hooksmith", pypi_lookup: PyPILookup | None = None
     ) -> None:
         self.package_name = package_name
         self._pypi_lookup = pypi_lookup or query_pypi_major_minor
@@ -108,7 +108,7 @@ class VersionCalculator:
 
         # PR build: PATCH is the PR number; TestPyPI previews add the run number.
         # The dev segment uses a hyphen ("-dev") so the string is valid SemVer (for
-        # gatecheck-rs/Cargo.toml) *and* normalizes to PEP 440 ".dev" for the wheels —
+        # hooksmith-rs/Cargo.toml) *and* normalizes to PEP 440 ".dev" for the wheels —
         # 0.2.59-dev1 == 0.2.59.dev1. A plain "." after the patch is a Cargo parse error.
         version = f"{major}.{new_minor}.{pr_number}"
         if is_testpypi and run_number:
@@ -123,7 +123,7 @@ def _extract_pr_number(github_ref: str) -> str | None:
 
 
 def main() -> None:
-    package_name = os.environ.get("PACKAGE_NAME", "gatecheck").strip()
+    package_name = os.environ.get("PACKAGE_NAME", "hooksmith").strip()
 
     env_major = os.environ.get("MAJOR_VERSION", "0").strip()
     try:

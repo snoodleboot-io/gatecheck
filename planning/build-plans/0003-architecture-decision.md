@@ -49,7 +49,7 @@ Use **Option A**: call `config.model_dump(by_alias=True, exclude_none=True, excl
 **Use `exclude_defaults=True`.** Here is why:
 
 - `exclude_unset=True` omits fields that were *not explicitly provided* to the
-  constructor. A `GatecheckConfig` produced by `model_validate(data)` inside
+  constructor. A `HooksmithConfig` produced by `model_validate(data)` inside
   `load_config` has **all** fields set — pydantic considers every field
   "explicitly provided" even when the input data simply lacked the key and
   pydantic filled in the default. On such an object, `exclude_unset=True`
@@ -57,7 +57,7 @@ Use **Option A**: call `config.model_dump(by_alias=True, exclude_none=True, excl
   whether its value equals the default, and would still omit fields that were
   absent from the source. This is the *correct* behavior for preserving user
   intent from a hand-written file — but `dump_config` must also work when
-  called on a programmatically constructed `GatecheckConfig()` (e.g. in
+  called on a programmatically constructed `HooksmithConfig()` (e.g. in
   tests), where nothing is "set."
 - `exclude_defaults=True` omits fields whose current value equals the field's
   declared default (regardless of how the object was constructed). For a
@@ -83,11 +83,11 @@ correctly.
 ## §2 `dump_config` function signature and contract
 
 ```python
-# src/gatecheck/config/dumper.py
+# src/hooksmith/config/dumper.py
 from pathlib import Path
-from gatecheck.config.gatecheck_config import GatecheckConfig
+from hooksmith.config.hooksmith_config import HooksmithConfig
 
-def dump_config(config: GatecheckConfig, path: Path) -> None: ...
+def dump_config(config: HooksmithConfig, path: Path) -> None: ...
 ```
 
 ### Contract
@@ -252,9 +252,9 @@ config.model_dump(by_alias=True, exclude_none=True, exclude_defaults=True)
 ### Why `exclude_defaults=True` is the correct choice
 
 `dump_config` must produce a minimal, clean config file regardless of how the
-`GatecheckConfig` object was constructed. Two construction paths are relevant:
+`HooksmithConfig` object was constructed. Two construction paths are relevant:
 
-1. **Via `load_config`:** `GatecheckConfig.model_validate(data)` is called by
+1. **Via `load_config`:** `HooksmithConfig.model_validate(data)` is called by
    `load_config`. Pydantic marks all fields — including those filled in with
    defaults because they were absent from the TOML input — as "set". Therefore
    `exclude_unset=True` on a `model_validate`-constructed object would **not**
@@ -262,7 +262,7 @@ config.model_dump(by_alias=True, exclude_none=True, exclude_defaults=True)
    by the validation process. `exclude_defaults=True` is required to suppress
    them.
 
-2. **Via direct construction:** `GatecheckConfig()` or
+2. **Via direct construction:** `HooksmithConfig()` or
    `HookDef(id="h", **{"from": "pypi:x", "run": "x"})` — fields not supplied
    by the caller take their defaults. `exclude_unset=True` would suppress these
    correctly, but `exclude_defaults=True` also suppresses them (a field at its
@@ -287,12 +287,12 @@ before being handed to the tomlkit walker.
 
 ## §5 Public API delta
 
-### `src/gatecheck/config/__init__.py`
+### `src/hooksmith/config/__init__.py`
 
 Add one import and update `__all__`:
 
 ```python
-from gatecheck.config.dumper import dump_config
+from hooksmith.config.dumper import dump_config
 ```
 
 `__all__` ordering rule: **alphabetical**, matching the existing convention
@@ -303,7 +303,7 @@ Alphabetical insertion of `"dump_config"` among the existing symbols:
 ```
 ConfigError        → C
 dump_config        → d  (lowercase; 'd' sorts after all uppercase in ASCII)
-GatecheckConfig    → G
+HooksmithConfig    → G
 GroupDef           → G
 HookDef            → H
 SourceSpec         → S
@@ -317,7 +317,7 @@ after adding both new symbols is:
 ```python
 __all__ = [
     "ConfigError",
-    "GatecheckConfig",
+    "HooksmithConfig",
     "GroupDef",
     "HookDef",
     "SourceSpec",
@@ -335,7 +335,7 @@ lowercase-initial), with `dump_config` before `load_config` (`d` < `l`).
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/config/dumper.py` | `dump_config` function and private helpers only. No class. |
+| `src/hooksmith/config/dumper.py` | `dump_config` function and private helpers only. No class. |
 
 One new file. No existing files modified beyond `__init__.py` (API delta, §5).
 

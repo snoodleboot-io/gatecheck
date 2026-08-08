@@ -15,8 +15,8 @@ Build out the existing `EnvManager` stub so `EnvManager.resolve(hook) ->
 ResolvedEnv` turns a `HookDef` whose `from` is `project` or `system` into a
 `ResolvedEnv(bin_dir, cache_key)` — the runner-facing contract for getting an
 executable environment for a hook. Classify the spec with
-`gatecheck.sources.parse_source`, derive the tool name from `hook.run`, locate the
-executable with `gatecheck.sources.resolve_source`, and derive a **deterministic
+`hooksmith.sources.parse_source`, derive the tool name from `hook.run`, locate the
+executable with `hooksmith.sources.resolve_source`, and derive a **deterministic
 `cache_key`**. This is the **non-venv path only**: `pypi:` / `pypi+alias:` and the
 unsupported kinds route to a typed, deferred `EnvError`.
 
@@ -27,7 +27,7 @@ hermetic**, with **NO subprocess, NO network, NO filesystem writes, NO venv
 creation**. See
 [STY-0007](../features/FEAT-0003-environments/stories/STY-0007-env-manager-non-venv-path.md),
 [FEAT-0003](../features/FEAT-0003-environments/feature.md),
-[PRD-0001 § Scope — Environments](../prd/0001-gatecheck.md#scope), and
+[PRD-0001 § Scope — Environments](../prd/0001-hooksmith.md#scope), and
 [ADR-0001](../adr/0001-python-host-rust-core.md).
 
 ## Design-gate decisions (GRANTED — build to these)
@@ -52,19 +52,19 @@ creation**. See
 ## In-scope for this build
 
 Single-PR vertical slice. New + built-out code lands in the existing leaf package
-`src/gatecheck/env/` (one class / function-group per file, per core conventions):
+`src/hooksmith/env/` (one class / function-group per file, per core conventions):
 
-- `src/gatecheck/env/env_error.py` — **NEW.** `EnvError(ValueError)` with
+- `src/hooksmith/env/env_error.py` — **NEW.** `EnvError(ValueError)` with
   structured `hook_id` / `reason` and the message `cannot resolve environment for
   hook '<id>': <reason>` (mirrors `SourceResolutionError`'s shape).
-- `src/gatecheck/env/manager.py` — **EDIT (build out).** Add
+- `src/hooksmith/env/manager.py` — **EDIT (build out).** Add
   `EnvManager.__init__(self, workspace_root: Path | None = None, environ:
   Mapping[str, str] | None = None)` (both stored, forwarded to `resolve_source`);
   implement `resolve(hook) -> ResolvedEnv` (`parse_source` → tool-name derivation →
   `match` dispatch); add the private `_derive_tool` + `_cache_key` helpers and
   `_CACHE_KEY_SCHEME = "env-v1"`. The `ResolvedEnv` frozen dataclass **stays here**,
   unchanged.
-- `src/gatecheck/env/__init__.py` — **EDIT.** Export `EnvError` alongside
+- `src/hooksmith/env/__init__.py` — **EDIT.** Export `EnvError` alongside
   `EnvManager` / `ResolvedEnv`; set `__all__` (alphabetical, uppercase-first).
 - Unit tests `tests/unit/test_env_manager.py` (hermetic; inject `workspace_root` +
   `environ`; `tmp_path` fake `.venv/bin` + fake `PATH` dir; no subprocess, no
@@ -81,7 +81,7 @@ Single-PR vertical slice. New + built-out code lands in the existing leaf packag
   **STY-0008.** This story only *routes* `pypi` to a deferred `EnvError`; that
   branch is the single, clearly-marked seam STY-0008 replaces.
 - **Calling `registry.resolve_pypi_source`** — consumed in STY-0008, not here.
-- **Cache hit/miss tracing and `gatecheck cache why`** — **STY-0009.** This story
+- **Cache hit/miss tracing and `hooksmith cache why`** — **STY-0009.** This story
   defines the `cache_key` *derivation* but stores / explains nothing.
 - **Running the executable** (argv assembly, changed-file passing, output
   streaming, exit codes) — the runner.
@@ -126,8 +126,8 @@ Acceptance criteria (AC-1 … AC-16). Highlights:
   surfaced as `ConfigError`, carries no `line:col`.
 - [ ] AC-13: The whole story runs with **no subprocess and no network**; suites are
   hermetic; `resolve` is a deterministic function of its injected inputs.
-- [ ] AC-14: `from gatecheck.env import EnvManager, ResolvedEnv, EnvError` works.
-- [ ] AC-15: `mypy --strict src/gatecheck/env/` passes; the `match` over
+- [ ] AC-14: `from hooksmith.env import EnvManager, ResolvedEnv, EnvError` works.
+- [ ] AC-15: `mypy --strict src/hooksmith/env/` passes; the `match` over
   `ParsedSource` is exhaustive.
 - [ ] AC-16: `resolve` never creates, writes, or mutates any directory; `bin_dir`
   is always an already-existing directory for the resolved kinds.
@@ -144,7 +144,7 @@ Acceptance criteria (AC-1 … AC-16). Highlights:
   environ=None) -> ResolvedTool` (`tool` / `executable: Path` / `origin`) and
   `SourceResolutionError`. `EnvManager` calls it for `project` / `system` and
   forwards `workspace_root` / `environ`. **`resolve_source` is not modified.**
-- **`gatecheck.config.HookDef`** — supplies `hook.id`, `hook.from_`, `hook.run`
+- **`hooksmith.config.HookDef`** — supplies `hook.id`, `hook.from_`, `hook.run`
   (all validated non-empty by the loader). Consumed unchanged.
 - **`ResolvedEnv` (existing stub)** — `bin_dir: Path`, `cache_key: str`, frozen
   dataclass. Kept byte-for-byte; only `EnvManager` around it is built out.
