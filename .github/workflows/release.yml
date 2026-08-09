@@ -191,7 +191,7 @@ jobs:
           # --find-links for our wheels; PyPI still reachable for runtime deps.
           pip install --find-links wheelhouse hooksmith
           hooksmith --version
-          gc --version
+          hs --version
           python -c "import hooksmith_core; print('hooksmith_core import OK')"
 
   # ── publish to TestPyPI (PR previews) ────────────────────────────
