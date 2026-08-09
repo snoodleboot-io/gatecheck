@@ -29,8 +29,8 @@ only inside `parser.py` for construction/validation.
 ### Justification (vs frozen dataclasses)
 
 1. **Consistency with the existing config models.** Every model in
-   `gatecheck.config` (`SourceSpec`, `HookDef`, `HookWhen`, `GroupDef`,
-   `GatecheckConfig`) is a pydantic `BaseModel` with `ConfigDict`. The story
+   `hooksmith.config` (`SourceSpec`, `HookDef`, `HookWhen`, `GroupDef`,
+   `HooksmithConfig`) is a pydantic `BaseModel` with `ConfigDict`. The story
    explicitly prefers "consistent with the config models' pydantic usage."
    Using dataclasses here would introduce a second modelling idiom in the same
    codebase for no benefit.
@@ -79,36 +79,36 @@ only inside `parser.py` for construction/validation.
 
 ---
 
-## §2 Module layout — `src/gatecheck/sources/`
+## §2 Module layout — `src/hooksmith/sources/`
 
 One class per file (core conventions: filename = snake_case of the class).
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/sources/pypi_source.py` | `PyPISource` frozen pydantic model. |
-| `src/gatecheck/sources/project_source.py` | `ProjectSource` frozen pydantic model. |
-| `src/gatecheck/sources/system_source.py` | `SystemSource` frozen pydantic model. |
-| `src/gatecheck/sources/unsupported_source.py` | `UnsupportedSource` frozen pydantic model. |
-| `src/gatecheck/sources/parsed_source.py` | `ParsedSource` union type alias (no class). |
-| `src/gatecheck/sources/source_spec_error.py` | `SourceSpecError(ValueError)`. |
-| `src/gatecheck/sources/parser.py` | `parse_source(spec) -> ParsedSource` + private helpers. No class. |
-| `src/gatecheck/sources/__init__.py` | Facade; imports + `__all__`. |
+| `src/hooksmith/sources/pypi_source.py` | `PyPISource` frozen pydantic model. |
+| `src/hooksmith/sources/project_source.py` | `ProjectSource` frozen pydantic model. |
+| `src/hooksmith/sources/system_source.py` | `SystemSource` frozen pydantic model. |
+| `src/hooksmith/sources/unsupported_source.py` | `UnsupportedSource` frozen pydantic model. |
+| `src/hooksmith/sources/parsed_source.py` | `ParsedSource` union type alias (no class). |
+| `src/hooksmith/sources/source_spec_error.py` | `SourceSpecError(ValueError)`. |
+| `src/hooksmith/sources/parser.py` | `parse_source(spec) -> ParsedSource` + private helpers. No class. |
+| `src/hooksmith/sources/__init__.py` | Facade; imports + `__all__`. |
 
 ### `__init__.py` exports / `__all__`
 
 Alphabetical (uppercase before lowercase, matching BUILD-0001..0003 §:
 
 ```python
-"""Public facade for gatecheck.sources (BUILD-0004-ARCH §2)."""
+"""Public facade for hooksmith.sources (BUILD-0004-ARCH §2)."""
 from __future__ import annotations
 
-from gatecheck.sources.parsed_source import ParsedSource
-from gatecheck.sources.parser import parse_source
-from gatecheck.sources.project_source import ProjectSource
-from gatecheck.sources.pypi_source import PyPISource
-from gatecheck.sources.source_spec_error import SourceSpecError
-from gatecheck.sources.system_source import SystemSource
-from gatecheck.sources.unsupported_source import UnsupportedSource
+from hooksmith.sources.parsed_source import ParsedSource
+from hooksmith.sources.parser import parse_source
+from hooksmith.sources.project_source import ProjectSource
+from hooksmith.sources.pypi_source import PyPISource
+from hooksmith.sources.source_spec_error import SourceSpecError
+from hooksmith.sources.system_source import SystemSource
+from hooksmith.sources.unsupported_source import UnsupportedSource
 
 __all__ = [
     "ParsedSource",
@@ -262,9 +262,9 @@ class SourceSpecError(ValueError):
 
 ## §6 check.toml → ConfigError translation (TSK-005) — LOCKED integration point
 
-### Where: `load_config` in `src/gatecheck/config/loader.py`, **eager**
+### Where: `load_config` in `src/hooksmith/config/loader.py`, **eager**
 
-After `GatecheckConfig.model_validate(data)` succeeds, `load_config` iterates
+After `HooksmithConfig.model_validate(data)` succeeds, `load_config` iterates
 the validated hooks and parses each `from_` **eagerly** (during `load_config`),
 before returning. A new private helper in `_error_translator.py`,
 `_locate_source_spec_errors(...)`, recovers `(line, col, msg)` for any failing
@@ -291,7 +291,7 @@ ValidationError branch) and pass the source + doc into the new helper:
 
 ```python
 # loader.py (additions, after successful model_validate)
-config = GatecheckConfig.model_validate(data)
+config = HooksmithConfig.model_validate(data)
 spec_errors = _locate_source_spec_errors(config, source)
 if spec_errors:
     raise ConfigError(path, spec_errors)
@@ -301,7 +301,7 @@ return config
 ```python
 # _error_translator.py (new helper)
 def _locate_source_spec_errors(
-    config: GatecheckConfig,
+    config: HooksmithConfig,
     source: str,
 ) -> list[tuple[int, int, str]]:
     """For each hook whose `from_` fails parse_source, return (line, col, msg)
@@ -352,8 +352,8 @@ a later story).
 ### Import direction
 
 `config/_error_translator.py` and `config/loader.py` import from
-`gatecheck.sources` (`parse_source`, `SourceSpecError`). `gatecheck.sources`
-imports **nothing** from `gatecheck.config`. No circular import: `sources` is a
+`hooksmith.sources` (`parse_source`, `SourceSpecError`). `hooksmith.sources`
+imports **nothing** from `hooksmith.config`. No circular import: `sources` is a
 leaf package; `config` depends on it one-directionally.
 
 ---
@@ -361,7 +361,7 @@ leaf package; `config` depends on it one-directionally.
 ## §7 Public API surface (LOCKED)
 
 ```python
-from gatecheck.sources import (
+from hooksmith.sources import (
     parse_source,
     ParsedSource,
     SourceSpecError,
@@ -372,9 +372,9 @@ from gatecheck.sources import (
 )
 ```
 
-`gatecheck.config`'s public surface is **unchanged** — no new symbol is
-exported from `gatecheck.config`. In particular, `SourceSpec` (the `[sources]`
-table model) is untouched and is **not** re-exported from `gatecheck.sources`.
+`hooksmith.config`'s public surface is **unchanged** — no new symbol is
+exported from `hooksmith.config`. In particular, `SourceSpec` (the `[sources]`
+table model) is untouched and is **not** re-exported from `hooksmith.sources`.
 The TSK-005 wiring is internal to `loader.py` / `_error_translator.py` and adds
 no new public config symbol.
 
@@ -408,19 +408,19 @@ no new public config symbol.
 
 ## §10 Baseline issues — recommendations (user decides; do not implement here)
 
-1. **`env/manager.py:13` → `from gatecheck.config.schema import HookDef`** —
+1. **`env/manager.py:13` → `from hooksmith.config.schema import HookDef`** —
    broken import; `config/schema.py` does not exist (real module:
    `config/hook_def.py`). Only this one line references it (`grep` confirms the
    sole `config.schema` import; the `test_config_schema.py` string in
    `tests/integration/test_config_load_acceptance.py:165` is a filename
    literal, not an import). Fails `mypy --strict` today.
    **Recommendation: FIX IN BUILD-0004** — one-line change to
-   `from gatecheck.config.hook_def import HookDef`. It is the direct downstream
+   `from hooksmith.config.hook_def import HookDef`. It is the direct downstream
    consumer of FEAT-0002 (STY-0005 will call `parse_source` here), it is broken
    now, and a clean `mypy --strict` gate for this build is easier if this is
    green. Smallest possible change; no behavior touched.
 
-2. **`core.py:11` — `# type: ignore[import-not-found]` on `gatecheck_core`** —
+2. **`core.py:11` — `# type: ignore[import-not-found]` on `hooksmith_core`** —
    the Rust-extension import. **Recommendation: OUT of scope (defer).** It is
    unrelated to source-spec parsing, lives on the Python↔Rust boundary
    (ADR-0001) that STY-0004 deliberately avoids, and STY-0004 is a pure-Python
@@ -436,7 +436,7 @@ no new public config symbol.
 - PEP 508 / version-range validation of `requirement`.
 - Parsing the payload of `local:`/`git:`/`docker:` beyond the scheme name.
 - Cache key / hit-miss explainability.
-- Any new public symbol on `gatecheck.config`.
+- Any new public symbol on `hooksmith.config`.
 - New runtime dependencies.
 
 ---
@@ -451,11 +451,11 @@ no new public config symbol.
   - `0001-architecture-sketch.md` — schema + `load_config` contract.
   - `0002-architecture-decision.md` — `ConfigError` + error-wrapping (§2, §3).
   - `0003-architecture-decision.md` — dumper; `__all__` ordering convention.
-- Reused machinery (STY-0002): `src/gatecheck/config/_error_translator.py`
+- Reused machinery (STY-0002): `src/hooksmith/config/_error_translator.py`
   (`_nth_aot_header_line`, `_scan_field`, parent-anchor fallback);
-  `src/gatecheck/config/config_error.py` (`ConfigError(path, [(line, col,
+  `src/hooksmith/config/config_error.py` (`ConfigError(path, [(line, col,
   msg)])`).
-- Existing collision to avoid: `src/gatecheck/config/source_spec.py`
+- Existing collision to avoid: `src/hooksmith/config/source_spec.py`
   (`SourceSpec` = `[sources]` table model).
 - Unit tests (red): `tests/unit/test_source_parse.py`.
 - Acceptance tests (red): `tests/integration/test_source_spec_acceptance.py`.

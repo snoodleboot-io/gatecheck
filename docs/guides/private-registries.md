@@ -61,14 +61,14 @@ private package can never be silently served from a public build, or vice versa.
 Confirm what resolved with:
 
 ```console
-$ gatecheck cache why house-style
+$ hooksmith cache why house-style
 source:    pypi house-style==2.1.0 @ https://pkgs.corp.example.com/simple  (pypi)
 status:    hit — cached venv present — reused on the next run
 ```
 
 ## Authentication
 
-gatecheck does not store credentials, and there is no auth field in `check.toml` —
+hooksmith does not store credentials, and there is no auth field in `check.toml` —
 deliberately, so secrets never end up in a file you commit. Authenticate the way your
 index expects, through the environment:
 
@@ -80,7 +80,7 @@ default-registry = "https://pkgs.corp.example.com/simple"
 ```
 
 ```yaml
-- run: gatecheck sync
+- run: hooksmith sync
   env:
     UV_INDEX_URL: https://${{ secrets.PKG_USER }}:${{ secrets.PKG_TOKEN }}@pkgs.corp.example.com/simple
 ```
@@ -102,7 +102,7 @@ similar typically mint a short-lived token you export before running:
 ```bash
 export UV_INDEX_URL="https://aws:$(aws codeartifact get-authorization-token \
   --domain mydomain --query authorizationToken --output text)@mydomain-123456789012.d.codeartifact.us-east-1.amazonaws.com/pypi/myrepo/simple/"
-gatecheck sync
+hooksmith sync
 ```
 
 !!! warning "Index URLs must be http or https"
@@ -134,11 +134,11 @@ curl -sSf https://pkgs.corp.example.com/simple/house-style/ | head
 ```
 
 **Auth failures** — because credentials come from the environment, confirm they're
-present at the point gatecheck runs. A git hook does not inherit your interactive
+present at the point hooksmith runs. A git hook does not inherit your interactive
 shell's exports; use `~/.netrc` or a login shell for local hooks.
 
 ## See also
 
 - [Source Types](../config/sources.md) — `pypi:` and `pypi+alias:` in full.
 - [Air-gapped / Offline](air-gapped.md) — no-egress runs.
-- [`gatecheck cache why`](../cli/cache.md) — verify which index was used.
+- [`hooksmith cache why`](../cli/cache.md) — verify which index was used.

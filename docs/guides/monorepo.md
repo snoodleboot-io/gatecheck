@@ -1,6 +1,6 @@
 # Monorepo Setup
 
-gatecheck has native workspace support for monorepos. Hooks run only for relevant packages, package dependency graphs propagate affected status, and each package can override hook versions or add package-specific hooks.
+hooksmith has native workspace support for monorepos. Hooks run only for relevant packages, package dependency graphs propagate affected status, and each package can override hook versions or add package-specific hooks.
 
 ## Workspace structure
 
@@ -96,22 +96,22 @@ files = "*.py"
 ### All packages
 
 ```bash
-gatecheck run              # staged files
-gatecheck run --all-files  # all tracked files
-gatecheck run lint         # named group, all packages
+hooksmith run              # staged files
+hooksmith run --all-files  # all tracked files
+hooksmith run lint         # named group, all packages
 ```
 
 ### Affected packages only
 
 ```bash
 # Only run for packages containing changed files (+ their dependents)
-gatecheck run --affected --base main
+hooksmith run --affected --base main
 ```
 
 This is the key monorepo feature. If `shared` changed and `api` declares `depends-on = ["shared"]`, both `shared` and `api` are included — even if no files in `api/` changed.
 
 ```bash
-$ gatecheck run --affected --base main
+$ hooksmith run --affected --base main
 
   Affected packages: shared, api
 
@@ -129,16 +129,16 @@ $ gatecheck run --affected --base main
 
 ### Specific package
 
-Run from inside the package directory — gatecheck discovers that package's
+Run from inside the package directory — hooksmith discovers that package's
 `check.toml`:
 
 ```bash
-cd packages/api && gatecheck run
+cd packages/api && hooksmith run
 ```
 
 ## Dependency graph
 
-The `depends-on` field in `[package]` declares which other packages this package depends on. gatecheck uses this to propagate affected status upward through the graph.
+The `depends-on` field in `[package]` declares which other packages this package depends on. hooksmith uses this to propagate affected status upward through the graph.
 
 ```
 libs/shared ←── packages/api ←── packages/worker
@@ -160,15 +160,15 @@ package that a root change actually broke is not.
 
 ## Environment sharing
 
-When 10 packages all declare `from = "pypi:ruff>=0.4"`, gatecheck resolves this to the same cache key and uses a single shared venv. The lockfile at the workspace root tracks this globally.
+When 10 packages all declare `from = "pypi:ruff>=0.4"`, hooksmith resolves this to the same cache key and uses a single shared venv. The lockfile at the workspace root tracks this globally.
 
 ## Seeing which packages ran
 
-There is no separate introspection command — `gatecheck run --affected` reports the
+There is no separate introspection command — `hooksmith run --affected` reports the
 packages it selected, prefixing each result with the package name:
 
 ```bash
-$ gatecheck run --affected --base main
+$ hooksmith run --affected --base main
 
 ok    shared:ruff  (0.31s)
 ok    shared:mypy  (1.04s)
@@ -181,7 +181,7 @@ Pair it with `--json` when you need the selection programmatically — each
 `results[].hook_id` carries the `<package>:<hook>` prefix:
 
 ```bash
-gatecheck run --affected --base main --json | jq -r '.results[].hook_id'
+hooksmith run --affected --base main --json | jq -r '.results[].hook_id'
 ```
 
 ## CI integration
@@ -189,12 +189,12 @@ gatecheck run --affected --base main --json | jq -r '.results[].hook_id'
 ```yaml title=".github/workflows/ci.yml (excerpt)"
 - name: Run affected checks
   run: |
-    gatecheck run --affected --base ${{ github.event.pull_request.base.sha }} \
+    hooksmith run --affected --base ${{ github.event.pull_request.base.sha }} \
                   --all-files \
-                  --json | tee gatecheck-results.json
+                  --json | tee hooksmith-results.json
 
 - name: Annotate PR with failures
   if: failure()
   run: |
-    cat gatecheck-results.json | python scripts/annotate_pr.py
+    cat hooksmith-results.json | python scripts/annotate_pr.py
 ```

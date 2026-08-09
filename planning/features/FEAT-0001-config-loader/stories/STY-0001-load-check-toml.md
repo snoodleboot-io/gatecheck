@@ -11,7 +11,7 @@ feature: FEAT-0001
 
 ## As a / I want / So that
 
-As a **gatecheck developer**, I want **a `load_config(path)` function that returns a fully typed `GatecheckConfig`** so that **every other subsystem can rely on the config being shape-valid before it runs**.
+As a **hooksmith developer**, I want **a `load_config(path)` function that returns a fully typed `HooksmithConfig`** so that **every other subsystem can rely on the config being shape-valid before it runs**.
 
 ## Scope
 
@@ -19,17 +19,17 @@ The happy path only: a well-formed `check.toml` parses into a pydantic model tha
 
 ## Tasks
 
-- [ ] TSK-001 Define `HookDef`, `SourceSpec`, `GroupDef`, `GatecheckConfig` as pydantic models in `src/gatecheck/config/schema.py`.
-- [ ] TSK-002 Implement `load_config(path: Path) -> GatecheckConfig` in `src/gatecheck/config/loader.py` using stdlib `tomllib`.
+- [ ] TSK-001 Define `HookDef`, `SourceSpec`, `GroupDef`, `HooksmithConfig` as pydantic models in `src/hooksmith/config/schema.py`.
+- [ ] TSK-002 Implement `load_config(path: Path) -> HooksmithConfig` in `src/hooksmith/config/loader.py` using stdlib `tomllib`.
 - [ ] TSK-003 Add a fixture `tests/fixtures/check.toml.sample` matching the project's own `check.toml`.
 - [ ] TSK-004 Write `tests/unit/test_config_loader.py` covering: load sample, missing required key fails, unknown key warns or fails per pydantic config.
 - [ ] TSK-005 Add a usage example to `docs/config/reference.md` showing the Python API.
 
 ## Acceptance criteria
 
-- [ ] `pytest tests/unit/test_config_loader.py` passes with ≥ 90% line coverage on `gatecheck.config`.
-- [ ] `python -c "from gatecheck.config import load_config; print(load_config('check.toml'))"` against the repo's own `check.toml` prints a non-empty `GatecheckConfig`.
-- [ ] `mypy src/gatecheck/config/` passes with no errors under the project's strict settings.
+- [ ] `pytest tests/unit/test_config_loader.py` passes with ≥ 90% line coverage on `hooksmith.config`.
+- [ ] `python -c "from hooksmith.config import load_config; print(load_config('check.toml'))"` against the repo's own `check.toml` prints a non-empty `HooksmithConfig`.
+- [ ] `mypy src/hooksmith/config/` passes with no errors under the project's strict settings.
 - [ ] No new runtime dependency added beyond `pydantic>=2` (already pinned).
 
 ## Notes

@@ -1,23 +1,23 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" alt="gatecheck" width="120">
+<img src="docs/assets/logo.svg" alt="hooksmith" width="120">
 
-# gatecheck
+# hooksmith
 
 **modern pre-commit actions, blazing fast.**
 
-[![PyPI](https://img.shields.io/pypi/v/gatecheck?style=flat-square&color=e05e32&labelColor=0e0e0e)](https://pypi.org/project/gatecheck/)
-[![Python](https://img.shields.io/pypi/pyversions/gatecheck?style=flat-square&color=e05e32&labelColor=0e0e0e)](https://pypi.org/project/gatecheck/)
-[![CI](https://img.shields.io/github/actions/workflow/status/snoodleboot-io/gatecheck/ci.yml?branch=main&style=flat-square&color=e05e32&labelColor=0e0e0e)](https://github.com/snoodleboot-io/gatecheck/actions)
-[![License](https://img.shields.io/github/license/snoodleboot-io/gatecheck?style=flat-square&color=e05e32&labelColor=0e0e0e)](LICENSE)
-[![Built with Rust](https://img.shields.io/badge/built%20with-Rust-e05e32?style=flat-square&labelColor=0e0e0e)](gatecheck-rs/)
-[![Docs](https://img.shields.io/badge/docs-gatecheck.dev-e05e32?style=flat-square&labelColor=0e0e0e)](https://gatecheck.dev)
+[![PyPI](https://img.shields.io/pypi/v/hooksmith?style=flat-square&color=e05e32&labelColor=0e0e0e)](https://pypi.org/project/hooksmith/)
+[![Python](https://img.shields.io/pypi/pyversions/hooksmith?style=flat-square&color=e05e32&labelColor=0e0e0e)](https://pypi.org/project/hooksmith/)
+[![CI](https://img.shields.io/github/actions/workflow/status/snoodleboot-io/hooksmith/ci.yml?branch=main&style=flat-square&color=e05e32&labelColor=0e0e0e)](https://github.com/snoodleboot-io/hooksmith/actions)
+[![License](https://img.shields.io/github/license/snoodleboot-io/hooksmith?style=flat-square&color=e05e32&labelColor=0e0e0e)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/built%20with-Rust-e05e32?style=flat-square&labelColor=0e0e0e)](hooksmith-rs/)
+[![Docs](https://img.shields.io/badge/docs-hooksmith.dev-e05e32?style=flat-square&labelColor=0e0e0e)](https://hooksmith.dev)
 
 </div>
 
 ---
 
-gatecheck is the next-generation runner for your git pre-commit actions:
+hooksmith is the next-generation runner for your git pre-commit actions:
 
 - **Installs hooks from PyPI** — `from = "pypi:ruff>=0.4"`
 - **Supports private package registries** — `from = "pypi+internal:my-linter==1.0"`
@@ -25,12 +25,12 @@ gatecheck is the next-generation runner for your git pre-commit actions:
 - **Understands monorepos** — per-package configs, `--affected` execution, dep graphs
 - **Runs hooks in parallel** — DAG-based execution via Rust + rayon
 - **Starts in under 10ms** — compiled Rust binary, no interpreter warmup
-- **Explains cache decisions** — `gatecheck cache why black` tells you exactly why
+- **Explains cache decisions** — `hooksmith cache why black` tells you exactly why
 
 ## Install
 
 ```bash
-pip install gatecheck
+pip install hooksmith
 ```
 
 ## Quick example
@@ -58,14 +58,14 @@ on-event = "commit"
 ```
 
 ```bash
-gatecheck install    # install git hooks
-gatecheck sync       # install hook environments
-gatecheck run lint   # run the lint group
+hooksmith install    # install git hooks
+hooksmith sync       # install hook environments
+hooksmith run lint   # run the lint group
 ```
 
 ## What you get
 
-| Capability | gatecheck |
+| Capability | hooksmith |
 |---|---|
 | PyPI package sources (public + private) | ✓ native |
 | Project venv reuse | ✓ `from = "project"` |
@@ -81,29 +81,29 @@ gatecheck run lint   # run the lint group
 ## Importing existing hooks
 
 ```bash
-gatecheck migrate   # reads your existing hook config, writes check.toml
+hooksmith migrate   # reads your existing hook config, writes check.toml
 ```
 
 Known PyPI-published hooks (black, ruff, isort, mypy, flake8, and more) are detected automatically and rewritten with PyPI sources.
 
 ## Documentation
 
-Full documentation at **[gatecheck.dev](https://gatecheck.dev)**
+Full documentation at **[hooksmith.dev](https://hooksmith.dev)**
 
-- [Quick Start](https://gatecheck.dev/getting-started/quickstart/)
-- [Configuration Reference](https://gatecheck.dev/config/reference/)
-- [Monorepo Guide](https://gatecheck.dev/guides/monorepo/)
-- [Architecture](https://gatecheck.dev/design/architecture/)
+- [Quick Start](https://hooksmith.dev/getting-started/quickstart/)
+- [Configuration Reference](https://hooksmith.dev/config/reference/)
+- [Monorepo Guide](https://hooksmith.dev/guides/monorepo/)
+- [Architecture](https://hooksmith.dev/design/architecture/)
 
 ## Architecture
 
-gatecheck has two layers:
+hooksmith has two layers:
 
 **Python host** — config parsing (TOML), CLI (click + rich), environment management (uv-backed venvs)
 
-**Rust core (`gatecheck-core`)** — DAG solver, parallel subprocess runner, file glob matching, SHA-256 cache keys, git integration, affected-package graph
+**Rust core (`hooksmith-core`)** — DAG solver, parallel subprocess runner, file glob matching, SHA-256 cache keys, git integration, affected-package graph
 
-The Rust layer is distributed as a compiled maturin wheel. Users `pip install gatecheck` and get a native binary — no Rust toolchain required.
+The Rust layer is distributed as a compiled maturin wheel. Users `pip install hooksmith` and get a native binary — no Rust toolchain required.
 
 ```
 ┌─────────────────────────────────────┐
@@ -118,11 +118,11 @@ The Rust layer is distributed as a compiled maturin wheel. Users `pip install ga
 ## Development
 
 ```bash
-git clone https://github.com/snoodleboot-io/gatecheck
-cd gatecheck
+git clone https://github.com/snoodleboot-io/hooksmith
+cd hooksmith
 uv venv && uv pip install -e ".[dev]"
-cd gatecheck-rs && maturin develop --release && cd ..
-pytest tests/ && cargo test --manifest-path gatecheck-rs/Cargo.toml
+cd hooksmith-rs && maturin develop --release && cd ..
+pytest tests/ && cargo test --manifest-path hooksmith-rs/Cargo.toml
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide, commit conventions, and release process.

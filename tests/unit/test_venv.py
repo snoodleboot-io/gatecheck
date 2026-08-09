@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.venv — cross-platform venv layout (STY-0023 / GAT-25).
+"""Unit tests for hooksmith.venv — cross-platform venv layout (STY-0023 / GAT-25).
 
 Hermetic — the platform is simulated by patching ``venv._is_windows`` (not
 ``os.name``, which would make ``pathlib`` dispatch ``WindowsPath`` and break on a
@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck import venv
-from gatecheck.sources import parse_source, resolve_source
+from hooksmith import venv
+from hooksmith.sources import parse_source, resolve_source
 
 
 def _as_windows(monkeypatch: pytest.MonkeyPatch) -> None:

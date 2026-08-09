@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from gatecheck.config import GatecheckConfig, SourceSpec, dump_config, load_config
+from hooksmith.config import HooksmithConfig, SourceSpec, dump_config, load_config
 
 # ---------------------------------------------------------------------------
 # Schema — construction + default
@@ -100,7 +100,7 @@ def test_extra_registries_round_trips_through_dump_and_load(tmp_path: Path) -> N
     """Given a SourceSpec with extra_registries, When dumped then reloaded, Then the
     map survives and the whole config compares equal."""
     # Arrange
-    cfg = GatecheckConfig(
+    cfg = HooksmithConfig(
         sources=SourceSpec(extra_registries={"internal": "https://pkg.example.com/simple"})
     )
     out = tmp_path / "check.toml"
@@ -119,7 +119,7 @@ def test_empty_extra_registries_omitted_from_dump(tmp_path: Path) -> None:
     """Given an empty extra_registries (the default), When dumped, Then the key is
     omitted from the output (§7: default -> excluded, round-trip unchanged)."""
     # Arrange
-    cfg = GatecheckConfig(sources=SourceSpec(default_registry="https://pypi.org/simple"))
+    cfg = HooksmithConfig(sources=SourceSpec(default_registry="https://pypi.org/simple"))
     out = tmp_path / "check.toml"
 
     # Act

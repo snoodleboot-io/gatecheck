@@ -14,7 +14,7 @@ date: 2026-07-05
 Give the **network** `ParsedSource` kind — `PyPISource` — a *pinned version*.
 Deliver a synchronous
 `resolve_pypi_source(source, sources, *, client=None, allow_prereleases=False) ->
-ResolvedPyPISource` in a **new leaf package** `src/gatecheck/registry/` that turns
+ResolvedPyPISource` in a **new leaf package** `src/hooksmith/registry/` that turns
 a `PyPISource` (its verbatim `requirement` + optional registry `alias`) into a
 concrete, frozen `ResolvedPyPISource` (`name` + exact `version` + `index_url`,
 plus best-effort `sha256`/`url`/`filename`) by querying a **PEP 503 simple index**
@@ -28,7 +28,7 @@ Environments (STY-0006)"). **Query + version-math only: NO venv creation, NO
 artifact download, NO install.** See
 [STY-0006](../features/FEAT-0002-source-resolution/stories/STY-0006-resolve-pypi-registry-specs.md),
 [FEAT-0002](../features/FEAT-0002-source-resolution/feature.md),
-[PRD-0001 § Scope — Sources](../prd/0001-gatecheck.md#scope), and
+[PRD-0001 § Scope — Sources](../prd/0001-hooksmith.md#scope), and
 [ADR-0001](../adr/0001-python-host-rust-core.md).
 
 ## Design-gate approvals (GRANTED — build to these)
@@ -38,7 +38,7 @@ artifact download, NO install.** See
    `canonicalize_name`). Exactly **one** new dependency; HTTP + parsing stay on
    stdlib (`urllib`, `json`, `html.parser`) — **no** `httpx`/`requests`.
 2. **Config-schema change:** add `extra_registries: dict[str, str]` (alias
-   `extra-registries`, default empty) to `gatecheck.config.SourceSpec`.
+   `extra-registries`, default empty) to `hooksmith.config.SourceSpec`.
 3. **Registry approach:** PEP 503 simple index + PEP 691 JSON content negotiation,
    **not** the Warehouse JSON API (JSON API is PyPI-only and would break
    `pypi+alias:` private registries).
@@ -46,32 +46,32 @@ artifact download, NO install.** See
 ## In-scope for this build
 
 Single-PR vertical slice. New code lands in a new leaf package
-`src/gatecheck/registry/` (one class/function-group per file, per core
+`src/hooksmith/registry/` (one class/function-group per file, per core
 conventions); the config-schema change (TSK-001) is carved so it can land as its
 own reviewable commit within the PR:
 
-- `src/gatecheck/registry/resolved_pypi_source.py` — `ResolvedPyPISource` frozen
+- `src/hooksmith/registry/resolved_pypi_source.py` — `ResolvedPyPISource` frozen
   pydantic model (`kind`, `requirement`, `name`, `version`, `index_url`,
   `registry`; optional `sha256`/`url`/`filename`; `ConfigDict(frozen=True,
   extra="forbid")`).
-- `src/gatecheck/registry/registry_error.py` — `RegistryError(ValueError)` with
+- `src/hooksmith/registry/registry_error.py` — `RegistryError(ValueError)` with
   structured `requirement` / `index_url` / `reason` and the `cannot resolve
   '<req>' against <index>: <reason>` message.
-- `src/gatecheck/registry/registry_client.py` — the `RegistryClient` Protocol
+- `src/hooksmith/registry/registry_client.py` — the `RegistryClient` Protocol
   (`fetch_project(index_url, name) -> ProjectPage`), `ProjectPage` / `ProjectFile`
   value objects, the `PackageNotFound` / `MalformedIndexResponse` fetch-failure
   signals, and `UrllibRegistryClient` (stdlib `urllib`, PEP 691 `Accept` + PEP 503
   HTML fallback).
-- `src/gatecheck/registry/index_resolver.py` — `resolve_index_url(alias, sources)`
+- `src/hooksmith/registry/index_resolver.py` — `resolve_index_url(alias, sources)`
   (default vs `extra_registries`; built-in `https://pypi.org/simple` fallback;
   unknown alias → `RegistryError` with `index_url=None`). Pure, no network.
-- `src/gatecheck/registry/pypi_resolver.py` — `resolve_pypi_source(...) ->
+- `src/hooksmith/registry/pypi_resolver.py` — `resolve_pypi_source(...) ->
   ResolvedPyPISource` plus private version-selection helpers (the 8-step
   algorithm; no class).
-- `src/gatecheck/registry/__init__.py` — facade exporting `ProjectFile`,
+- `src/hooksmith/registry/__init__.py` — facade exporting `ProjectFile`,
   `ProjectPage`, `RegistryClient`, `RegistryError`, `ResolvedPyPISource`,
   `UrllibRegistryClient`, `resolve_pypi_source` (alphabetical, uppercase-first).
-- `src/gatecheck/config/source_spec.py` — **EDIT** adding `extra_registries:
+- `src/hooksmith/config/source_spec.py` — **EDIT** adding `extra_registries:
   dict[str, str]` (alias `extra-registries`, default empty) + a `field_validator`
   (alias `[A-Za-z0-9_-]+`, non-empty URL). (TSK-001)
 - `pyproject.toml` — add `packaging>=24` to `[project].dependencies`; register the
@@ -147,11 +147,11 @@ Acceptance criteria (AC-1 … AC-21). Highlights:
 - [ ] AC-17: A registry/resolution failure does not surface as `ConfigError` and is
   not raised from `load_config`; loading a `pypi:` hook succeeds. (TSK-008
   deferred, so this holds unconditionally.)
-- [ ] AC-18: `from gatecheck.registry import resolve_pypi_source,
+- [ ] AC-18: `from hooksmith.registry import resolve_pypi_source,
   ResolvedPyPISource, RegistryClient, RegistryError` works.
-- [ ] AC-19: `mypy --strict src/gatecheck/registry/` passes with no new errors.
+- [ ] AC-19: `mypy --strict src/hooksmith/registry/` passes with no new errors.
 - [ ] AC-20: Dependency delta is exactly `packaging>=24`; no HTTP client added.
-- [ ] AC-21: `resolve_source` (STY-0005) unchanged; `gatecheck.sources` gains no
+- [ ] AC-21: `resolve_source` (STY-0005) unchanged; `hooksmith.sources` gains no
   network I/O.
 
 ## Stakeholder dependencies
@@ -164,14 +164,14 @@ Acceptance criteria (AC-1 … AC-21). Highlights:
   — merged; its `resolve_source` `PyPISource` rejection names STY-0006 as the
   owner of `pypi` resolution. This build **fulfils** that promise from a **separate
   entry point** and does **not** modify `resolve_source` (AC-21).
-- **`gatecheck.config`** — `GatecheckConfig.sources` (`SourceSpec`) is extended
+- **`hooksmith.config`** — `HooksmithConfig.sources` (`SourceSpec`) is extended
   with `extra_registries` (TSK-001); the pydantic → `ConfigError` translation
   already in `load_config` carries the validator's errors with `line:col`. No new
   config plumbing.
 - **`packaging>=24`** — NEW runtime dependency (design-gate approved). Ships
-  `py.typed`; **no** mypy override needed (contrast `gatecheck_core`).
+  `py.typed`; **no** mypy override needed (contrast `hooksmith_core`).
 - **pydantic (>=2)** — already a runtime dep. No new install beyond `packaging`.
-- **Environments (`gatecheck.env`, not yet built)** — the downstream consumer of
+- **Environments (`hooksmith.env`, not yet built)** — the downstream consumer of
   `ResolvedPyPISource`; out of scope here.
 - **Locked architecture:**
   [0006-architecture-decision.md](0006-architecture-decision.md) — the
@@ -202,7 +202,7 @@ Acceptance criteria (AC-1 … AC-21). Highlights:
    into **`index_resolver.py`**. Locked to the story's names for consistency with
    the existing rejection message and ACs.
 
-No other deviations: package placement (`gatecheck.registry`), the single
+No other deviations: package placement (`hooksmith.registry`), the single
 `packaging>=24` dependency, PEP 503+691 approach, the injected-client seam,
 best-effort artifact fields, and the `RegistryError` shape all match the story
 verbatim.

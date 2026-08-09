@@ -1,6 +1,6 @@
 # Architecture Overview
 
-gatecheck is divided into two layers that communicate across a well-defined boundary: a **Python host** that owns configuration, CLI, and environment management, and a **Rust core** that owns execution speed.
+hooksmith is divided into two layers that communicate across a well-defined boundary: a **Python host** that owns configuration, CLI, and environment management, and a **Rust core** that owns execution speed.
 
 ## Layered model
 
@@ -17,7 +17,7 @@ gatecheck is divided into two layers that communicate across a well-defined boun
 ├────────────────────────┬────────────────────────────────┤
 │                        │  PyO3 boundary                 │
 ├────────────────────────┴────────────────────────────────┤
-│                 Rust core  (gatecheck_core)              │
+│                 Rust core  (hooksmith_core)              │
 │                                                         │
 │  DAG solver        Parallel runner     Git integration  │
 │  Kahn's alg        rayon thread pool   staged files     │
@@ -30,7 +30,7 @@ gatecheck is divided into two layers that communicate across a well-defined boun
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Data flow: `gatecheck run`
+## Data flow: `hooksmith run`
 
 ```mermaid
 sequenceDiagram
@@ -41,7 +41,7 @@ sequenceDiagram
     participant RustCore
 
     CLI->>Config: load check.toml
-    Config-->>CLI: GatecheckConfig
+    Config-->>CLI: HooksmithConfig
     CLI->>Workspace: Workspace.load(root)
     Workspace-->>CLI: packages + merged configs
     CLI->>RustCore: py_git_staged_files(repo_root)
@@ -80,7 +80,7 @@ The hot path — everything that runs on every commit — is Rust. Everything th
 
 ### `config.py` — Schema and parsing
 
-Owns the `GatecheckConfig` dataclass tree: `HookDef`, `SourceSpec`, `GroupDef`, `WhenCondition`, `WorkspaceConfig`. All TOML → Python object conversion happens here. The `SourceSpec.parse()` method implements the URI scheme (`pypi:`, `git:`, `local:`, `docker:`, `project`, `system`). `GatecheckConfig.merge()` implements parent→child override semantics for workspace inheritance.
+Owns the `HooksmithConfig` dataclass tree: `HookDef`, `SourceSpec`, `GroupDef`, `WhenCondition`, `WorkspaceConfig`. All TOML → Python object conversion happens here. The `SourceSpec.parse()` method implements the URI scheme (`pypi:`, `git:`, `local:`, `docker:`, `project`, `system`). `HooksmithConfig.merge()` implements parent→child override semantics for workspace inheritance.
 
 ### `workspace.py` — Monorepo model
 
@@ -92,17 +92,17 @@ Manages the venv lifecycle: creation (via `uv`), cache validation, invalidation 
 
 ### `runner.py` — Python-side runner (thin)
 
-Evaluates `when:` conditions (branch, env vars, CI detection — these require OS calls best done in Python), filters files per hook, then delegates to `gatecheck_core.py_run_hooks()`. The Rust layer handles everything from that point forward.
+Evaluates `when:` conditions (branch, env vars, CI detection — these require OS calls best done in Python), filters files per hook, then delegates to `hooksmith_core.py_run_hooks()`. The Rust layer handles everything from that point forward.
 
 ### `installer.py` — Git hook installation
 
-Writes a shell script into `.git/hooks/` per event, calling `gatecheck run <group>` for each group bound to that event. `group.on-event` routes the group to the matching git hook (`commit` → `pre-commit`, `push` → `pre-push`).
+Writes a shell script into `.git/hooks/` per event, calling `hooksmith run <group>` for each group bound to that event. `group.on-event` routes the group to the matching git hook (`commit` → `pre-commit`, `push` → `pre-push`).
 
 ### `migrate.py` — pre-commit importer
 
 Reads `.pre-commit-config.yaml` and emits `check.toml`. The `KNOWN_PYPI_HOOKS` map converts GitHub repo URLs to PyPI package names — the core UX win of migration.
 
-### `gatecheck_core` (Rust, `src/lib.rs`)
+### `hooksmith_core` (Rust, `src/lib.rs`)
 
 PyO3 extension module. Exposes nine functions to Python. Internally: DAG solver (Kahn's algorithm), rayon parallel executor, glob engine, SHA-256 hasher, git subprocess wrappers, and the affected-package graph algorithms.
 
@@ -110,22 +110,22 @@ PyO3 extension module. Exposes nine functions to Python. Internally: DAG solver 
 
 | Tool | Cold start (no-op) | Why |
 |---|---|---|
-| gatecheck | ~8ms | Rust binary, no interpreter warmup |
+| hooksmith | ~8ms | Rust binary, no interpreter warmup |
 | pre-commit | ~300ms+ | Python interpreter + import chain |
 | ruff (reference) | ~5ms | Same Rust-binary approach |
 
-The speedup comes from distributing gatecheck as a compiled maturin wheel. The user runs `pip install gatecheck` and gets a platform-specific binary. They never interact with Rust.
+The speedup comes from distributing hooksmith as a compiled maturin wheel. The user runs `pip install hooksmith` and gets a platform-specific binary. They never interact with Rust.
 
 ## Distribution model
 
 ```
-PyPI: gatecheck
-  └── gatecheck-core wheel (per platform, compiled Rust)
-      ├── linux/x86_64   gatecheck_core.cpython-312-x86_64-linux-gnu.so
-      ├── linux/aarch64  gatecheck_core.cpython-312-aarch64-linux-gnu.so
-      ├── macos/x86_64   gatecheck_core.cpython-312-darwin.so
-      ├── macos/arm64    gatecheck_core.cpython-312-darwin.so
-      └── windows/x64    gatecheck_core.cpython-312-win_amd64.pyd
+PyPI: hooksmith
+  └── hooksmith-core wheel (per platform, compiled Rust)
+      ├── linux/x86_64   hooksmith_core.cpython-312-x86_64-linux-gnu.so
+      ├── linux/aarch64  hooksmith_core.cpython-312-aarch64-linux-gnu.so
+      ├── macos/x86_64   hooksmith_core.cpython-312-darwin.so
+      ├── macos/arm64    hooksmith_core.cpython-312-darwin.so
+      └── windows/x64    hooksmith_core.cpython-312-win_amd64.pyd
 ```
 
 Built by maturin in CI. Pure Python fallback included for platforms without a wheel.

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.env.uv_bootstrap import UvBootstrapError, bootstrap_uv
+from hooksmith.env.uv_bootstrap import UvBootstrapError, bootstrap_uv
 
 pytestmark = [pytest.mark.integration, pytest.mark.network]
 

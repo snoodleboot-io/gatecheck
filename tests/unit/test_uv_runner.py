@@ -1,8 +1,8 @@
-"""Unit tests for gatecheck.env.uv_runner (STY-0008 / GAT-10).
+"""Unit tests for hooksmith.env.uv_runner (STY-0008 / GAT-10).
 
 Hermetic — no real ``uv`` and no real ``subprocess``: ``_run`` is patched to record
 argv, and ``subprocess.run`` is patched at the module boundary for the exit-code
-paths. Covers uv discovery (``GATECHECK_UV`` override + PATH), the ``uv venv`` /
+paths. Covers uv discovery (``HOOKSMITH_UV`` override + PATH), the ``uv venv`` /
 ``uv pip install`` argv for the hash and no-hash branches, and the ``UvNotFound`` /
 ``UvBuildError`` signals. AAA structure throughout.
 """
@@ -15,14 +15,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from gatecheck import venv
-from gatecheck.env import uv_runner as uv_runner_module
-from gatecheck.env.uv_runner import (
+from hooksmith import venv
+from hooksmith.env import uv_runner as uv_runner_module
+from hooksmith.env.uv_runner import (
     SubprocessUvRunner,
     UvBuildError,
     UvNotFound,
 )
-from gatecheck.registry import ResolvedPyPISource
+from hooksmith.registry import ResolvedPyPISource
 
 INDEX = "https://pypi.org/simple"
 
@@ -73,7 +73,7 @@ def test_build_venv_runs_uv_venv_then_install(
 ) -> None:
     # Arrange
     dest = tmp_path / "venv"
-    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
+    runner = SubprocessUvRunner({"HOOKSMITH_UV": _fake_uv(tmp_path)})
     recorded: list[list[str]] = []
     monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
     # Act
@@ -87,7 +87,7 @@ def test_build_venv_passes_python_version_when_set(
 ) -> None:
     # Arrange — a package pinned to 3.9
     dest = tmp_path / "venv"
-    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)}, python_version="3.9")
+    runner = SubprocessUvRunner({"HOOKSMITH_UV": _fake_uv(tmp_path)}, python_version="3.9")
     recorded: list[list[str]] = []
     monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
     # Act
@@ -107,10 +107,10 @@ def test_install_is_a_plain_version_pin_without_require_hashes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """BUG-0006: install NAME==VERSION and let uv resolve the tree. --require-hashes
-    would demand every transitive dependency be pinned+hashed too, which gatecheck
+    would demand every transitive dependency be pinned+hashed too, which hooksmith
     can't provide, so it must not be used."""
     # Arrange
-    runner = SubprocessUvRunner({"GATECHECK_UV": _fake_uv(tmp_path)})
+    runner = SubprocessUvRunner({"HOOKSMITH_UV": _fake_uv(tmp_path)})
     recorded: list[list[str]] = []
     monkeypatch.setattr(runner, "_run", lambda argv: recorded.append(argv))
     # Act
@@ -133,9 +133,9 @@ def test_find_uv_override_must_be_executable(tmp_path: Path) -> None:
     # Arrange — a non-executable override target
     plain = tmp_path / "not-uv"
     plain.write_text("", encoding="utf-8")
-    runner = SubprocessUvRunner({"GATECHECK_UV": str(plain)})
+    runner = SubprocessUvRunner({"HOOKSMITH_UV": str(plain)})
     # Act / Assert
-    with pytest.raises(UvNotFound, match="GATECHECK_UV"):
+    with pytest.raises(UvNotFound, match="HOOKSMITH_UV"):
         runner._find_uv()
 
 
@@ -148,8 +148,8 @@ def test_find_uv_absent_raises_when_bootstrap_disabled(tmp_path: Path) -> None:
 
 
 def test_find_uv_absent_raises_when_no_bootstrap_env_set(tmp_path: Path) -> None:
-    # Arrange — GATECHECK_NO_BOOTSTRAP disables auto-download even with allow_bootstrap
-    runner = SubprocessUvRunner({"PATH": str(tmp_path), "GATECHECK_NO_BOOTSTRAP": "1"})
+    # Arrange — HOOKSMITH_NO_BOOTSTRAP disables auto-download even with allow_bootstrap
+    runner = SubprocessUvRunner({"PATH": str(tmp_path), "HOOKSMITH_NO_BOOTSTRAP": "1"})
     # Act / Assert
     with pytest.raises(UvNotFound):
         runner._find_uv()

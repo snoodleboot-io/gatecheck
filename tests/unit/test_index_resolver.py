@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.registry.index_resolver.resolve_index_url (STY-0006).
+"""Unit tests for hooksmith.registry.index_resolver.resolve_index_url (STY-0006).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0006-architecture-decision.md`` §2 / §4 step 1:
@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import pytest
 
-from gatecheck.config import SourceSpec
-from gatecheck.registry import RegistryError
-from gatecheck.registry.index_resolver import resolve_index_url
+from hooksmith.config import SourceSpec
+from hooksmith.registry import RegistryError
+from hooksmith.registry.index_resolver import resolve_index_url
 
 BUILTIN_DEFAULT = "https://pypi.org/simple"
 

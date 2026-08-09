@@ -5,11 +5,11 @@
 #   - windows-checks: the same Python gates on windows-latest
 #   - rust-checks   : cargo fmt --check + clippy -D warnings + cargo test
 #   - docs-build    : mkdocs build --strict (a dead internal link fails the PR)
-#   - self-host     : gatecheck run full --all-files — the tool gating itself
+#   - self-host     : hooksmith run full --all-files — the tool gating itself
 #
-# The Python package depends on the `gatecheck-core` native extension, which is
-# NOT published to PyPI — CI builds it from gatecheck-rs/ with maturin and
-# installs the resulting wheel before installing gatecheck itself.
+# The Python package depends on the `hooksmith-core` native extension, which is
+# NOT published to PyPI — CI builds it from hooksmith-rs/ with maturin and
+# installs the resulting wheel before installing hooksmith itself.
 #
 # Follow-up (not yet gating): cross-platform build-wheels smoke tests.
 
@@ -44,7 +44,7 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: gatecheck-rs
+          workspaces: hooksmith-rs
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -52,20 +52,20 @@ jobs:
       - name: Create virtualenv
         run: uv venv --python ${{ matrix.python-version }} .venv
 
-      - name: Build and install the native core (gatecheck_core)
+      - name: Build and install the native core (hooksmith_core)
         run: |
           uv pip install --python .venv/bin/python maturin
-          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
-          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path hooksmith-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/hooksmith_core-*.whl
 
-      - name: Install gatecheck + dev dependencies
+      - name: Install hooksmith + dev dependencies
         run: uv pip install --python .venv/bin/python -e ".[dev]"
 
       - name: Ruff (lint)
-        run: .venv/bin/ruff check src tests scripts
+        run: .venv/bin/ruff check src tests .github/scripts
 
       - name: Ruff (format check)
-        run: .venv/bin/ruff format --check src tests scripts
+        run: .venv/bin/ruff format --check src tests .github/scripts
 
       - name: Mypy
         run: .venv/bin/mypy
@@ -94,7 +94,7 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: gatecheck-rs
+          workspaces: hooksmith-rs
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -102,17 +102,17 @@ jobs:
       - name: Create virtualenv
         run: uv venv --python ${{ matrix.python-version }} .venv
 
-      - name: Build and install the native core (gatecheck_core)
+      - name: Build and install the native core (hooksmith_core)
         run: |
           uv pip install --python .venv/Scripts/python.exe maturin
-          .venv/Scripts/maturin.exe build --release --interpreter .venv/Scripts/python.exe --manifest-path gatecheck-rs/Cargo.toml --out dist
-          uv pip install --python .venv/Scripts/python.exe "$(ls dist/gatecheck_core-*.whl)"
+          .venv/Scripts/maturin.exe build --release --interpreter .venv/Scripts/python.exe --manifest-path hooksmith-rs/Cargo.toml --out dist
+          uv pip install --python .venv/Scripts/python.exe "$(ls dist/hooksmith_core-*.whl)"
 
-      - name: Install gatecheck + dev dependencies
+      - name: Install hooksmith + dev dependencies
         run: uv pip install --python .venv/Scripts/python.exe -e ".[dev]"
 
       - name: Ruff (lint)
-        run: .venv/Scripts/python.exe -m ruff check src tests scripts
+        run: .venv/Scripts/python.exe -m ruff check src tests .github/scripts
 
       - name: Mypy
         run: .venv/Scripts/python.exe -m mypy
@@ -135,16 +135,16 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: gatecheck-rs
+          workspaces: hooksmith-rs
 
       - name: Cargo fmt
-        run: cargo fmt --check --manifest-path gatecheck-rs/Cargo.toml
+        run: cargo fmt --check --manifest-path hooksmith-rs/Cargo.toml
 
       - name: Cargo clippy
-        run: cargo clippy --manifest-path gatecheck-rs/Cargo.toml --all-targets -- -D warnings
+        run: cargo clippy --manifest-path hooksmith-rs/Cargo.toml --all-targets -- -D warnings
 
       - name: Cargo test
-        run: cargo test --manifest-path gatecheck-rs/Cargo.toml
+        run: cargo test --manifest-path hooksmith-rs/Cargo.toml
 
   docs-build:
     name: docs
@@ -159,9 +159,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Install ONLY the docs extra, not the project: gatecheck depends on the
-      # gatecheck-core native extension, which is built from source rather than
-      # published, and mkdocs does not need to import gatecheck at all. Reading the
+      # Install ONLY the docs extra, not the project: hooksmith depends on the
+      # hooksmith-core native extension, which is built from source rather than
+      # published, and mkdocs does not need to import hooksmith at all. Reading the
       # list out of pyproject.toml keeps it from drifting.
       - name: Install docs dependencies
         run: |
@@ -178,7 +178,7 @@ jobs:
       - name: Build docs
         run: mkdocs build --strict
 
-  # gatecheck checks gatecheck: run this repo's own check.toml through the runner.
+  # hooksmith checks hooksmith: run this repo's own check.toml through the runner.
   # This is the dogfood gate — it exercises the pypi source path (an isolated,
   # uv-built ruff), the project/system paths (mypy, cargo), the DAG scheduler, and
   # the report end to end. The direct python-checks / rust-checks jobs remain the
@@ -197,7 +197,7 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: gatecheck-rs
+          workspaces: hooksmith-rs
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -205,20 +205,20 @@ jobs:
       - name: Create virtualenv
         run: uv venv --python 3.12 .venv
 
-      - name: Build and install the native core (gatecheck_core)
+      - name: Build and install the native core (hooksmith_core)
         run: |
           uv pip install --python .venv/bin/python maturin
-          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
-          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path hooksmith-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/hooksmith_core-*.whl
 
-      - name: Install gatecheck + dev dependencies
+      - name: Install hooksmith + dev dependencies
         run: uv pip install --python .venv/bin/python -e ".[dev]"
 
       # The `full` group: ruff (pypi, isolated), ruff-format, mypy (project),
       # cargo-fmt-check + cargo-clippy (system). Hooks are check-mode, so a problem
       # fails the run rather than rewriting the tree.
-      - name: gatecheck run full --all-files
-        run: .venv/bin/gatecheck run full --all-files
+      - name: hooksmith run full --all-files
+        run: .venv/bin/hooksmith run full --all-files
 
       # Defense in depth: a check-mode hook must not have modified anything. If this
       # ever fails, a hook is auto-fixing when it should be verifying.

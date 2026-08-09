@@ -19,25 +19,25 @@ the right values; STY-0002 makes those values point users at the exact byte
 they need to edit. See
 [STY-0002](../features/FEAT-0001-config-loader/stories/STY-0002-surface-error-context.md),
 [FEAT-0001](../features/FEAT-0001-config-loader/feature.md),
-[PRD-0001](../prd/0001-gatecheck.md), and
+[PRD-0001](../prd/0001-hooksmith.md), and
 [ADR-0001](../adr/0001-python-host-rust-core.md).
 
 ## In-scope for this build
 
 - Add `tomlkit>=0.13` to `[project].dependencies` (only new dep).
-- New `ConfigError(ValueError)` in `src/gatecheck/config/config_error.py` carrying `(path, [(line, col, msg), ...])`.
+- New `ConfigError(ValueError)` in `src/hooksmith/config/config_error.py` carrying `(path, [(line, col, msg), ...])`.
 - New private `_error_translator.py` with `_parse_toml_error` and `_locate_validation_error` helpers.
 - Modify `load_config` to catch both raw exceptions, translate, and re-raise `ConfigError` with `__cause__` preserved.
-- Export `ConfigError` from `gatecheck.config.__init__`.
+- Export `ConfigError` from `hooksmith.config.__init__`.
 - Acceptance + unit tests; two-layer assertions on existing STY-0001 tests.
 
 ## Out of scope (deferred)
 
 - Multi-file `check.toml` merging — separate monorepo feature under [FEAT-0001](../features/FEAT-0001-config-loader/feature.md) "Out of scope".
 - `from`-string spec parsing (`pypi:`, `git:`) — blocked on the source-resolver story; errors don't exist yet.
-- ANSI/Rich coloured output — `gatecheck run` may layer styling later; charter format stays plain text.
+- ANSI/Rich coloured output — `hooksmith run` may layer styling later; charter format stays plain text.
 - Adding position info to surfaces STY-0001 left untouched (e.g. `__init__.py` re-exports, model construction outside `load_config`).
-- Round-trip dump (`gatecheck migrate`) — STY-0003.
+- Round-trip dump (`hooksmith migrate`) — STY-0003.
 
 ## Success criteria
 
@@ -47,9 +47,9 @@ Verbatim from [STY-0002](../features/FEAT-0001-config-loader/stories/STY-0002-su
 - [ ] `load_config(Path("missing_id.toml"))` with `[[hook]]\nfrom = "x"\nrun = "x"\n` raises `ConfigError`; `str(exc)` contains the offending table's line and mentions field name `id`.
 - [ ] A file with TWO independent ValidationErrors surfaces both, separated by newline; `str(exc).count("\n") >= 1`.
 - [ ] `ConfigError` subclasses `ValueError` — existing `except ValueError:` callers still work.
-- [ ] `from gatecheck.config import ConfigError, load_config` works.
+- [ ] `from hooksmith.config import ConfigError, load_config` works.
 - [ ] `pytest tests/unit/test_config_error.py` ≥ 90% line coverage on `_error_translator` and `config_error`.
-- [ ] `mypy --strict src/gatecheck/config/` still passes.
+- [ ] `mypy --strict src/hooksmith/config/` still passes.
 - [ ] Only `tomlkit>=0.13` added as runtime dep.
 - [ ] All STY-0001 tests still pass — including raw-exception tests, now asserting `ConfigError.__cause__` is the raw `TOMLDecodeError` / `ValidationError` (two-layer strategy).
 
@@ -57,7 +57,7 @@ Verbatim from [STY-0002](../features/FEAT-0001-config-loader/stories/STY-0002-su
 
 - **[STY-0001](../features/FEAT-0001-config-loader/stories/STY-0001-load-check-toml.md)** — already merged into `main`; provides the loader + models STY-0002 wraps. No blocker.
 - **`tomlkit>=0.13`** — on PyPI, installed in venv at G0 (v0.15.0), 100+ KLOC battle-tested. No blocker.
-- **Downstream consumers of `ConfigError` format** — the future `gatecheck run` CLI error display will format these strings to users; locking the `path:line:col: msg` shape now is what unblocks them. No party blocks STY-0002.
+- **Downstream consumers of `ConfigError` format** — the future `hooksmith run` CLI error display will format these strings to users; locking the `path:line:col: msg` shape now is what unblocks them. No party blocks STY-0002.
 - **Locked user decisions (BUILD-0002):** (1) add `tomlkit` for exact positions; (2) two-layer test strategy (keep raw-exception tests + add wrapper tests); (3) same multiagent pattern as STY-0001. No re-litigation.
 - **Convention exceptions** G-1…G-9 from BUILD-0001 carry forward unchanged.
 

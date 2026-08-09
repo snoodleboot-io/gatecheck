@@ -1,6 +1,6 @@
 # Planning
 
-This directory is where work for `gatecheck` is shaped before code is written. The hierarchy goes from the broadest question (*should we build it?*) down to the smallest unit of work (*who's doing what today?*):
+This directory is where work for `hooksmith` is shaped before code is written. The hierarchy goes from the broadest question (*should we build it?*) down to the smallest unit of work (*who's doing what today?*):
 
 ```
 PRD  →  ADR  →  Feature  →  Story  →  Task
@@ -30,7 +30,7 @@ planning/
 
 | Kind     | Prefix | Example         |
 | -------- | ------ | --------------- |
-| PRD      | none   | `0001-gatecheck.md` |
+| PRD      | none   | `0001-hooksmith.md` |
 | ADR      | `ADR-` | `0001-python-host-rust-core.md` |
 | Feature  | `FEAT-`| `FEAT-0001-config-loader` |
 | Story    | `STY-` | `STY-0001-load-check-toml.md` |
@@ -73,7 +73,7 @@ Use relative markdown links: `[ADR-0001](../../adr/0001-python-host-rust-core.md
 
 The repo ships with one of each so the format is concrete:
 
-- [PRD-0001 — gatecheck](prd/0001-gatecheck.md)
+- [PRD-0001 — hooksmith](prd/0001-hooksmith.md)
 - [ADR-0001 — Python host + Rust core split](adr/0001-python-host-rust-core.md)
 - [FEAT-0001 — Config loader](features/FEAT-0001-config-loader/feature.md)
 - [STY-0001 — Load check.toml](features/FEAT-0001-config-loader/stories/STY-0001-load-check-toml.md)

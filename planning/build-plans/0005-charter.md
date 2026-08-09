@@ -14,7 +14,7 @@ date: 2026-07-05
 Give the two **non-network** `ParsedSource` kinds — `SystemSource` and
 `ProjectSource` — a *location*. Deliver a pure, synchronous
 `resolve_source(source, tool, *, workspace_root=None, environ=None) ->
-ResolvedTool` function in the existing leaf package `src/gatecheck/sources/`
+ResolvedTool` function in the existing leaf package `src/hooksmith/sources/`
 that turns those kinds into a concrete, **absolute** executable path the runner
 can invoke without re-deriving where the binary lives. A missing tool raises a
 dedicated `SourceResolutionError(ValueError)` with a clear "not found on PATH /
@@ -27,27 +27,27 @@ lookup only: NO network, NO venv creation, NO subprocess execution.** It
 resolves what already exists; it never builds an environment. See
 [STY-0005](../features/FEAT-0002-source-resolution/stories/STY-0005-resolve-project-system-sources.md),
 [FEAT-0002](../features/FEAT-0002-source-resolution/feature.md),
-[PRD-0001 § Scope — Sources](../prd/0001-gatecheck.md#scope), and
+[PRD-0001 § Scope — Sources](../prd/0001-hooksmith.md#scope), and
 [ADR-0001](../adr/0001-python-host-rust-core.md).
 
 ## In-scope for this build
 
 Single-PR vertical slice. All new code lands in the existing package
-`src/gatecheck/sources/` (one class/function-group per file, per core
+`src/hooksmith/sources/` (one class/function-group per file, per core
 conventions):
 
-- `src/gatecheck/sources/resolved_tool.py` — `ResolvedTool` frozen pydantic
+- `src/hooksmith/sources/resolved_tool.py` — `ResolvedTool` frozen pydantic
   model (`tool: str`, `executable: Path`, `origin: Literal["project",
   "system"]`; `ConfigDict(frozen=True, extra="forbid")`).
-- `src/gatecheck/sources/source_resolution_error.py` —
+- `src/hooksmith/sources/source_resolution_error.py` —
   `SourceResolutionError(ValueError)` with structured `tool` / `kind` / `reason`
   and the `cannot resolve '<tool>' from <kind> source: <reason>` message.
-- `src/gatecheck/sources/resolver.py` — `resolve_source(...) -> ResolvedTool`
+- `src/hooksmith/sources/resolver.py` — `resolve_source(...) -> ResolvedTool`
   plus private helpers (no class); a `match` over `ParsedSource` with the
   `SystemSource` (`shutil.which`) and `ProjectSource` (`VIRTUAL_ENV` → `.venv`
   precedence, exists + regular-file + executable) rules; reject `PyPISource` /
   `UnsupportedSource` with `SourceResolutionError`.
-- `src/gatecheck/sources/__init__.py` — extend the facade imports + `__all__`
+- `src/hooksmith/sources/__init__.py` — extend the facade imports + `__all__`
   with `ResolvedTool`, `SourceResolutionError`, `resolve_source` (keep the
   existing alphabetical, uppercase-before-lowercase ordering).
 - Unit tests in `tests/unit/test_source_resolve.py` (≥ 12 tests; hermetic via
@@ -76,10 +76,10 @@ conventions):
   as a documented later decision, not built here (see architecture-decision §6).
 - **Cache key / hit-miss explainability** — PRD-0001 § Scope — Cache. `origin`
   is carried for runner explainability, but no cache key is produced.
-- **The `.gitignore` `env/` un-ignore + committing `src/gatecheck/env/`** — a
+- **The `.gitignore` `env/` un-ignore + committing `src/hooksmith/env/`** — a
   **separate chore** (STY-0005 TSK-008), deliberately kept OUT of this build.
-  Because the resolver lands in `gatecheck.sources`, STY-0005 has no dependency
-  on `gatecheck.env` and does not need that package committed. See § Split-out
+  Because the resolver lands in `hooksmith.sources`, STY-0005 has no dependency
+  on `hooksmith.env` and does not need that package committed. See § Split-out
   chore below.
 - **New runtime dependencies** — none added; stdlib `os` / `shutil` / `pathlib`
   / `typing` plus the already-present `pydantic` are sufficient.
@@ -125,9 +125,9 @@ Acceptance criteria:
 - [ ] AC-13: A resolution failure does **not** surface as `ConfigError` and is
   **not** raised from `load_config` — loading a config whose tool is absent
   succeeds; the error only appears when `resolve_source` is called.
-- [ ] AC-14: `from gatecheck.sources import resolve_source, ResolvedTool,
+- [ ] AC-14: `from hooksmith.sources import resolve_source, ResolvedTool,
   SourceResolutionError` works.
-- [ ] AC-15: `mypy --strict src/gatecheck/sources/` passes with no new errors;
+- [ ] AC-15: `mypy --strict src/hooksmith/sources/` passes with no new errors;
   the `match` over `ParsedSource` narrows the `SystemSource` / `ProjectSource`
   cases cleanly.
 - [ ] AC-16: No new runtime dependencies added (`os`, `shutil`, `pathlib`,
@@ -136,7 +136,7 @@ Acceptance criteria:
 ## Stakeholder dependencies
 
 - **[STY-0004](../features/FEAT-0002-source-resolution/stories/STY-0004-parse-classify-source-specs.md)**
-  — merged; provides the `gatecheck.sources` package, the four `kind`-models,
+  — merged; provides the `hooksmith.sources` package, the four `kind`-models,
   the `ParsedSource` plain-union alias, and `parse_source`. STY-0005 **consumes
   and extends** this package; the union alias is the `match` surface. No blocker;
   this is the integration surface and must not be reshaped.
@@ -144,9 +144,9 @@ Acceptance criteria:
   written)** — the downstream boundary. `resolve_source` rejects `PyPISource`
   with a typed error whose reason names STY-0006 as the owner of `pypi`
   resolution. STY-0005 does not implement any network path.
-- **`gatecheck.config`** — `HookDef.run` is where the runner will derive `tool`
+- **`hooksmith.config`** — `HookDef.run` is where the runner will derive `tool`
   (first shell token); `HookDef.from_` feeds `parse_source`. STY-0005 does
-  **not** import `gatecheck.config`; it receives `tool` as an explicit argument,
+  **not** import `hooksmith.config`; it receives `tool` as an explicit argument,
   keeping `sources` a leaf. No blocker.
 - **pydantic (>=2)** — already a runtime dep since STY-0001. No new install.
 - **Locked architecture:**
@@ -157,14 +157,14 @@ Acceptance criteria:
 
 STY-0005 TSK-008 is raised as its **own chore**, separate from this build: the
 bare `env/` line in `.gitignore` (intended for virtualenvs) also matches
-`src/gatecheck/env/`, so that package (`manager.py`, `__init__.py`) is silently
-uncommitted. Because STY-0005's resolver lands in `gatecheck.sources`, this
+`src/hooksmith/env/`, so that package (`manager.py`, `__init__.py`) is silently
+uncommitted. Because STY-0005's resolver lands in `hooksmith.sources`, this
 build has **no** dependency on the env package and does **not** need it
 committed. Bundling the un-ignore + making the entire Environments scaffold
 `ruff` / `mypy --strict` clean is unrelated scope that would bloat a focused
 resolution PR and couple it to a feature (Environments) not yet being built.
 The chore must: fix `.gitignore` (anchor `/env/` or add
-`!src/gatecheck/env/`), commit the package, and make it `ruff` / `mypy
+`!src/hooksmith/env/`), commit the package, and make it `ruff` / `mypy
 --strict` clean — including landing BUILD-0004's already-applied-but-uncommitted
 `config.schema` → `config.hook_def` import fix in `env/manager.py`, which is
 invisible to git while the package is ignored.

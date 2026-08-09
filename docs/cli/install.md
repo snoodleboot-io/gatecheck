@@ -1,14 +1,14 @@
-# `gatecheck install`
+# `hooksmith install`
 
-Write the git hook scripts that make gatecheck run automatically.
+Write the git hook scripts that make hooksmith run automatically.
 
 ```console
-$ gatecheck install [OPTIONS]
+$ hooksmith install [OPTIONS]
 ```
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.hooksmith]` `pyproject.toml`. |
 
 ## What it installs
 
@@ -43,7 +43,7 @@ on-event = "commit-msg"
 ```
 
 ```console
-$ gatecheck install
+$ hooksmith install
 installed  pre-commit  (format, lint)
 installed  pre-push    (full)
 installed  commit-msg  (msg)
@@ -53,10 +53,10 @@ The generated script is deliberately boring:
 
 ```sh title=".git/hooks/pre-commit"
 #!/bin/sh
-# gatecheck-managed
+# hooksmith-managed
 set -e
-gatecheck run format
-gatecheck run lint
+hooksmith run format
+hooksmith run lint
 ```
 
 The `commit-msg` script forwards git's message-file argument (`$1`) so the group's
@@ -64,9 +64,9 @@ hooks can inspect the pending message via [`{commit-msg}`](run.md#message-check-
 
 ```sh title=".git/hooks/commit-msg"
 #!/bin/sh
-# gatecheck-managed
+# hooksmith-managed
 set -e
-gatecheck run msg --commit-msg-file "$1"
+hooksmith run msg --commit-msg-file "$1"
 ```
 
 `set -e` means the first failing group stops the commit, and the non-zero exit
@@ -74,17 +74,17 @@ propagates to git.
 
 ## It won't clobber your existing hooks
 
-Every generated script carries a `# gatecheck-managed` marker on its second line.
+Every generated script carries a `# hooksmith-managed` marker on its second line.
 On install:
 
 - **No hook file** → written.
-- **A gatecheck-managed hook** → overwritten (this is how you pick up config changes).
+- **A hooksmith-managed hook** → overwritten (this is how you pick up config changes).
 - **Any other hook** → left completely untouched, and reported as skipped.
 
 ```console
-$ gatecheck install
+$ hooksmith install
 installed  pre-commit  (lint)
-skipped    pre-push    — existing hook is not gatecheck-managed
+skipped    pre-push    — existing hook is not hooksmith-managed
 ```
 
 That last line is not an error — it's telling you a hook you wrote by hand is still
@@ -94,11 +94,11 @@ you prefer.
 ## Nothing to install
 
 ```console
-$ gatecheck install
+$ hooksmith install
 Nothing to install — no group declares an 'on-event'.
 ```
 
-Hooks still work; you just have to invoke `gatecheck run` yourself. Add `on-event` to
+Hooks still work; you just have to invoke `hooksmith run` yourself. Add `on-event` to
 a group when you want it automatic.
 
 ## Re-running it
@@ -115,12 +115,12 @@ There's no `uninstall` command. The hooks are ordinary files:
 rm .git/hooks/pre-commit .git/hooks/pre-push
 ```
 
-Check for the `# gatecheck-managed` marker first if you're not sure whether a hook is
+Check for the `# hooksmith-managed` marker first if you're not sure whether a hook is
 one of ours.
 
 ## Skipping hooks temporarily
 
-Use git's own escape hatch — gatecheck doesn't need to know:
+Use git's own escape hatch — hooksmith doesn't need to know:
 
 ```bash
 git commit --no-verify
@@ -131,6 +131,6 @@ For a single hook, prefer a [`when` condition](../config/conditions.md) such as
 
 ## See also
 
-- [`gatecheck sync`](sync.md) — build the environments before the first commit, so
+- [`hooksmith sync`](sync.md) — build the environments before the first commit, so
   the hook isn't slow the first time it fires.
 - [Groups & Ordering](../config/groups.md) — `on-event`, `fail-fast`, `parallel`.

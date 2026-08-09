@@ -45,8 +45,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Install ONLY the docs extra — mkdocs never imports gatecheck, and the package
-      # depends on the unpublished gatecheck-core native extension. Read the list out
+      # Install ONLY the docs extra — mkdocs never imports hooksmith, and the package
+      # depends on the unpublished hooksmith-core native extension. Read the list out
       # of pyproject.toml so it cannot drift from the single source of truth.
       - name: Install docs dependencies
         run: |

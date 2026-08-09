@@ -1,10 +1,10 @@
-# Contributing to gatecheck
+# Contributing to hooksmith
 
 Thanks for your interest in contributing. This document covers the development workflow, commit conventions, and release process.
 
 ## Development model: Trunk-Based Development
 
-gatecheck uses strict trunk-based development:
+hooksmith uses strict trunk-based development:
 
 - **`main` is always releasable.** Every commit that lands on main must pass all tests.
 - **Feature branches are short-lived.** Open a PR, get review, merge. Don't let branches live longer than a few days.
@@ -25,7 +25,7 @@ All branches merge to `main`. Never merge `main` back into a feature branch — 
 
 ## Commit messages: Conventional Commits
 
-gatecheck uses [Conventional Commits](https://www.conventionalcommits.org/) **strictly**. The CI version computation reads commit messages to determine the next version number.
+hooksmith uses [Conventional Commits](https://www.conventionalcommits.org/) **strictly**. The CI version computation reads commit messages to determine the next version number.
 
 ### Format
 
@@ -97,38 +97,38 @@ feat: add feature    # too vague — describe what the feature is
 
 ```bash
 # Clone and enter
-git clone https://github.com/snoodleboot-io/gatecheck
-cd gatecheck
+git clone https://github.com/snoodleboot-io/hooksmith
+cd hooksmith
 
 # Install Python deps
 uv venv
 uv pip install -e ".[dev]"
 
 # Build the Rust extension (requires Rust toolchain)
-cd gatecheck-rs
+cd hooksmith-rs
 maturin develop --release
 cd ..
 
-# Install gatecheck itself as a git hook runner
-gatecheck install
+# Install hooksmith itself as a git hook runner
+hooksmith install
 
 # Run tests
 pytest tests/ -v
-cargo test --manifest-path gatecheck-rs/Cargo.toml
+cargo test --manifest-path hooksmith-rs/Cargo.toml
 ```
 
 ## Running checks locally
 
 ```bash
 # Everything (what CI runs)
-gatecheck run --all-files
+hooksmith run --all-files
 
 # Just linting (fast)
-gatecheck run lint
+hooksmith run lint
 
 # Just Rust
-cargo test --manifest-path gatecheck-rs/Cargo.toml
-cargo clippy --manifest-path gatecheck-rs/Cargo.toml
+cargo test --manifest-path hooksmith-rs/Cargo.toml
+cargo clippy --manifest-path hooksmith-rs/Cargo.toml
 
 # Just Python
 pytest tests/ -v --tb=short
@@ -136,29 +136,16 @@ pytest tests/ -v --tb=short
 
 ## Versioning
 
-**You never edit a version number in source.** There are no `VERSION` files, no
-`__version__` strings, no `setup.cfg` version fields. The `gatecheck` version is
-derived from the git tag by hatch-vcs at build time.
+**You never edit a version number in source.** There are no `VERSION` files to bump and
+no tags to cut. The version is **computed in CI at build time** — `MAJOR.MINOR.PATCH`
+where MAJOR is pinned in the workflow, MINOR is the latest on PyPI + 1, and PATCH is the
+PR number (or `0` on a push to main). Both distributions (`hooksmith` and
+`hooksmith-core`) get that one version injected before they build.
 
-`scripts/compute_version.py` computes what the *next* tag should be, from the tag
-history and conventional-commit messages:
-
-1. Find the latest `vX.Y.Z` tag
-2. Read all commits since it
-3. Determine the bump level from commit types — `feat:` → minor, `fix:`/`perf:`/`refactor:`/`revert:` → patch, a `BREAKING CHANGE:` footer (or `--force-major`) → major, `docs:`/`chore:`/`ci:` alone → no release
-4. Print `v(X+1).Y.Z`, `vX.(Y+1).Z`, or `vX.Y.(Z+1)`
-
-```bash
-python scripts/compute_version.py
-```
-
-You then create that tag yourself and push it (see [Release process](#release-process)).
-The script *advises* the version; it does not push tags — tagging is a deliberate human
-action so a release is never cut without one.
-
-`gatecheck-core` (the Rust extension) versions separately, from
-`gatecheck-rs/Cargo.toml`; bump it when the Rust changes. See
-[RELEASING.md](RELEASING.md#versioning-the-two-packages).
+`src/hooksmith/__about__.py` carries a `0.0.0.dev0` placeholder for local installs; CI
+rewrites it (and `hooksmith-rs/Cargo.toml`, and the `hooksmith-core==` pin) per build.
+See [docs/design/versioning.md](docs/design/versioning.md) and
+[RELEASING.md](RELEASING.md) for the full model.
 
 ## PR process
 
@@ -183,17 +170,14 @@ The `pages` workflow deploys the docs (and the marketing landing page) to GitHub
 ## Release process
 
 Full details, including the one-time PyPI Trusted Publisher setup, are in
-[RELEASING.md](RELEASING.md). In short:
+[RELEASING.md](RELEASING.md). In short — it's **trunk-based, no tags**:
 
-1. **Decide the version.** `python scripts/compute_version.py` reads the
-   conventional-commit history since the last tag and prints the next version.
-2. **Tag and push** — `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag *is* the
-   version.
-3. The `release` workflow builds both distributions (`gatecheck` and `gatecheck-core`),
-   smoke-tests them on Linux/macOS/Windows, then **pauses on the `release`
-   environment** for a manual approval — a human reviews before anything reaches PyPI.
-4. On approval it publishes to PyPI via Trusted Publishing (OIDC, no tokens) and creates
-   the GitHub release with generated notes.
+1. **Open a PR to `main`.** The `release` workflow builds both distributions, smoke-tests
+   them on Linux/macOS/Windows, and publishes a `.devN` preview to **TestPyPI**.
+2. **Merge the PR.** The push to `main` rebuilds at `0.<minor>.0` and **pauses on the
+   `release` environment** — a human approves before anything reaches PyPI.
+3. On approval it publishes both packages to PyPI via Trusted Publishing (OIDC, no
+   tokens).
 
-Tag creation is deliberately a human step, not auto-pushed from `main` — the approval
-gate plus an explicit tag are two independent chances to catch a bad release.
+The MINOR number comes from PyPI, so every merge is a fresh release. To bump MAJOR, edit
+`MAJOR_VERSION` in `.github/workflows/release.yml`.

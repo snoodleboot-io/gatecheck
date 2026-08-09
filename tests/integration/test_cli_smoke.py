@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 
 @pytest.mark.integration
@@ -22,4 +22,4 @@ def test_version_flag() -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
-    assert "gatecheck" in result.output
+    assert "hooksmith" in result.output

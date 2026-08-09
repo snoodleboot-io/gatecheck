@@ -1,10 +1,10 @@
-"""Unit tests for gatecheck.offline.is_offline (STY-0034 / GAT-36)."""
+"""Unit tests for hooksmith.offline.is_offline (STY-0034 / GAT-36)."""
 
 from __future__ import annotations
 
 import pytest
 
-from gatecheck.offline import OFFLINE_ENV, is_offline
+from hooksmith.offline import OFFLINE_ENV, is_offline
 
 
 @pytest.mark.parametrize(

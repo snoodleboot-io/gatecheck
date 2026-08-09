@@ -1,14 +1,14 @@
-# `gatecheck sync`
+# `hooksmith sync`
 
 Build every hook's environment ahead of time, so the first run isn't the slow one.
 
 ```console
-$ gatecheck sync [OPTIONS]
+$ hooksmith sync [OPTIONS]
 ```
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.hooksmith]` `pyproject.toml`. |
 
 `run` builds environments on demand anyway, so `sync` is never *required* — it just
 moves the cost somewhere you'd rather pay it: a setup step, a CI prep job, or a
@@ -17,7 +17,7 @@ network-enabled stage before an [air-gapped run](../guides/air-gapped.md).
 ## Output
 
 ```console
-$ gatecheck sync
+$ hooksmith sync
 built   ruff
 cached  mypy
 ready   cargo-clippy
@@ -48,7 +48,7 @@ to the same cache key and share one venv.
 That's why `sync` is cheap to re-run: it only builds what genuinely isn't there yet.
 
 ```console
-$ gatecheck sync    # second time
+$ hooksmith sync    # second time
 cached  ruff
 cached  mypy
 ready   cargo-clippy
@@ -56,7 +56,7 @@ ready   cargo-clippy
 3 ready, 0 error
 ```
 
-Use [`gatecheck cache why <hook>`](cache.md) to see the key and whether it's a hit.
+Use [`hooksmith cache why <hook>`](cache.md) to see the key and whether it's a hit.
 
 ## In CI
 
@@ -65,11 +65,11 @@ Cache the environment directory and `sync` becomes a no-op on subsequent runs:
 ```yaml
 - uses: actions/cache@v4
   with:
-    path: ~/.cache/gatecheck
-    key: gatecheck-${{ runner.os }}-${{ hashFiles('check.toml') }}
+    path: ~/.cache/hooksmith
+    key: hooksmith-${{ runner.os }}-${{ hashFiles('check.toml') }}
 
-- run: gatecheck sync
-- run: gatecheck run --base "$GITHUB_BASE_REF"
+- run: hooksmith sync
+- run: hooksmith run --base "$GITHUB_BASE_REF"
 ```
 
 Keying on `check.toml` invalidates the cache exactly when your pinned tools change.
@@ -80,8 +80,8 @@ Keying on `check.toml` invalidates the cache exactly when your pinned tools chan
 there *is* egress, then run offline against it.
 
 ```bash
-gatecheck sync                  # network available
-gatecheck run --offline         # no egress; a cache miss is a clear error
+hooksmith sync                  # network available
+hooksmith run --offline         # no egress; a cache miss is a clear error
 ```
 
 See the [air-gapped guide](../guides/air-gapped.md) for the full recipe, including why
@@ -89,5 +89,5 @@ offline mode requires exact version pins.
 
 ## See also
 
-- [`gatecheck cache`](cache.md) — inspect and reclaim what `sync` built.
+- [`hooksmith cache`](cache.md) — inspect and reclaim what `sync` built.
 - [Source Types](../config/sources.md) — which `from` values need an environment at all.

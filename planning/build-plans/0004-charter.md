@@ -13,7 +13,7 @@ date: 2026-06-28
 
 Give a hook's `from` string *meaning*. Deliver a pure, synchronous
 `parse_source(spec: str) -> ParsedSource` function in a **new** package
-`src/gatecheck/sources/` that classifies a `from` spec into one of four typed,
+`src/hooksmith/sources/` that classifies a `from` spec into one of four typed,
 frozen, `kind`-discriminated models — `PyPISource`, `ProjectSource`,
 `SystemSource`, `UnsupportedSource` — that downstream resolution (STY-0005) and
 the runner can `match` on without re-parsing the raw string. Bad specs raise a
@@ -27,12 +27,12 @@ This is the first vertical slice of FEAT-0002: **parse only — no network, no
 venv creation, no executable resolution.** See
 [STY-0004](../features/FEAT-0002-source-resolution/stories/STY-0004-parse-classify-source-specs.md),
 [FEAT-0002](../features/FEAT-0002-source-resolution/feature.md),
-[PRD-0001 § Scope — Sources](../prd/0001-gatecheck.md#scope), and
+[PRD-0001 § Scope — Sources](../prd/0001-hooksmith.md#scope), and
 [ADR-0001](../adr/0001-python-host-rust-core.md).
 
 ## In-scope for this build
 
-- New package `src/gatecheck/sources/` (one class per file, per core
+- New package `src/hooksmith/sources/` (one class per file, per core
   conventions):
   - `pypi_source.py` — `PyPISource` frozen model.
   - `project_source.py` — `ProjectSource` frozen model.
@@ -93,15 +93,15 @@ Acceptance criteria:
   first line matches `^check\.toml:\d+:\d+:` and names the bad spec.
 - [ ] AC-9: `parse_source` performs no I/O — no filesystem, no network, no
   subprocess.
-- [ ] AC-10: `from gatecheck.sources import parse_source, ParsedSource,
+- [ ] AC-10: `from hooksmith.sources import parse_source, ParsedSource,
   SourceSpecError` works.
-- [ ] AC-11: `mypy --strict src/gatecheck/sources/` passes with no new errors.
+- [ ] AC-11: `mypy --strict src/hooksmith/sources/` passes with no new errors.
 - [ ] AC-12: No new runtime dependencies added.
 
 ## Stakeholder dependencies
 
 - **[STY-0001](../features/FEAT-0001-config-loader/stories/STY-0001-load-check-toml.md)**
-  — merged into `main`; provides `GatecheckConfig`, `HookDef` (`from_` alias
+  — merged into `main`; provides `HooksmithConfig`, `HookDef` (`from_` alias
   `from`), and `load_config`. No blocker.
 - **[STY-0002](../features/FEAT-0001-config-loader/stories/STY-0002-surface-error-context.md)**
   — merged into `main`; provides `ConfigError(path, [(line, col, msg)])` and the
@@ -116,17 +116,17 @@ Acceptance criteria:
 
 ## Cross-references / baseline issues (architect recommendation, user decides)
 
-- **`src/gatecheck/env/manager.py:13`** imports
-  `from gatecheck.config.schema import HookDef`, but no `config/schema.py`
+- **`src/hooksmith/env/manager.py:13`** imports
+  `from hooksmith.config.schema import HookDef`, but no `config/schema.py`
   exists (the real module is `config/hook_def.py`). This currently fails
   `mypy --strict`. **Recommendation: fix now, IN BUILD-0004** as a one-line
-  import correction (`from gatecheck.config.hook_def import HookDef`).
+  import correction (`from hooksmith.config.hook_def import HookDef`).
   Rationale: `env/manager.py` is the direct downstream consumer of FEAT-0002's
   source/env work (it is where STY-0005 will call `parse_source`), it is broken
   today, the fix is trivial and isolated, and leaving it red muddies the
   `mypy --strict` gate for this build. See architecture-decision §10.
-- **`src/gatecheck/core.py:11`** carries a `# type: ignore[import-not-found]`
-  on the `gatecheck_core` Rust-extension import that `mypy` may flag as unused
+- **`src/hooksmith/core.py:11`** carries a `# type: ignore[import-not-found]`
+  on the `hooksmith_core` Rust-extension import that `mypy` may flag as unused
   when the wheel is absent. **Recommendation: OUT of scope (defer).** Rationale:
   it is unrelated to source-spec parsing, sits on the Rust-core boundary
   (ADR-0001) that FEAT-0002 explicitly does not touch, and STY-0004 is a
@@ -139,5 +139,5 @@ Acceptance criteria:
 |---|------|------------|--------|------------|
 | R1 | `from`-key `line:col` recovery for a bad spec re-implements (and diverges from) STY-0002's scanner. | Med | High — diagnostics drift from the rest of the loader; AC-8 regex passes but column is wrong. | TSK-005 MUST call the existing `_error_translator` helpers (`_nth_aot_header_line` to anchor the Nth `[[hook]]`, `_scan_field` to locate `from =`), not hand-roll a scan. Acceptance tests assert exact `(line, col)` on a fixture with a known-position bad `from`. |
 | R2 | Eager parse-at-load changes `load_config`'s observable failure surface (a previously-valid model now raises). | Med | Med — callers that loaded configs with `local:`/`git:` specs see new behaviour. | Eager validation only raises for **invalid** specs; `UnsupportedSource` does NOT raise (it is valid-but-unsupported). Document the eager-vs-lazy decision (§5); acceptance tests confirm a `local:` `from` loads without error. |
-| R3 | Name collision with existing `gatecheck.config.SourceSpec` (the `[sources]` table). | Low | Med — import confusion, accidental conflation of registry-config and parsed-spec concepts. | New package `gatecheck.sources`; union is `ParsedSource`, never `SourceSpec`. No symbol named `SourceSpec` is exported from `gatecheck.sources`. |
+| R3 | Name collision with existing `hooksmith.config.SourceSpec` (the `[sources]` table). | Low | Med — import confusion, accidental conflation of registry-config and parsed-spec concepts. | New package `hooksmith.sources`; union is `ParsedSource`, never `SourceSpec`. No symbol named `SourceSpec` is exported from `hooksmith.sources`. |
 | R4 | Discriminated-union `match` fails to narrow under `mypy --strict`. | Low | Med | Use a pydantic `Annotated[Union[...], Field(discriminator="kind")]` `TypeAdapter` only inside the parser; the public `ParsedSource` is a plain `Union` alias so `match … case PyPISource()` narrows cleanly. AC-11 gate catches regressions. |

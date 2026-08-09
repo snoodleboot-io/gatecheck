@@ -1,13 +1,13 @@
 # Quick Start
 
-Get gatecheck running in your project in under two minutes.
+Get hooksmith running in your project in under two minutes.
 
 ## Install
 
 ```bash
-pip install gatecheck
+pip install hooksmith
 # or with uv (recommended):
-uv tool install gatecheck
+uv tool install hooksmith
 ```
 
 ## Create `check.toml`
@@ -17,7 +17,7 @@ uv tool install gatecheck
 touch check.toml
 
 # Or migrate from pre-commit:
-gatecheck migrate
+hooksmith migrate
 ```
 
 A minimal `check.toml` for a Python project:
@@ -48,7 +48,7 @@ on-event = "commit"
 ## Install git hooks
 
 ```bash
-gatecheck install
+hooksmith install
 ```
 
 This writes `.git/hooks/pre-commit` (and other hooks based on your `on-event` settings).
@@ -56,7 +56,7 @@ This writes `.git/hooks/pre-commit` (and other hooks based on your `on-event` se
 ## Sync environments
 
 ```bash
-gatecheck sync
+hooksmith sync
 ```
 
 Downloads and installs all hook dependencies. First run takes a moment; subsequent runs are instant (cached by uv).
@@ -65,19 +65,19 @@ Downloads and installs all hook dependencies. First run takes a moment; subseque
 
 ```bash
 # Run on staged files (same as what the git hook does)
-gatecheck run
+hooksmith run
 
 # Run a specific group
-gatecheck run lint
+hooksmith run lint
 
 # Run on all tracked files
-gatecheck run --all-files
+hooksmith run --all-files
 
 # Run against everything changed since a branch (good for CI)
-gatecheck run --base main
+hooksmith run --base main
 
 # Machine-readable results
-gatecheck run --json
+hooksmith run --json
 ```
 
 ## What it looks like

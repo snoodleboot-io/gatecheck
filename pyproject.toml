@@ -1,12 +1,13 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "gatecheck"
-# Version is intentionally absent from this file.
-# It is computed from git tags by the CI pipeline via scripts/compute_version.py.
-# At build time, hatchling reads it from the SCM tag via hatch-vcs.
+name = "hooksmith"
+# Version is dynamic: sourced from src/hooksmith/__about__.py and injected by CI/CD.
+# The release pipeline computes MAJOR.MINOR.PATCH from PyPI history + PR context
+# (see .github/scripts/calculate_version.py) and rewrites __about__.py before build.
+# Local and editable installs use its 0.0.0.dev0 placeholder.
 dynamic = ["version"]
 description = "The next-generation runner for git pre-commit actions — real package sources, monorepo support, and Rust-powered parallel execution."
 readme = "README.md"
@@ -35,7 +36,7 @@ dependencies = [
     "tomlkit>=0.13",
     "packaging>=24",           # PEP 440/508 version + requirement handling (registry resolver)
     "pyyaml>=6",               # parsing .pre-commit-config.yaml (migrate)
-    "gatecheck-core>=0.1.0",   # the Rust extension wheel
+    "hooksmith-core>=0.1.0",   # the Rust extension wheel
 ]
 
 [project.optional-dependencies]
@@ -46,7 +47,7 @@ dev = [
     "mypy>=1.10",
     "ruff==0.15.20",           # pinned: must match check.toml's ruff hook exactly
     "maturin>=1.5",
-    "pyyaml>=6",                # for gatecheck migrate
+    "pyyaml>=6",                # for hooksmith migrate
     "types-PyYAML>=6",          # yaml stubs for mypy
 ]
 docs = [
@@ -58,22 +59,21 @@ docs = [
 ]
 
 [project.scripts]
-gatecheck = "gatecheck.cli:main"
-gc = "gatecheck.cli:main"
+hooksmith = "hooksmith.cli:main"
+hs = "hooksmith.cli:main"
 
 [project.urls]
-Homepage = "https://gatecheck.dev"
-Documentation = "https://gatecheck.dev"
-Repository = "https://github.com/snoodleboot-io/gatecheck"
-Changelog = "https://gatecheck.dev/changelog/"
-Issues = "https://github.com/snoodleboot-io/gatecheck/issues"
+Homepage = "https://hooksmith.dev"
+Documentation = "https://hooksmith.dev"
+Repository = "https://github.com/snoodleboot-io/hooksmith"
+Changelog = "https://hooksmith.dev/changelog/"
+Issues = "https://github.com/snoodleboot-io/hooksmith/issues"
 
 [tool.hatch.version]
-source = "vcs"
-tag-pattern = "v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+.*)"
+path = "src/hooksmith/__about__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gatecheck"]
+packages = ["src/hooksmith"]
 
 # ── Ruff ──────────────────────────────────────────────────────
 [tool.ruff]
@@ -98,7 +98,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gatecheck"]
+known-first-party = ["hooksmith"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -111,13 +111,13 @@ strict = true
 warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
-files = ["src/gatecheck"]
+files = ["src/hooksmith"]
 
 # The Rust extension (built by maturin) ships no type stubs / py.typed marker,
 # so mypy cannot analyze it. Treat it as untyped at the module level rather than
 # scattering inline ignores at every import site.
 [[tool.mypy.overrides]]
-module = ["gatecheck_core"]
+module = ["hooksmith_core"]
 ignore_missing_imports = true
 
 # ── pytest ────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/gatecheck"]
+source = ["src/hooksmith"]
 branch = true
 omit = ["tests/*"]
 

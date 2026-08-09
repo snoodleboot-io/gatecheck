@@ -1,13 +1,13 @@
 """Docs must only document commands that exist (BUG-0003 / GAT-44).
 
-The docs once described a CLI that was never built — `gatecheck workspace list`,
+The docs once described a CLI that was never built — `hooksmith workspace list`,
 `cache prune`, `run --hook`, `migrate --dry-run` and more — including on the
-quickstart page a first-time user lands on. This test extracts every ``gatecheck …``
+quickstart page a first-time user lands on. This test extracts every ``hooksmith …``
 invocation from the documentation, the README and the marketing page, and walks it
 against the real click command tree, so prose can never drift from the CLI again.
 
 Only invocations inside **code** (fenced blocks, inline spans, or HTML ``<code>``)
-are checked; prose that merely begins with the word "gatecheck" is ignored.
+are checked; prose that merely begins with the word "hooksmith" is ignored.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from pathlib import Path
 import click
 import pytest
 
-from gatecheck.cli.main import main
+from hooksmith.cli.main import main
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -27,9 +27,9 @@ _FENCED = re.compile(r"```[^\n]*\n(.*?)```", re.DOTALL)
 _INLINE = re.compile(r"`([^`\n]+)`")
 _HTML_CODE = re.compile(r"<code[^>]*>(.*?)</code>", re.DOTALL | re.IGNORECASE)
 # A real invocation starts a line (optionally after a `$ ` prompt). This deliberately
-# skips prose and shell comments that merely mention gatecheck mid-line, and the
-# negative lookahead avoids matching the `gatecheck-core` package name.
-_INVOCATION = re.compile(r"^[ \t]*(?:\$ )?(gatecheck(?![-\w])[^\n|>&#]*)", re.MULTILINE)
+# skips prose and shell comments that merely mention hooksmith mid-line, and the
+# negative lookahead avoids matching the `hooksmith-core` package name.
+_INVOCATION = re.compile(r"^[ \t]*(?:\$ )?(hooksmith(?![-\w])[^\n|>&#]*)", re.MULTILINE)
 _HELP_OPTS = ("-h", "--help")
 
 
@@ -51,14 +51,14 @@ def _code_spans(text: str, path: Path) -> list[str]:
 
 
 def _invocations() -> list[tuple[Path, str]]:
-    """Extract ``(file, command)`` for every gatecheck invocation written in code."""
+    """Extract ``(file, command)`` for every hooksmith invocation written in code."""
     found: list[tuple[Path, str]] = []
     for path in _sources():
         text = path.read_text(encoding="utf-8")
         for span in _code_spans(text, path):
             for raw in _INVOCATION.findall(span):
                 command = raw.strip().rstrip("\\").strip()
-                # Skip prose-in-backticks like `gatecheck is fast` by requiring the
+                # Skip prose-in-backticks like `hooksmith is fast` by requiring the
                 # remainder to look like arguments, not a sentence.
                 if _looks_like_prose(command):
                     continue
@@ -67,10 +67,10 @@ def _invocations() -> list[tuple[Path, str]]:
 
 
 def _looks_like_prose(command: str) -> bool:
-    """True when the text after ``gatecheck`` reads as a sentence rather than argv."""
-    rest = command[len("gatecheck") :].strip()
+    """True when the text after ``hooksmith`` reads as a sentence rather than argv."""
+    rest = command[len("hooksmith") :].strip()
     if not rest:
-        return False  # bare `gatecheck` is a legitimate invocation
+        return False  # bare `hooksmith` is a legitimate invocation
     first = rest.split()[0]
     return not (first.startswith("-") or first.replace("-", "").isalnum()) or " " in first
 
@@ -79,7 +79,7 @@ def _walk(command: str) -> None:
     """Resolve ``command`` against the click tree; raise AssertionError if it cannot exist."""
     tokens = shlex.split(command)[1:]  # drop the program name
     node: click.Command = main
-    seen: list[str] = ["gatecheck"]
+    seen: list[str] = ["hooksmith"]
 
     for token in tokens:
         if token.startswith("-"):
@@ -117,7 +117,7 @@ def _is_command_like(token: str) -> bool:
     [pytest.param(p, c, id=f"{p.name}::{c[:60]}") for p, c in _invocations()],
 )
 def test_documented_command_exists(path: Path, command: str) -> None:
-    """Every documented gatecheck invocation must resolve against the real CLI."""
+    """Every documented hooksmith invocation must resolve against the real CLI."""
     try:
         _walk(command)
     except ValueError as exc:  # unbalanced quotes in a doc snippet

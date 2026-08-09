@@ -21,32 +21,32 @@ One concern per file. Filenames follow `snake_case(ClassName)` per
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/config/source_spec.py` | Defines `class SourceSpec` only. |
-| `src/gatecheck/config/hook_def.py` | Defines `class HookDef` only. |
-| `src/gatecheck/config/group_def.py` | Defines `class GroupDef` only. |
-| `src/gatecheck/config/gatecheck_config.py` | Defines `class GatecheckConfig` only. |
-| `src/gatecheck/config/loader.py` | Defines `load_config(path: Path) -> GatecheckConfig` only. |
-| `src/gatecheck/config/__init__.py` | **Public facade.** Re-exports the five symbols below. Documented exception to python.md no-import-forwarding rule (BUILD-0001 G-3 / C3). |
-| `src/gatecheck/config/schema.py` | **TO BE DELETED.** No back-compat re-export. |
+| `src/hooksmith/config/source_spec.py` | Defines `class SourceSpec` only. |
+| `src/hooksmith/config/hook_def.py` | Defines `class HookDef` only. |
+| `src/hooksmith/config/group_def.py` | Defines `class GroupDef` only. |
+| `src/hooksmith/config/hooksmith_config.py` | Defines `class HooksmithConfig` only. |
+| `src/hooksmith/config/loader.py` | Defines `load_config(path: Path) -> HooksmithConfig` only. |
+| `src/hooksmith/config/__init__.py` | **Public facade.** Re-exports the five symbols below. Documented exception to python.md no-import-forwarding rule (BUILD-0001 G-3 / C3). |
+| `src/hooksmith/config/schema.py` | **TO BE DELETED.** No back-compat re-export. |
 
 ---
 
 ## 2. Public API surface
 
-Exactly five symbols are exported from `gatecheck.config`. `__all__` MUST
+Exactly five symbols are exported from `hooksmith.config`. `__all__` MUST
 list them in this order:
 
 ```python
-__all__ = ["GatecheckConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]
+__all__ = ["HooksmithConfig", "GroupDef", "HookDef", "SourceSpec", "load_config"]
 ```
 
 | Symbol | Kind | Imported from |
 |---|---|---|
-| `load_config` | function | `gatecheck.config.loader` |
-| `GatecheckConfig` | pydantic model | `gatecheck.config.gatecheck_config` |
-| `HookDef` | pydantic model | `gatecheck.config.hook_def` |
-| `SourceSpec` | pydantic model | `gatecheck.config.source_spec` |
-| `GroupDef` | pydantic model | `gatecheck.config.group_def` |
+| `load_config` | function | `hooksmith.config.loader` |
+| `HooksmithConfig` | pydantic model | `hooksmith.config.hooksmith_config` |
+| `HookDef` | pydantic model | `hooksmith.config.hook_def` |
+| `SourceSpec` | pydantic model | `hooksmith.config.source_spec` |
+| `GroupDef` | pydantic model | `hooksmith.config.group_def` |
 
 No other symbol is part of the STY-0001 public surface. Internal helpers
 (if any) MUST be prefixed `_` and excluded from `__all__`.
@@ -104,7 +104,7 @@ Same `model_config` (`extra="forbid"`, `populate_by_name=True`).
 | `fail_fast` | `fail-fast` | `bool` | `False` | — |
 | `on_event` | `on-event` | `Literal["commit", "push"] \| None` | `None` | Restricted to the two event names exercised by the repo's `check.toml`. Other docs values (`commit-msg`, `merge`) are out of scope (§8). |
 
-### 3.4 `GatecheckConfig` — top-level document
+### 3.4 `HooksmithConfig` — top-level document
 
 | Python name | TOML alias | Type | Default | Validation |
 |---|---|---|---|---|
@@ -119,11 +119,11 @@ No field is aliased at the top level; TOML names already match.
 ## 4. Function signatures
 
 ```python
-# src/gatecheck/config/loader.py
+# src/hooksmith/config/loader.py
 from pathlib import Path
-from gatecheck.config.gatecheck_config import GatecheckConfig
+from hooksmith.config.hooksmith_config import HooksmithConfig
 
-def load_config(path: Path) -> GatecheckConfig: ...
+def load_config(path: Path) -> HooksmithConfig: ...
 ```
 
 Semantics:
@@ -136,7 +136,7 @@ Semantics:
   rejected by the type checker; runtime behaviour with a `str` is
   undefined for STY-0001.
 - Implementation outline (informative, not normative):
-  `tomllib.load(open(path, "rb"))` → `GatecheckConfig.model_validate(...)`.
+  `tomllib.load(open(path, "rb"))` → `HooksmithConfig.model_validate(...)`.
 
 ---
 
@@ -151,7 +151,7 @@ file:line:col translation of `ValidationError`.
 | `path` does not exist | `FileNotFoundError` | `open()` call inside `tomllib.load`. |
 | `path` exists but is not readable | `PermissionError` | `open()`. |
 | File contents are not valid TOML | `tomllib.TOMLDecodeError` | `tomllib.load`. |
-| TOML parses but violates the schema (missing required field, wrong type, unknown key, bad `Literal` value) | `pydantic.ValidationError` | `GatecheckConfig.model_validate`. |
+| TOML parses but violates the schema (missing required field, wrong type, unknown key, bad `Literal` value) | `pydantic.ValidationError` | `HooksmithConfig.model_validate`. |
 | Any of the four above | wrapped as `ConfigError` (a `ValueError` subclass) in `load_config`, with the original exception preserved on `__cause__` | STY-0002 (BUILD-0002 / [BUILD-0002-ARCH](0002-architecture-decision.md) §5) |
 
 **Explicitly out of scope** for STY-0001:
@@ -253,9 +253,9 @@ follow-up stories:
   (`pypi:`, `git:`, `docker:`, etc.).
 - Error-position reporting (file:line:col) — STY-0002.
 - Config file lookup / upward search — separate story.
-- `pyproject.toml` `[tool.gatecheck]` ingestion — separate story.
+- `pyproject.toml` `[tool.hooksmith]` ingestion — separate story.
 - Async I/O — explicitly disallowed by STY-0001 Notes.
-- Any import of `gatecheck_core` from this package — forbidden by
+- Any import of `hooksmith_core` from this package — forbidden by
   STY-0001 acceptance criterion 4.
 
 ---

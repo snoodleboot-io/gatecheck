@@ -27,9 +27,9 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config import ConfigError, SourceSpec, load_config
-from gatecheck.registry import RegistryError, UrllibRegistryClient, resolve_pypi_source
-from gatecheck.sources import PyPISource
+from hooksmith.config import ConfigError, SourceSpec, load_config
+from hooksmith.registry import RegistryError, UrllibRegistryClient, resolve_pypi_source
+from hooksmith.sources import PyPISource
 
 # ---------------------------------------------------------------------------
 # Loopback PEP 691 simple-index server

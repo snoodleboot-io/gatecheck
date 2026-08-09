@@ -15,15 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config import SourceSpec
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvError, EnvManager, ResolvedEnv
-from gatecheck.env.uv_bootstrap import UvBootstrapError
-from gatecheck.env.uv_runner import UvBuildError, UvNotFound
-from gatecheck.registry import ProjectFile, ProjectPage, RegistryError, ResolvedPyPISource
-from gatecheck.venv import bin_dir_name
+from hooksmith.config import SourceSpec
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import EnvError, EnvManager, ResolvedEnv
+from hooksmith.env.uv_bootstrap import UvBootstrapError
+from hooksmith.env.uv_runner import UvBuildError, UvNotFound
+from hooksmith.registry import ProjectFile, ProjectPage, RegistryError, ResolvedPyPISource
+from hooksmith.venv import bin_dir_name
 
-_OFFLINE = {"GATECHECK_OFFLINE": "1"}
+_OFFLINE = {"HOOKSMITH_OFFLINE": "1"}
 
 DEFAULT_INDEX = "https://pypi.org/simple"
 
@@ -141,7 +141,7 @@ def test_pypi_alias_forwards_the_aliased_index(tmp_path: Path) -> None:
 
 def test_registry_error_propagates_unwrapped(tmp_path: Path) -> None:
     # Arrange — a client whose fetch fails; resolve_pypi_source wraps it as RegistryError
-    from gatecheck.registry.registry_client import PackageNotFound
+    from hooksmith.registry.registry_client import PackageNotFound
 
     client = FakeRegistryClient(_ruff_page(), error=PackageNotFound("ruff"))
     manager = EnvManager(cache_root=tmp_path, client=client, uv_runner=FakeUvRunner())

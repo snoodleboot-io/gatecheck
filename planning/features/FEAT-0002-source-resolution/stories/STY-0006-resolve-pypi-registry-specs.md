@@ -13,7 +13,7 @@ adrs: [ADR-0001]
 
 ## As a / I want / So that
 
-As a **gatecheck developer**, I want **a `resolve_pypi_source(source, sources)`
+As a **hooksmith developer**, I want **a `resolve_pypi_source(source, sources)`
 function that turns a `PyPISource` — its `requirement` and optional registry
 `alias` — into a concrete, pinned distribution descriptor by querying the
 registry index over the network** so that **the Environments feature can build a
@@ -71,7 +71,7 @@ Explicitly **out of scope**:
 | `default-registry` | string | PyPI | Index URL for `pypi:` sources |
 | `extra-registries` | list of `{alias = url}` | `[]` | Named private indexes |
 
-…but the implemented model `gatecheck.config.SourceSpec` **only has
+…but the implemented model `hooksmith.config.SourceSpec` **only has
 `default_registry`**. There is **no `extra_registries` field**, so today there is
 **no way to map `pypi+internal:` → an index URL**. Without it, this story cannot
 resolve any `pypi+alias:` spec.
@@ -83,7 +83,7 @@ its exact shape, and it is a hard dependency for the story's core value. It is
 carved into its own task so it can be reviewed/landed independently if the
 design gate prefers to split it.
 
-Note this modifies `src/gatecheck/config/source_spec.py`, a config-schema file —
+Note this modifies `src/hooksmith/config/source_spec.py`, a config-schema file —
 call out at the design gate so the human approves the schema change alongside the
 new dependency.
 
@@ -110,7 +110,7 @@ Two ways to enumerate a project's versions:
   yanked flags in one JSON doc) but **PyPI/Warehouse-specific**. Private indexes
   (devpi, Artifactory, Nexus, GitLab, AWS CodeArtifact) generally do **not** serve
   it. Using it would make `pypi+alias:` — the private-registry story that is half
-  the point of gatecheck — unresolvable.
+  the point of hooksmith — unresolvable.
 - **PEP 503 "simple" index** — `GET {index_url}/{canonical_name}/`. A **universal
   standard** every index implements; PEP 691 adds a JSON representation via content
   negotiation. The configured `default-registry` (`https://pypi.org/simple`) is
@@ -121,21 +121,21 @@ Two ways to enumerate a project's versions:
 only approach that works uniformly across PyPI and private registries, and it
 matches the URL shape the config already stores.
 
-### Where the new code lives — **recommendation: a new `src/gatecheck/registry/` package**
+### Where the new code lives — **recommendation: a new `src/hooksmith/registry/` package**
 
-STY-0004/0005 built `gatecheck.sources` as a **pure, dependency-light, no-I/O
+STY-0004/0005 built `hooksmith.sources` as a **pure, dependency-light, no-I/O
 leaf** (its ACs assert "no network, no subprocess"). STY-0006 is the opposite: it
 performs network I/O and pulls in `packaging` + `urllib`. Landing it *inside*
-`gatecheck.sources` would contradict that package's established character.
+`hooksmith.sources` would contradict that package's established character.
 
-**Recommendation: a new leaf package `src/gatecheck/registry/`** — the network
+**Recommendation: a new leaf package `src/hooksmith/registry/`** — the network
 "resolve a requirement against an index" concern — giving a clean three-way split:
 
-- `gatecheck.sources` — classify a `from` spec (`parse_source`) and locate the
+- `hooksmith.sources` — classify a `from` spec (`parse_source`) and locate the
   local kinds (`resolve_source`). Pure, no I/O. **Unchanged by this story.**
-- `gatecheck.registry` — query an index and pin a `pypi:` requirement to a
+- `hooksmith.registry` — query an index and pin a `pypi:` requirement to a
   concrete distribution. Network + `packaging`. **New, this story.**
-- `gatecheck.env` — build/cache the uv-backed venv from the pinned descriptor.
+- `hooksmith.env` — build/cache the uv-backed venv from the pinned descriptor.
   The Environments feature. Consumes this story's output.
 
 `resolve_source`'s `PyPISource` branch stays **unchanged** — it still rejects
@@ -144,20 +144,20 @@ network path is a **separate entry point** (`registry.resolve_pypi_source`) that
 the Environments `EnvManager` calls directly. This preserves STY-0005's contract
 verbatim and keeps `sources` pure.
 
-**Architect to lock:** `gatecheck.registry` (recommended) vs
-`gatecheck.sources.pypi_resolver` (more cohesive with FEAT-0002 but contaminates
-the pure leaf). The story is written around `gatecheck.registry`.
+**Architect to lock:** `hooksmith.registry` (recommended) vs
+`hooksmith.sources.pypi_resolver` (more cohesive with FEAT-0002 but contaminates
+the pure leaf). The story is written around `hooksmith.registry`.
 
 Files (one class/function-group per file per core conventions):
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/registry/resolved_pypi_source.py` | `ResolvedPyPISource` frozen pydantic model (the pinned descriptor). |
-| `src/gatecheck/registry/registry_error.py` | `RegistryError(ValueError)` with structured fields. |
-| `src/gatecheck/registry/registry_client.py` | `RegistryClient` Protocol (the network seam) + `UrllibRegistryClient` default impl (stdlib `urllib`). |
-| `src/gatecheck/registry/index_resolver.py` | Alias → index-URL resolution against a `SourceSpec`. |
-| `src/gatecheck/registry/pypi_resolver.py` | `resolve_pypi_source(...) -> ResolvedPyPISource` + private version-selection helpers. No class. |
-| `src/gatecheck/registry/__init__.py` | Facade — export the public symbols; set `__all__`. |
+| `src/hooksmith/registry/resolved_pypi_source.py` | `ResolvedPyPISource` frozen pydantic model (the pinned descriptor). |
+| `src/hooksmith/registry/registry_error.py` | `RegistryError(ValueError)` with structured fields. |
+| `src/hooksmith/registry/registry_client.py` | `RegistryClient` Protocol (the network seam) + `UrllibRegistryClient` default impl (stdlib `urllib`). |
+| `src/hooksmith/registry/index_resolver.py` | Alias → index-URL resolution against a `SourceSpec`. |
+| `src/hooksmith/registry/pypi_resolver.py` | `resolve_pypi_source(...) -> ResolvedPyPISource` + private version-selection helpers. No class. |
+| `src/hooksmith/registry/__init__.py` | Facade — export the public symbols; set `__all__`. |
 
 ### Input / output contract (describe — do not implement)
 
@@ -174,7 +174,7 @@ def resolve_pypi_source(
 
 - **`source`** — the `PyPISource` from `parse_source(hook.from_)`, carrying the
   verbatim `requirement` and the optional registry `alias` (`registry`).
-- **`sources`** — the parsed `[sources]` table (`GatecheckConfig.sources`, may be
+- **`sources`** — the parsed `[sources]` table (`HooksmithConfig.sources`, may be
   `None`). Supplies `default_registry` and the new `extra_registries` alias map.
 - **`client`** — the injectable network seam (see § Hermetic testing). Defaults to
   `UrllibRegistryClient()`. Tests pass a fake; auth/proxy config plugs in here later.
@@ -212,7 +212,7 @@ populating them best-effort, `None` when unavailable.
 ### Error type / behavior
 
 A dedicated **`RegistryError(ValueError)`** in
-`src/gatecheck/registry/registry_error.py`, mirroring `SourceResolutionError`'s
+`src/hooksmith/registry/registry_error.py`, mirroring `SourceResolutionError`'s
 shape (subclasses `ValueError`; structured fields; location-free):
 
 ```python
@@ -354,27 +354,27 @@ EnvManager.resolve(hook)        # Environments → builds/caches a uv venv from 
 
 - [ ] TSK-001: **[config-schema; design-gate approval]** Add
   `extra_registries: dict[str, str]` (alias `extra-registries`, default empty) to
-  `gatecheck.config.SourceSpec`, matching the already-documented reference; validate
+  `hooksmith.config.SourceSpec`, matching the already-documented reference; validate
   alias keys `[A-Za-z0-9_-]+` and non-empty URL values. Carved out so it can land
   independently if the gate prefers to split the schema change.
 - [ ] TSK-002: **[new dependency; design-gate approval]** Add `packaging>=24` to
   `pyproject.toml` runtime `dependencies`. HTTP/index parsing stay on stdlib
   (`urllib`, `json`, `html.parser`) — **no** `httpx`/`requests`.
-- [ ] TSK-003: Create `src/gatecheck/registry/` package with `__init__.py` facade
+- [ ] TSK-003: Create `src/hooksmith/registry/` package with `__init__.py` facade
   exporting `resolve_pypi_source`, `ResolvedPyPISource`, `RegistryClient`,
   `UrllibRegistryClient`, `RegistryError` (set `__all__`, alphabetical).
-- [ ] TSK-004: Add `src/gatecheck/registry/resolved_pypi_source.py` —
+- [ ] TSK-004: Add `src/hooksmith/registry/resolved_pypi_source.py` —
   `ResolvedPyPISource` frozen pydantic model (`kind`, `requirement`, `name`,
   `version`, `index_url`, `registry`; optional `sha256`/`url`/`filename`;
   `ConfigDict(frozen=True, extra="forbid")`).
-- [ ] TSK-005: Add `src/gatecheck/registry/registry_error.py` —
+- [ ] TSK-005: Add `src/hooksmith/registry/registry_error.py` —
   `RegistryError(ValueError)` with structured `requirement` / `index_url` /
   `reason` and the `cannot resolve '<req>' against <index>: <reason>` message.
-- [ ] TSK-006: Add `src/gatecheck/registry/registry_client.py` — the
+- [ ] TSK-006: Add `src/hooksmith/registry/registry_client.py` — the
   `RegistryClient` Protocol (`fetch_project`) + a `ProjectPage`/file value object,
   and `UrllibRegistryClient` (stdlib `urllib`, PEP 691 `Accept` + PEP 503 HTML
   fallback, 404/network/malformed → mapped by the resolver).
-- [ ] TSK-007: Add `src/gatecheck/registry/index_resolver.py` — alias → index-URL
+- [ ] TSK-007: Add `src/hooksmith/registry/index_resolver.py` — alias → index-URL
   resolution against a `SourceSpec | None` (default vs `extra_registries`; unknown
   alias → `RegistryError`).
 - [ ] TSK-008: **(Optional / deferrable — raise separately if descoped)** Add a
@@ -384,7 +384,7 @@ EnvManager.resolve(hook)        # Environments → builds/caches a uv venv from 
   surfaces as `RegistryError` at resolve time instead.
 - [ ] TSK-009: Implement `resolve_pypi_source(source, sources, *, client=None,
   allow_prereleases=False) -> ResolvedPyPISource` in
-  `src/gatecheck/registry/pypi_resolver.py` — the 8-step algorithm above
+  `src/hooksmith/registry/pypi_resolver.py` — the 8-step algorithm above
   (index resolve → requirement parse → fetch → enumerate → specifier/pre-release
   filter → yanked rules → select highest → build descriptor).
 - [ ] TSK-010: Write `tests/unit/test_pypi_resolver.py` (≥ 15 tests, hermetic via a
@@ -454,19 +454,19 @@ EnvManager.resolve(hook)        # Environments → builds/caches a uv venv from 
   is **not** raised from `load_config`; loading a `pypi:` hook succeeds — the error
   only appears when `resolve_pypi_source` is called. (If TSK-008 lands, an
   *undeclared alias* is the sole exception, caught at load time as `ConfigError`.)
-- [ ] AC-18: `from gatecheck.registry import resolve_pypi_source, ResolvedPyPISource,
+- [ ] AC-18: `from hooksmith.registry import resolve_pypi_source, ResolvedPyPISource,
   RegistryClient, RegistryError` works.
-- [ ] AC-19: `mypy --strict src/gatecheck/registry/` passes with no new errors; the
+- [ ] AC-19: `mypy --strict src/hooksmith/registry/` passes with no new errors; the
   `RegistryClient` Protocol and the `ResolvedPyPISource` model type cleanly.
 - [ ] AC-20: The dependency delta is exactly `packaging>=24` (runtime); no HTTP
   client dependency is added.
 - [ ] AC-21: `resolve_source` (STY-0005) is **unchanged** — a `PyPISource` still
-  raises `SourceResolutionError` there; `gatecheck.sources` gains no network I/O.
+  raises `SourceResolutionError` there; `hooksmith.sources` gains no network I/O.
 
 ## Notes
 
-- **Package placement (architect to confirm):** `gatecheck.registry` is recommended
-  over `gatecheck.sources.pypi_resolver` to keep the `sources` leaf pure/no-I/O —
+- **Package placement (architect to confirm):** `hooksmith.registry` is recommended
+  over `hooksmith.sources.pypi_resolver` to keep the `sources` leaf pure/no-I/O —
   see § Where the new code lives.
 - **Design-gate approvals required before implementation (two items):**
   (1) new runtime dependency `packaging>=24`; (2) config-schema change adding

@@ -13,7 +13,7 @@ adrs: [ADR-0001]
 
 ## As a / I want / So that
 
-As a **gatecheck developer**, I want **a `parse_source(spec)` function that
+As a **hooksmith developer**, I want **a `parse_source(spec)` function that
 turns a hook's `from` string into a typed, validated source-kind object** so
 that **the resolver and runner can `match` on the kind without re-parsing the
 raw string, and bad specs are rejected with a clear, IDE-parseable error
@@ -28,8 +28,8 @@ validates its syntax — **pure parsing only. NO network, NO venv creation, NO
 executable resolution.** Resolving `project`/`system` to a binary is STY-0005;
 network resolution of `pypi:` is STY-0006 / Environments.
 
-The new code lives in a new package `src/gatecheck/sources/` (not under
-`gatecheck.config`). Rationale: the existing `gatecheck.config.SourceSpec`
+The new code lives in a new package `src/hooksmith/sources/` (not under
+`hooksmith.config`). Rationale: the existing `hooksmith.config.SourceSpec`
 model already names the `[sources]` *table* (registry config), so reusing
 `config` for the parsed-spec model would collide on the name and conflate two
 distinct concepts — "what registries exist" vs "what a single hook's `from`
@@ -85,13 +85,13 @@ pydantic usage) or frozen dataclasses — the architect locks the choice:
   — a `Literal`-discriminated `Annotated` union the resolver can `match` on.
 
 Name note: the union is deliberately **not** called `SourceSpec` to avoid
-colliding with the existing `gatecheck.config.SourceSpec` (the `[sources]`
+colliding with the existing `hooksmith.config.SourceSpec` (the `[sources]`
 table model).
 
 ### Error behavior
 
 - `parse_source(spec: str)` raises a dedicated `SourceSpecError(ValueError)`
-  (in `src/gatecheck/sources/`) for an invalid spec. It subclasses `ValueError`
+  (in `src/hooksmith/sources/`) for an invalid spec. It subclasses `ValueError`
   to stay consistent with `ConfigError`. Message format:
   `invalid source spec '<spec>': <reason>` (e.g.
   `invalid source spec 'pypi+:ruff': registry alias must not be empty`).
@@ -108,7 +108,7 @@ table model).
 
 ## Tasks
 
-- [ ] TSK-001: Create `src/gatecheck/sources/` package (`__init__.py` facade
+- [ ] TSK-001: Create `src/hooksmith/sources/` package (`__init__.py` facade
   exporting `parse_source`, `ParsedSource`, the four kind models, and
   `SourceSpecError`; set `__all__`).
 - [ ] TSK-002: Add the typed model module(s) — `PyPISource`, `ProjectSource`,
@@ -151,9 +151,9 @@ table model).
   first line matches `^check\.toml:\d+:\d+:` and names the bad spec.
 - [ ] AC-9: `parse_source` performs no I/O — no filesystem, no network, no
   subprocess (verifiable by inspection / mock-free test design).
-- [ ] AC-10: `from gatecheck.sources import parse_source, ParsedSource,
+- [ ] AC-10: `from hooksmith.sources import parse_source, ParsedSource,
   SourceSpecError` works.
-- [ ] AC-11: `mypy --strict src/gatecheck/sources/` passes with no new errors.
+- [ ] AC-11: `mypy --strict src/hooksmith/sources/` passes with no new errors.
 - [ ] AC-12: No new runtime dependencies added.
 
 ## Notes
@@ -164,11 +164,11 @@ table model).
   parsing is resolution's concern. Carry it through verbatim.
 - `UnsupportedSource` exists so STY-0006+ can add `local`/`git`/`docker`
   without breaking `parse_source`'s contract (Open/Closed).
-- Naming collision to watch: `gatecheck.config.SourceSpec` is the `[sources]`
+- Naming collision to watch: `hooksmith.config.SourceSpec` is the `[sources]`
   *table* model; the parsed-spec union is `ParsedSource` in the new
-  `gatecheck.sources` package. Do not conflate them.
+  `hooksmith.sources` package. Do not conflate them.
 - Architect to lock: pydantic models vs frozen dataclasses for the union, and
   the exact `line:col` recovery for a hook's `from` key (mirror STY-0002).
 - Pre-existing inconsistency flagged for the architect (out of STY-0004 scope):
-  `src/gatecheck/env/manager.py` imports `gatecheck.config.schema`, a module
+  `src/hooksmith/env/manager.py` imports `hooksmith.config.schema`, a module
   that does not exist in the current `config/` package.

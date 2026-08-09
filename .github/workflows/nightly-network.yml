@@ -36,7 +36,7 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: gatecheck-rs
+          workspaces: hooksmith-rs
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -44,13 +44,13 @@ jobs:
       - name: Create virtualenv
         run: uv venv --python ${{ matrix.python-version }} .venv
 
-      - name: Build and install the native core (gatecheck_core)
+      - name: Build and install the native core (hooksmith_core)
         run: |
           uv pip install --python .venv/bin/python maturin
-          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path gatecheck-rs/Cargo.toml --out dist
-          uv pip install --python .venv/bin/python dist/gatecheck_core-*.whl
+          .venv/bin/maturin build --release --interpreter .venv/bin/python --manifest-path hooksmith-rs/Cargo.toml --out dist
+          uv pip install --python .venv/bin/python dist/hooksmith_core-*.whl
 
-      - name: Install gatecheck + dev dependencies
+      - name: Install hooksmith + dev dependencies
         run: uv pip install --python .venv/bin/python -e ".[dev]"
 
       - name: Pytest (network — real PyPI + uv download/build)

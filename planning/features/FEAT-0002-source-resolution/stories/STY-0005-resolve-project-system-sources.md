@@ -13,7 +13,7 @@ adrs: [ADR-0001]
 
 ## As a / I want / So that
 
-As a **gatecheck developer**, I want **a `resolve_source(source, tool)` function
+As a **hooksmith developer**, I want **a `resolve_source(source, tool)` function
 that turns the two non-network `ParsedSource` kinds — `SystemSource` and
 `ProjectSource` — into a concrete, absolute executable path** so that **the
 runner can invoke a hook's command without re-deriving where the binary lives,
@@ -51,10 +51,10 @@ Explicitly **out of scope**:
   (Windows is a fast-follower); documented as a locked-later decision, not built
   here.
 
-### Where the new code lives — **recommendation: `gatecheck.sources` (a new `resolver.py`)**
+### Where the new code lives — **recommendation: `hooksmith.sources` (a new `resolver.py`)**
 
-The resolver lands in the existing leaf package `src/gatecheck/sources/`,
-alongside `parser.py`, **not** in `gatecheck.env`.
+The resolver lands in the existing leaf package `src/hooksmith/sources/`,
+alongside `parser.py`, **not** in `hooksmith.env`.
 
 Rationale:
 - **It consumes and extends `sources`' own types.** `resolve_source` takes a
@@ -62,10 +62,10 @@ Rationale:
   of a *cached environment*. It is the natural second half of the parse→resolve
   slice STY-0004 started, in the same package. `parse_source` → `resolve_source`
   reads as one story arc.
-- **It stays a pure, dependency-light leaf.** `gatecheck.sources` imports nothing
-  from `gatecheck.config` or `gatecheck.env`; keeping the resolver here preserves
+- **It stays a pure, dependency-light leaf.** `hooksmith.sources` imports nothing
+  from `hooksmith.config` or `hooksmith.env`; keeping the resolver here preserves
   that. It needs only `os` / `shutil` / `pathlib`.
-- **`gatecheck.env` is a different abstraction.** `EnvManager.resolve(hook) ->
+- **`hooksmith.env` is a different abstraction.** `EnvManager.resolve(hook) ->
   ResolvedEnv(bin_dir, cache_key)` is about **uv-backed venv creation and
   caching** — the Environments feature. Its return type is an *environment* (a
   bin dir + a cache key), not a single located binary. STY-0005 produces no cache
@@ -81,10 +81,10 @@ Files (one class/function-group per file per core conventions):
 
 | File | Single responsibility |
 |---|---|
-| `src/gatecheck/sources/resolved_tool.py` | `ResolvedTool` frozen pydantic model. |
-| `src/gatecheck/sources/source_resolution_error.py` | `SourceResolutionError(ValueError)`. |
-| `src/gatecheck/sources/resolver.py` | `resolve_source(...) -> ResolvedTool` + private helpers. No class. |
-| `src/gatecheck/sources/__init__.py` | Facade — extend imports + `__all__` with the three new symbols. |
+| `src/hooksmith/sources/resolved_tool.py` | `ResolvedTool` frozen pydantic model. |
+| `src/hooksmith/sources/source_resolution_error.py` | `SourceResolutionError(ValueError)`. |
+| `src/hooksmith/sources/resolver.py` | `resolve_source(...) -> ResolvedTool` + private helpers. No class. |
+| `src/hooksmith/sources/__init__.py` | Facade — extend imports + `__all__` with the three new symbols. |
 
 ### Input / output contract (describe — do not implement)
 
@@ -130,7 +130,7 @@ whatever `shutil.which` / the `.venv` scan returns).
 ### Error type / behavior
 
 A dedicated `SourceResolutionError(ValueError)` in
-`src/gatecheck/sources/source_resolution_error.py`, mirroring `SourceSpecError`'s
+`src/hooksmith/sources/source_resolution_error.py`, mirroring `SourceSpecError`'s
 shape (subclasses `ValueError`; carries structured fields; location-free):
 
 ```python
@@ -202,19 +202,19 @@ branch on `.kind`.
 
 ## Tasks
 
-- [ ] TSK-001: Add `src/gatecheck/sources/resolved_tool.py` — `ResolvedTool`
+- [ ] TSK-001: Add `src/hooksmith/sources/resolved_tool.py` — `ResolvedTool`
   frozen pydantic model (`tool: str`, `executable: Path`,
   `origin: Literal["project", "system"]`; `ConfigDict(frozen=True,
   extra="forbid")`).
-- [ ] TSK-002: Add `src/gatecheck/sources/source_resolution_error.py` —
+- [ ] TSK-002: Add `src/hooksmith/sources/source_resolution_error.py` —
   `SourceResolutionError(ValueError)` with structured `tool` / `kind` / `reason`
   and the `cannot resolve '<tool>' from <kind> source: <reason>` message.
 - [ ] TSK-003: Implement `resolve_source(source, tool, *, workspace_root=None,
-  environ=None) -> ResolvedTool` in `src/gatecheck/sources/resolver.py`:
+  environ=None) -> ResolvedTool` in `src/hooksmith/sources/resolver.py`:
   `match` on the source kind; system (`shutil.which`) and project
   (`VIRTUAL_ENV` → `.venv` precedence, exists+file+executable) rules; absolutize
   the result; reject `pypi` / `unsupported` with `SourceResolutionError`.
-- [ ] TSK-004: Extend `src/gatecheck/sources/__init__.py` facade + `__all__` with
+- [ ] TSK-004: Extend `src/hooksmith/sources/__init__.py` facade + `__all__` with
   `resolve_source`, `ResolvedTool`, `SourceResolutionError` (keep the existing
   alphabetical ordering convention).
 - [ ] TSK-005: Write `tests/unit/test_source_resolve.py` (≥ 12 tests, hermetic
@@ -234,8 +234,8 @@ branch on `.kind`.
   `ResolvedTool`, the discovery/precedence rules, and the "not found" error
   (and that resolution failure is a runtime, not a config, error).
 - [ ] TSK-008: **Raise a separate chore** (do NOT bundle into STY-0005) to
-  un-ignore, commit, and lint-clean the `src/gatecheck/env/` package — fix
-  `.gitignore` (anchor `/env/` or add `!src/gatecheck/env/`) and make the package
+  un-ignore, commit, and lint-clean the `src/hooksmith/env/` package — fix
+  `.gitignore` (anchor `/env/` or add `!src/hooksmith/env/`) and make the package
   `ruff` / `mypy --strict` clean. See Notes for why this is split out.
 
 ## Acceptance criteria
@@ -275,9 +275,9 @@ branch on `.kind`.
 - [ ] AC-13: A resolution failure does **not** surface as `ConfigError` and is
   **not** raised from `load_config` — loading a config whose tool is absent
   succeeds; the error only appears when `resolve_source` is called.
-- [ ] AC-14: `from gatecheck.sources import resolve_source, ResolvedTool,
+- [ ] AC-14: `from hooksmith.sources import resolve_source, ResolvedTool,
   SourceResolutionError` works.
-- [ ] AC-15: `mypy --strict src/gatecheck/sources/` passes with no new errors;
+- [ ] AC-15: `mypy --strict src/hooksmith/sources/` passes with no new errors;
   the `match` over `ParsedSource` narrows the `SystemSource` / `ProjectSource`
   cases cleanly.
 - [ ] AC-16: No new runtime dependencies added (`os`, `shutil`, `pathlib`,
@@ -285,15 +285,15 @@ branch on `.kind`.
 
 ## Notes
 
-- **Resolver location (architect to confirm):** `gatecheck.sources.resolver` is
-  recommended over `gatecheck.env` — see § Where the new code lives. If the
-  architect instead places it in `gatecheck.env`, the `.gitignore` un-ignore
+- **Resolver location (architect to confirm):** `hooksmith.sources.resolver` is
+  recommended over `hooksmith.env` — see § Where the new code lives. If the
+  architect instead places it in `hooksmith.env`, the `.gitignore` un-ignore
   (TSK-008) **must** move into this story, since the resolver could not otherwise
   be committed.
 - **`.gitignore` / env-package bundling (recommendation: SPLIT):** the bare
   `env/` line in `.gitignore` (intended for virtualenvs) also matches
-  `src/gatecheck/env/`, so that package (`manager.py`, `__init__.py`) is silently
-  uncommitted. Because STY-0005's resolver lands in `gatecheck.sources`, this
+  `src/hooksmith/env/`, so that package (`manager.py`, `__init__.py`) is silently
+  uncommitted. Because STY-0005's resolver lands in `hooksmith.sources`, this
   story does **not** need the env package committed, so the un-ignore is kept out
   of STY-0005 and raised as its own chore (TSK-008). Rationale: bundling an
   un-ignore + making the entire Environments scaffold `ruff` / `mypy --strict`
@@ -301,8 +301,8 @@ branch on `.kind`.
   to a feature (Environments) that is not yet being built. Flag: once un-ignored,
   the env package is subject to `ruff` / `mypy --strict`, so the chore must clean
   it (it is not currently gated). Note also that BUILD-0004 already corrected
-  `env/manager.py`'s import from `gatecheck.config.schema` to
-  `gatecheck.config.hook_def` in the working copy — but because the package is
+  `env/manager.py`'s import from `hooksmith.config.schema` to
+  `hooksmith.config.hook_def` in the working copy — but because the package is
   gitignored, that fix is uncommitted and invisible to git; the chore is what
   actually lands it.
 - **Tool name derivation:** `tool` is the first shell token of `HookDef.run`.

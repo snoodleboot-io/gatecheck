@@ -7,7 +7,7 @@ and the locked contract in
 
 Lane B (this file) writes the tests in the RED state — ``ConfigError`` does
 not yet exist and ``load_config`` does not yet wrap raw exceptions. Lane D
-will implement ``gatecheck.config.config_error`` and update the loader to
+will implement ``hooksmith.config.config_error`` and update the loader to
 make these tests green. Per the two-layer test strategy, every test that
 exercises ``load_config`` asserts both the wrapper layer (``ConfigError``
 identity / format) and the underlying raw exception identity via
@@ -25,7 +25,7 @@ from pathlib import Path
 import pydantic
 import pytest
 
-from gatecheck.config import ConfigError, load_config
+from hooksmith.config import ConfigError, load_config
 
 # Allow an optional Windows drive prefix (C:\...) before the path:line:col: form.
 IDE_PREFIX_RE: re.Pattern[str] = re.compile(r"^(?:[A-Za-z]:)?[^:]+:\d+:\d+:\s+")
@@ -136,7 +136,7 @@ def test_config_error_is_value_error_subclass() -> None:
 
 
 def test_public_facade_exports_config_error() -> None:
-    """Given the gatecheck.config public facade,
+    """Given the hooksmith.config public facade,
     When ConfigError and load_config are imported from it,
     Then ConfigError is a class subclassing ValueError and load_config is
     callable, locking the BUILD-0002 §6 public API surface.
@@ -144,8 +144,8 @@ def test_public_facade_exports_config_error() -> None:
     Covers STY-0002 acceptance criterion 5.
     """
     # Arrange / Act
-    from gatecheck.config import ConfigError as ImportedConfigError
-    from gatecheck.config import load_config as imported_load_config
+    from hooksmith.config import ConfigError as ImportedConfigError
+    from hooksmith.config import load_config as imported_load_config
 
     # Assert
     assert isinstance(ImportedConfigError, type)

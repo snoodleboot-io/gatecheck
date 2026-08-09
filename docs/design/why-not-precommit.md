@@ -25,7 +25,7 @@ The consequences ten years later:
 - **Semver ranges are impossible**. `rev: 24.3.0` is a git tag. There is no `rev: ">=24,<25"`.
 - **The "local" hook special-case** exists specifically to paper over this limitation, but local hooks lose most of the isolation guarantees.
 
-gatecheck treats source type as a URI scheme: `pypi:black>=24`, `pypi+internal:my-linter==1.0`, `git:https://github.com/org/repo@v2`, `local:scripts/check.py`, `docker:ghcr.io/org/linter:latest`. All are first-class.
+hooksmith treats source type as a URI scheme: `pypi:black>=24`, `pypi+internal:my-linter==1.0`, `git:https://github.com/org/repo@v2`, `local:scripts/check.py`, `docker:ghcr.io/org/linter:latest`. All are first-class.
 
 ### 2. One venv per hook, always
 
@@ -35,7 +35,7 @@ pre-commit creates an isolated virtualenv for every hook. This is safe but expen
 - If you have 10 hooks, you have 10 venvs sitting in `~/.cache/pre-commit`.
 - Your project's venv (the one with your actual dependencies) is never used — even for `mypy`, which needs your project's types to work correctly.
 
-The `from = "project"` source type in gatecheck solves the mypy problem directly: run the hook inside the existing project venv. No shadow copies, no version drift between what mypy sees and what your project actually uses.
+The `from = "project"` source type in hooksmith solves the mypy problem directly: run the hook inside the existing project venv. No shadow copies, no version drift between what mypy sees and what your project actually uses.
 
 The `from = "shared:group-name"` mode (roadmap) lets hooks that share compatible dependencies pool into a single env — one ruff install for 50 packages in a monorepo.
 
@@ -48,7 +48,7 @@ Workarounds exist:
 - Multiple `.pre-commit-config.yaml` files invoked by a wrapper script — not supported natively
 - Running pre-commit per-package in CI — loses the "one command" UX
 
-gatecheck's workspace model is first-class:
+hooksmith's workspace model is first-class:
 
 ```
 check.toml          ← workspace root (shared hooks, workspace config)
@@ -60,27 +60,27 @@ libs/
   shared/check.toml   ← the dep that everything else depends on
 ```
 
-`gatecheck run --affected --base main` diffs against main, maps changed files to packages, propagates through the dependency graph (if `shared` changed, also run `api` and `frontend`), and runs only what needs running.
+`hooksmith run --affected --base main` diffs against main, maps changed files to packages, propagates through the dependency graph (if `shared` changed, also run `api` and `frontend`), and runs only what needs running.
 
 ### 4. Sequential execution by default
 
 pre-commit runs hooks one at a time in list order. If `ruff` takes 2s, `mypy` takes 8s, and `black` takes 1s — you wait 11 seconds sequentially even though none of them depend on each other.
 
-gatecheck builds a DAG from `depends-on` declarations and executes independent hooks in parallel using rayon's thread pool. The three hooks above run in ~8s (mypy dominates, ruff and black run alongside it).
+hooksmith builds a DAG from `depends-on` declarations and executes independent hooks in parallel using rayon's thread pool. The three hooks above run in ~8s (mypy dominates, ruff and black run alongside it).
 
 ### 5. Opaque cache invalidation
 
 When does pre-commit rebuild a hook's environment? The answer involves inspecting the source in `~/.cache/pre-commit`, understanding its internal hash format, and hoping the invalidation logic matches your mental model.
 
-`gatecheck cache why black` tells you exactly:
+`hooksmith cache why black` tells you exactly:
 
 ```
-$ gatecheck cache why black
+$ hooksmith cache why black
 Source changed: was 'pypi:black==23.9.1', now 'pypi:black==24.3.0'.
-Env at ~/.cache/gatecheck/envs/pypi_a3f8b2c1d4e5f6a7 will be rebuilt.
+Env at ~/.cache/hooksmith/envs/pypi_a3f8b2c1d4e5f6a7 will be rebuilt.
 ```
 
-`gatecheck cache why <hook>` explains any hook's cache key and hit/miss status (`--json` for machine consumption). `gatecheck cache clear` removes cached environments, reporting how many and how much space was freed — `--dry-run` previews, `--all` also drops the bootstrapped `uv`.
+`hooksmith cache why <hook>` explains any hook's cache key and hit/miss status (`--json` for machine consumption). `hooksmith cache clear` removes cached environments, reporting how many and how much space was freed — `--dry-run` previews, `--all` also drops the bootstrapped `uv`.
 
 ### 6. Config verbosity
 
@@ -95,23 +95,23 @@ repos:
 ```
 
 ```toml
-# gatecheck: 3 lines for the same hook
+# hooksmith: 3 lines for the same hook
 [[hook]]
 id   = "black"
 from = "pypi:black==24.3.0"
 ```
 
-The `repos:` / `hooks:` nesting in pre-commit exists because the data model is "a collection of repositories, each of which contains hooks." gatecheck's data model is "a flat list of hooks, each of which declares its source." The nesting reflects the implementation, not the intent.
+The `repos:` / `hooks:` nesting in pre-commit exists because the data model is "a collection of repositories, each of which contains hooks." hooksmith's data model is "a flat list of hooks, each of which declares its source." The nesting reflects the implementation, not the intent.
 
 ## What pre-commit does well
 
-To be clear: pre-commit's approach to git hook installation, its hook repository ecosystem, and its `--all-files` / staged-file semantics are all good and worth preserving. gatecheck keeps all of these:
+To be clear: pre-commit's approach to git hook installation, its hook repository ecosystem, and its `--all-files` / staged-file semantics are all good and worth preserving. hooksmith keeps all of these:
 
-- `gatecheck install` installs git hooks the same way
+- `hooksmith install` installs git hooks the same way
 - Hooks run on staged files by default, `--all-files` for CI
-- `gatecheck migrate` converts your existing `.pre-commit-config.yaml`
+- `hooksmith migrate` converts your existing `.pre-commit-config.yaml`
 
-The migration path is intentional. Switching to gatecheck shouldn't require rewriting your entire hook setup from scratch.
+The migration path is intentional. Switching to hooksmith shouldn't require rewriting your entire hook setup from scratch.
 
 ## The Rust question
 
@@ -119,4 +119,4 @@ See [Rust Core](rust-core.md) for the full treatment. The short version: the run
 
 1. The startup time matters — a 300ms no-op on every commit is noticeable
 2. The parallel executor is where Rust's ownership model prevents races without a GIL
-3. Distributing as a compiled maturin wheel means users never see the Rust — they just `pip install gatecheck` and get a fast binary
+3. Distributing as a compiled maturin wheel means users never see the Rust — they just `pip install hooksmith` and get a fast binary

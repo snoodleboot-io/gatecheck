@@ -23,14 +23,14 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config import ConfigError, load_config
-from gatecheck.sources import (
+from hooksmith.config import ConfigError, load_config
+from hooksmith.sources import (
     ProjectSource,
     SourceResolutionError,
     SystemSource,
     resolve_source,
 )
-from gatecheck.venv import bin_dir_name
+from hooksmith.venv import bin_dir_name
 
 
 def _make_executable(path: Path) -> Path:

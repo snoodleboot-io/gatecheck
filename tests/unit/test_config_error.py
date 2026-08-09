@@ -29,15 +29,15 @@ import pydantic
 import pytest
 import tomlkit
 
-from gatecheck.config import ConfigError
-from gatecheck.config._error_translator import (
+from hooksmith.config import ConfigError
+from hooksmith.config._error_translator import (
     _locate_validation_errors,
     _parse_toml_error,
     _safe_as_string,
     _walk_doc,
 )
-from gatecheck.config.config_error import ConfigError as ConfigErrorDirect
-from gatecheck.config.gatecheck_config import GatecheckConfig
+from hooksmith.config.config_error import ConfigError as ConfigErrorDirect
+from hooksmith.config.hooksmith_config import HooksmithConfig
 
 # ──────────────────────────────────────────────────────────────────────────
 # ConfigError shape (BUILD-0002-ARCH §2)
@@ -203,9 +203,9 @@ def test_parse_toml_error_real_tomllib_end_of_document() -> None:
 
 def _validation_error_for(data: dict[str, object]) -> pydantic.ValidationError:
     """Helper: trigger a ValidationError by validating ``data`` against
-    GatecheckConfig and return the captured exception."""
+    HooksmithConfig and return the captured exception."""
     try:
-        GatecheckConfig.model_validate(data)
+        HooksmithConfig.model_validate(data)
     except pydantic.ValidationError as e:
         return e
     raise AssertionError("Expected ValidationError, none was raised")

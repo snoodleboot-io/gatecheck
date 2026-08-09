@@ -1,85 +1,85 @@
 /* ============================================================
-   gatecheck — custom MkDocs Material theme
+   hooksmith — custom MkDocs Material theme
    Color palette: rust orange/brown/red · black · white
    ============================================================ */
 
 /* ── Color tokens ─────────────────────────────────────────── */
 :root {
-  --gc-rust-50:  #fdf2ee;
-  --gc-rust-100: #fbe0d6;
-  --gc-rust-200: #f6bba6;
-  --gc-rust-300: #ee8f6d;
-  --gc-rust-400: #e05e32;  /* main brand accent */
-  --gc-rust-500: #c74a20;
-  --gc-rust-600: #a63a18;
-  --gc-rust-700: #852e13;
-  --gc-rust-800: #5c1f0c;
-  --gc-rust-900: #3a1207;
+  --hs-rust-50:  #fdf2ee;
+  --hs-rust-100: #fbe0d6;
+  --hs-rust-200: #f6bba6;
+  --hs-rust-300: #ee8f6d;
+  --hs-rust-400: #e05e32;  /* main brand accent */
+  --hs-rust-500: #c74a20;
+  --hs-rust-600: #a63a18;
+  --hs-rust-700: #852e13;
+  --hs-rust-800: #5c1f0c;
+  --hs-rust-900: #3a1207;
 
-  --gc-black:    #0e0e0e;
-  --gc-near-black: #1a1a1a;
-  --gc-charcoal: #2a2a2a;
-  --gc-mid:      #444444;
-  --gc-muted:    #888888;
-  --gc-light:    #d8d8d8;
-  --gc-near-white: #f5f5f5;
-  --gc-white:    #ffffff;
+  --hs-black:    #0e0e0e;
+  --hs-near-black: #1a1a1a;
+  --hs-charcoal: #2a2a2a;
+  --hs-mid:      #444444;
+  --hs-muted:    #888888;
+  --hs-light:    #d8d8d8;
+  --hs-near-white: #f5f5f5;
+  --hs-white:    #ffffff;
 }
 
 /* ── Light scheme ─────────────────────────────────────────── */
-[data-md-color-scheme="gatecheck-light"] {
-  --md-primary-fg-color:        var(--gc-rust-400);
-  --md-primary-fg-color--light: var(--gc-rust-300);
-  --md-primary-fg-color--dark:  var(--gc-rust-600);
-  --md-primary-bg-color:        var(--gc-white);
+[data-md-color-scheme="hooksmith-light"] {
+  --md-primary-fg-color:        var(--hs-rust-400);
+  --md-primary-fg-color--light: var(--hs-rust-300);
+  --md-primary-fg-color--dark:  var(--hs-rust-600);
+  --md-primary-bg-color:        var(--hs-white);
 
-  --md-accent-fg-color:         var(--gc-rust-500);
-  --md-accent-fg-color--transparent: color-mix(in srgb, var(--gc-rust-400) 10%, transparent);
+  --md-accent-fg-color:         var(--hs-rust-500);
+  --md-accent-fg-color--transparent: color-mix(in srgb, var(--hs-rust-400) 10%, transparent);
 
-  --md-default-fg-color:          var(--gc-near-black);
-  --md-default-fg-color--light:   var(--gc-mid);
-  --md-default-fg-color--lighter: var(--gc-muted);
-  --md-default-bg-color:          var(--gc-white);
-  --md-default-bg-color--light:   var(--gc-near-white);
+  --md-default-fg-color:          var(--hs-near-black);
+  --md-default-fg-color--light:   var(--hs-mid);
+  --md-default-fg-color--lighter: var(--hs-muted);
+  --md-default-bg-color:          var(--hs-white);
+  --md-default-bg-color--light:   var(--hs-near-white);
   --md-default-bg-color--lighter: #f0f0f0;
-  --md-default-bg-color--lightest: var(--gc-near-white);
+  --md-default-bg-color--lightest: var(--hs-near-white);
 
-  --md-code-fg-color:             var(--gc-near-black);
+  --md-code-fg-color:             var(--hs-near-black);
   --md-code-bg-color:             #f6f3f1;
-  --md-code-hl-color:             color-mix(in srgb, var(--gc-rust-400) 15%, transparent);
+  --md-code-hl-color:             color-mix(in srgb, var(--hs-rust-400) 15%, transparent);
 
-  --md-typeset-a-color:           var(--gc-rust-500);
+  --md-typeset-a-color:           var(--hs-rust-500);
 
-  --md-footer-fg-color:           var(--gc-near-white);
-  --md-footer-bg-color:           var(--gc-near-black);
-  --md-footer-bg-color--dark:     var(--gc-black);
+  --md-footer-fg-color:           var(--hs-near-white);
+  --md-footer-bg-color:           var(--hs-near-black);
+  --md-footer-bg-color--dark:     var(--hs-black);
 }
 
 /* ── Dark scheme ──────────────────────────────────────────── */
-[data-md-color-scheme="gatecheck-dark"] {
-  --md-primary-fg-color:        var(--gc-rust-400);
-  --md-primary-fg-color--light: var(--gc-rust-300);
-  --md-primary-fg-color--dark:  var(--gc-rust-600);
-  --md-primary-bg-color:        var(--gc-near-black);
+[data-md-color-scheme="hooksmith-dark"] {
+  --md-primary-fg-color:        var(--hs-rust-400);
+  --md-primary-fg-color--light: var(--hs-rust-300);
+  --md-primary-fg-color--dark:  var(--hs-rust-600);
+  --md-primary-bg-color:        var(--hs-near-black);
 
-  --md-accent-fg-color:         var(--gc-rust-300);
+  --md-accent-fg-color:         var(--hs-rust-300);
 
   --md-default-fg-color:          #e8e8e8;
-  --md-default-fg-color--light:   var(--gc-light);
-  --md-default-fg-color--lighter: var(--gc-muted);
-  --md-default-bg-color:          var(--gc-near-black);
-  --md-default-bg-color--light:   var(--gc-charcoal);
-  --md-default-bg-color--lighter: var(--gc-mid);
+  --md-default-fg-color--light:   var(--hs-light);
+  --md-default-fg-color--lighter: var(--hs-muted);
+  --md-default-bg-color:          var(--hs-near-black);
+  --md-default-bg-color--light:   var(--hs-charcoal);
+  --md-default-bg-color--lighter: var(--hs-mid);
   --md-default-bg-color--lightest: #333333;
 
   --md-code-fg-color:             #e8ddd8;
   --md-code-bg-color:             #1f1a18;
-  --md-code-hl-color:             color-mix(in srgb, var(--gc-rust-400) 20%, transparent);
+  --md-code-hl-color:             color-mix(in srgb, var(--hs-rust-400) 20%, transparent);
 
-  --md-typeset-a-color:           var(--gc-rust-300);
+  --md-typeset-a-color:           var(--hs-rust-300);
 
-  --md-footer-fg-color:           var(--gc-light);
-  --md-footer-bg-color:           var(--gc-black);
+  --md-footer-fg-color:           var(--hs-light);
+  --md-footer-bg-color:           var(--hs-black);
   --md-footer-bg-color--dark:     #050505;
 }
 
@@ -92,24 +92,24 @@
 .md-typeset h1 {
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--gc-rust-500);
+  color: var(--hs-rust-500);
 }
 
-[data-md-color-scheme="gatecheck-dark"] .md-typeset h1 {
-  color: var(--gc-rust-300);
+[data-md-color-scheme="hooksmith-dark"] .md-typeset h1 {
+  color: var(--hs-rust-300);
 }
 
 .md-typeset h2 {
   font-weight: 700;
   letter-spacing: -0.02em;
-  border-bottom: 2px solid var(--gc-rust-400);
+  border-bottom: 2px solid var(--hs-rust-400);
   padding-bottom: 0.3em;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
 .md-header {
-  background: var(--gc-black);
-  box-shadow: 0 1px 0 var(--gc-rust-700);
+  background: var(--hs-black);
+  box-shadow: 0 1px 0 var(--hs-rust-700);
 }
 
 .md-header__title {
@@ -124,27 +124,27 @@
 
 /* ── Navigation ───────────────────────────────────────────── */
 .md-nav__link--active {
-  color: var(--gc-rust-400) !important;
+  color: var(--hs-rust-400) !important;
   font-weight: 600;
 }
 
 .md-nav__link:hover {
-  color: var(--gc-rust-400);
+  color: var(--hs-rust-400);
 }
 
 /* ── Tabs ─────────────────────────────────────────────────── */
 .md-tabs {
-  background: var(--gc-near-black);
+  background: var(--hs-near-black);
 }
 
 .md-tabs__link--active {
-  color: var(--gc-rust-300) !important;
-  border-bottom: 2px solid var(--gc-rust-400);
+  color: var(--hs-rust-300) !important;
+  border-bottom: 2px solid var(--hs-rust-400);
 }
 
 /* ── Code blocks ──────────────────────────────────────────── */
 .md-typeset pre > code {
-  border-left: 3px solid var(--gc-rust-600);
+  border-left: 3px solid var(--hs-rust-600);
 }
 
 .md-typeset code {
@@ -162,20 +162,20 @@
 
 .md-typeset .admonition.note,
 .md-typeset details.note {
-  border-left-color: var(--gc-rust-400);
+  border-left-color: var(--hs-rust-400);
 }
 
 .md-typeset .admonition.warning,
 .md-typeset details.warning {
-  border-left-color: var(--gc-rust-600);
+  border-left-color: var(--hs-rust-600);
 }
 
 /* ── Hero section (home page) ─────────────────────────────── */
 .gc-hero {
   padding: 4rem 2rem 3rem;
   text-align: center;
-  background: var(--gc-black);
-  color: var(--gc-white);
+  background: var(--hs-black);
+  color: var(--hs-white);
   position: relative;
   overflow: hidden;
 }
@@ -185,7 +185,7 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in srgb, var(--gc-rust-600) 25%, transparent), transparent 70%);
+    radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in srgb, var(--hs-rust-600) 25%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -198,12 +198,12 @@
 }
 
 .gc-hero__title span {
-  color: var(--gc-rust-400);
+  color: var(--hs-rust-400);
 }
 
 .gc-hero__tagline {
   font-size: clamp(1rem, 2.5vw, 1.3rem);
-  color: var(--gc-light);
+  color: var(--hs-light);
   max-width: 52ch;
   margin: 0 auto 2.5rem;
   line-height: 1.5;
@@ -240,20 +240,20 @@
 .gc-btn:hover { transform: translateY(-1px); opacity: 0.9; }
 
 .gc-btn--primary {
-  background: var(--gc-rust-400);
-  color: var(--gc-white);
+  background: var(--hs-rust-400);
+  color: var(--hs-white);
 }
 
 .gc-btn--secondary {
   background: transparent;
-  color: var(--gc-white);
+  color: var(--hs-white);
   border: 1.5px solid rgba(255,255,255,0.3);
 }
 
 /* ── Install strip ────────────────────────────────────────── */
 .gc-install {
-  background: var(--gc-near-black);
-  border: 1px solid var(--gc-charcoal);
+  background: var(--hs-near-black);
+  border: 1px solid var(--hs-charcoal);
   border-radius: 8px;
   padding: 1rem 1.5rem;
   display: inline-flex;
@@ -261,12 +261,12 @@
   gap: 1rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.9rem;
-  color: var(--gc-rust-300);
+  color: var(--hs-rust-300);
   max-width: 100%;
   margin: 0 auto;
 }
 
-.gc-install__prefix { color: var(--gc-muted); }
+.gc-install__prefix { color: var(--hs-muted); }
 
 /* ── Feature grid ─────────────────────────────────────────── */
 .gc-features {
@@ -278,14 +278,14 @@
 
 .gc-feature {
   background: var(--md-default-bg-color--light);
-  border: 1px solid color-mix(in srgb, var(--gc-rust-400) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hs-rust-400) 20%, transparent);
   border-radius: 10px;
   padding: 1.5rem;
   transition: border-color 0.2s, transform 0.2s;
 }
 
 .gc-feature:hover {
-  border-color: var(--gc-rust-400);
+  border-color: var(--hs-rust-400);
   transform: translateY(-2px);
 }
 
@@ -316,8 +316,8 @@
 }
 
 .gc-compare th {
-  background: var(--gc-near-black);
-  color: var(--gc-white);
+  background: var(--hs-near-black);
+  color: var(--hs-white);
   padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
@@ -336,23 +336,23 @@
 
 .gc-check   { color: #3aad6a; font-size: 1.1em; }
 .gc-cross   { color: #cc3333; font-size: 1.1em; }
-.gc-partial { color: var(--gc-rust-400); font-size: 1.1em; }
+.gc-partial { color: var(--hs-rust-400); font-size: 1.1em; }
 
 /* ── Footer ───────────────────────────────────────────────── */
 .md-footer {
-  border-top: 1px solid var(--gc-rust-700);
+  border-top: 1px solid var(--hs-rust-700);
 }
 
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gc-rust-600); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--gc-rust-400); }
+::-webkit-scrollbar-thumb { background: var(--hs-rust-600); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--hs-rust-400); }
 
 /* ── Version badge ────────────────────────────────────────── */
 .gc-version {
   display: inline-block;
-  background: var(--gc-rust-400);
+  background: var(--hs-rust-400);
   color: white;
   font-size: 0.7rem;
   font-weight: 700;

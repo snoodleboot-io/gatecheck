@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.runner import run_hook
+from hooksmith.config.hook_def import HookDef
+from hooksmith.runner import run_hook
 
 pytestmark = pytest.mark.integration
 

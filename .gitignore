@@ -13,7 +13,7 @@ pip-wheel-metadata/
 # Virtual environments
 .venv/
 venv/
-# Root-level virtualenv only; anchored so it does NOT match src/gatecheck/env/
+# Root-level virtualenv only; anchored so it does NOT match src/hooksmith/env/
 /env/
 .python-version
 
@@ -31,8 +31,8 @@ htmlcov/
 *.pyd
 
 # ── Rust ──────────────────────────────────────────────────────
-gatecheck-rs/target/
-# Cargo.lock is kept — gatecheck-core ships as a binary wheel and we want
+hooksmith-rs/target/
+# Cargo.lock is kept — hooksmith-core ships as a binary wheel and we want
 # reproducible release builds.
 
 # ── Docs ──────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.SubprocessProcessRunner (STY-0013 / GAT-15).
+"""Unit tests for hooksmith.runner.SubprocessProcessRunner (STY-0013 / GAT-15).
 
 Hermetic — ``subprocess.run`` is patched at the module boundary; no real process.
 Asserts argv/env/cwd are forwarded and stdout+stderr are combined. AAA.
@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from gatecheck.runner import SubprocessProcessRunner
-from gatecheck.runner import process_runner as process_runner_module
+from hooksmith.runner import SubprocessProcessRunner
+from hooksmith.runner import process_runner as process_runner_module
 
 
 def test_forwards_argv_env_cwd_and_combines_output(monkeypatch: pytest.MonkeyPatch) -> None:

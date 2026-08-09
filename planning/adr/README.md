@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This directory contains the ADRs for `gatecheck`. Each ADR captures one decision: the context that forced it, the choice made, and what changed because of it.
+This directory contains the ADRs for `hooksmith`. Each ADR captures one decision: the context that forced it, the choice made, and what changed because of it.
 
 ## Format
 

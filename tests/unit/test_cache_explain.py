@@ -17,11 +17,11 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import CacheExplanation, EnvManager
-from gatecheck.env.env_cache import venv_slot
-from gatecheck.registry import ProjectFile, ProjectPage
-from gatecheck.venv import bin_dir_name
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import CacheExplanation, EnvManager
+from hooksmith.env.env_cache import venv_slot
+from hooksmith.registry import ProjectFile, ProjectPage
+from hooksmith.venv import bin_dir_name
 
 DEFAULT_INDEX = "https://pypi.org/simple"
 

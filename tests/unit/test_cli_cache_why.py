@@ -1,4 +1,4 @@
-"""Unit tests for `gatecheck cache why` (STY-0009 / GAT-11).
+"""Unit tests for `hooksmith cache why` (STY-0009 / GAT-11).
 
 Hermetic via click's ``CliRunner`` in an isolated filesystem: a ``project`` hook
 resolves against a fake ``.venv/bin/<tool>`` in the temp cwd (no PATH / network
@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
-from gatecheck.venv import bin_dir_name
+from hooksmith.cli.main import main
+from hooksmith.venv import bin_dir_name
 
 _CONFIG = """
 [[hook]]

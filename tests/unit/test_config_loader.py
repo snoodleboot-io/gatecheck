@@ -1,11 +1,11 @@
-"""Unit tests for gatecheck.config.loader.load_config.
+"""Unit tests for hooksmith.config.loader.load_config.
 
 Implements STY-0001 / TSK-002 / TSK-004 test obligations.
 
 Contract under test is locked by
 `planning/build-plans/0001-architecture-sketch.md`:
 
-- Section 4: `load_config(path: Path) -> GatecheckConfig`, synchronous,
+- Section 4: `load_config(path: Path) -> HooksmithConfig`, synchronous,
   side-effect-free beyond opening `path` in binary mode.
 - Section 5: errors propagate unwrapped (`FileNotFoundError`,
   `tomllib.TOMLDecodeError`, `pydantic.ValidationError`). No custom
@@ -31,14 +31,14 @@ from pathlib import Path
 import pydantic
 import pytest
 
-from gatecheck.config import ConfigError, GatecheckConfig, load_config
+from hooksmith.config import ConfigError, HooksmithConfig, load_config
 
 # ---------------------------------------------------------------------------
 # Happy path
 # ---------------------------------------------------------------------------
 
 
-def test_load_config_returns_gatecheck_config(sample_check_toml: Path) -> None:
+def test_load_config_returns_hooksmith_config(sample_check_toml: Path) -> None:
     # Arrange
     fixture_path = sample_check_toml
 
@@ -46,7 +46,7 @@ def test_load_config_returns_gatecheck_config(sample_check_toml: Path) -> None:
     cfg = load_config(fixture_path)
 
     # Assert
-    assert isinstance(cfg, GatecheckConfig)
+    assert isinstance(cfg, HooksmithConfig)
 
 
 def test_load_repo_check_toml() -> None:
@@ -86,7 +86,7 @@ def test_load_config_idempotent(sample_check_toml: Path) -> None:
 def test_load_config_matches_raw_tomllib(sample_check_toml: Path) -> None:
     # Arrange
     raw_dict = tomllib.loads(sample_check_toml.read_text())
-    expected = GatecheckConfig.model_validate(raw_dict).model_dump()
+    expected = HooksmithConfig.model_validate(raw_dict).model_dump()
 
     # Act
     actual = load_config(sample_check_toml).model_dump()
@@ -258,9 +258,9 @@ def test_load_config_rejects_str_path(sample_check_toml: Path) -> None:
 
 
 def test_load_dump_reload_round_trips(sample_check_toml: Path, tmp_path: Path) -> None:
-    """Round-trip smoke: load → dump → reload yields equal GatecheckConfig."""
+    """Round-trip smoke: load → dump → reload yields equal HooksmithConfig."""
     # Arrange
-    from gatecheck.config import dump_config
+    from hooksmith.config import dump_config
 
     cfg1 = load_config(sample_check_toml)
     out = tmp_path / "check.toml"
@@ -273,17 +273,17 @@ def test_load_dump_reload_round_trips(sample_check_toml: Path, tmp_path: Path) -
     assert cfg1 == cfg2
 
 
-# ── pyproject.toml [tool.gatecheck] (GAT-48) ──────────────────────
+# ── pyproject.toml [tool.hooksmith] (GAT-48) ──────────────────────
 
 
-def test_loads_from_pyproject_tool_gatecheck(tmp_path: Path) -> None:
-    """A pyproject.toml is loaded from its [tool.gatecheck] table, ignoring the rest."""
+def test_loads_from_pyproject_tool_hooksmith(tmp_path: Path) -> None:
+    """A pyproject.toml is loaded from its [tool.hooksmith] table, ignoring the rest."""
     # Arrange
     path = tmp_path / "pyproject.toml"
     path.write_text(
         '[build-system]\nrequires = ["hatchling"]\n\n'
-        "[tool.gatecheck]\n"
-        "[[tool.gatecheck.hook]]\n"
+        "[tool.hooksmith]\n"
+        "[[tool.hooksmith.hook]]\n"
         'id = "ruff"\nfrom = "system"\nrun = "ruff check"\n',
         encoding="utf-8",
     )
@@ -293,25 +293,25 @@ def test_loads_from_pyproject_tool_gatecheck(tmp_path: Path) -> None:
     assert [h.id for h in cfg.hook] == ["ruff"]
 
 
-def test_pyproject_without_tool_gatecheck_is_a_clear_error(tmp_path: Path) -> None:
-    # Arrange — a pyproject.toml with no [tool.gatecheck]
+def test_pyproject_without_tool_hooksmith_is_a_clear_error(tmp_path: Path) -> None:
+    # Arrange — a pyproject.toml with no [tool.hooksmith]
     path = tmp_path / "pyproject.toml"
     path.write_text('[tool.poetry]\nname = "x"\n', encoding="utf-8")
     # Act / Assert
     with pytest.raises(ConfigError) as exc_info:
         load_config(path)
-    assert "no [tool.gatecheck] table" in str(exc_info.value)
+    assert "no [tool.hooksmith] table" in str(exc_info.value)
 
 
 def test_pyproject_validation_error_maps_into_the_subtable(tmp_path: Path) -> None:
-    """A schema error's line/col must point inside [tool.gatecheck], not at line 1."""
+    """A schema error's line/col must point inside [tool.hooksmith], not at line 1."""
     # Arrange — an unknown key on the hook at line 6
     path = tmp_path / "pyproject.toml"
     path.write_text(
         "[tool.poetry]\n"  # 1
         'name = "x"\n'  # 2
         "\n"  # 3
-        "[[tool.gatecheck.hook]]\n"  # 4
+        "[[tool.hooksmith.hook]]\n"  # 4
         'id = "a"\n'  # 5
         'from = "system"\n'  # 6
         'run = "echo"\n'  # 7
@@ -331,7 +331,7 @@ def test_pyproject_source_spec_error_maps_into_the_subtable(tmp_path: Path) -> N
     # Arrange — a malformed `from` at line 3
     path = tmp_path / "pyproject.toml"
     path.write_text(
-        "[[tool.gatecheck.hook]]\n"  # 1
+        "[[tool.hooksmith.hook]]\n"  # 1
         'id = "a"\n'  # 2
         'from = "pypi:"\n'  # 3  <- empty requirement
         'run = "echo"\n',  # 4

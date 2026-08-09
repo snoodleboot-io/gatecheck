@@ -1,9 +1,9 @@
-# `gatecheck migrate`
+# `hooksmith migrate`
 
 Convert a `.pre-commit-config.yaml` into a `check.toml`.
 
 ```console
-$ gatecheck migrate [OPTIONS]
+$ hooksmith migrate [OPTIONS]
 ```
 
 | Option | Default | Description |
@@ -12,8 +12,8 @@ $ gatecheck migrate [OPTIONS]
 | `--output FILE` | `check.toml` | Where to write the converted config. |
 
 ```console
-$ gatecheck migrate
-warning: hook 'prettier': maps to system tool 'prettier' — ensure it is installed on PATH (gatecheck does not manage npm/system tools)
+$ hooksmith migrate
+warning: hook 'prettier': maps to system tool 'prettier' — ensure it is installed on PATH (hooksmith does not manage npm/system tools)
 warning: hook 'custom': best-effort mapping for unknown repo 'https://github.com/acme/custom-linter' (from = 'pypi:custom-linter')
 Wrote check.toml
 ```
@@ -24,7 +24,7 @@ until you're satisfied, then delete the old one.
 ## The contract: nothing is silently dropped
 
 Every hook in the input produces a hook in the output. Where the translation is
-uncertain, gatecheck still emits the hook and prints a **warning** saying what it
+uncertain, hooksmith still emits the hook and prints a **warning** saying what it
 guessed. Read the warnings, fix what matters, delete what doesn't.
 
 That's the whole design: a migration you have to review is honest; one that silently
@@ -57,7 +57,7 @@ needs.
 
 **`pass_filenames: false`** becomes `pass-files = false`.
 
-**`files`** is a *regex* in pre-commit and a *glob* in gatecheck. The common
+**`files`** is a *regex* in pre-commit and a *glob* in hooksmith. The common
 single-extension form translates cleanly:
 
 | pre-commit | check.toml |
@@ -86,15 +86,15 @@ read but not translated.
 Write somewhere else and diff:
 
 ```bash
-gatecheck migrate --output check.toml.new
+hooksmith migrate --output check.toml.new
 diff check.toml check.toml.new
 ```
 
 Then check the result actually works before deleting anything:
 
 ```bash
-gatecheck sync                 # do the environments build?
-gatecheck run --all-files      # does everything still pass?
+hooksmith sync                 # do the environments build?
+hooksmith run --all-files      # does everything still pass?
 ```
 
 Only then:
@@ -102,7 +102,7 @@ Only then:
 ```bash
 pre-commit uninstall
 rm .pre-commit-config.yaml
-gatecheck install
+hooksmith install
 ```
 
 ## See also

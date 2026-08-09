@@ -12,18 +12,18 @@ superseded-by: none
 
 ## Context
 
-`gatecheck` has two distinct kinds of workload:
+`hooksmith` has two distinct kinds of workload:
 
 1. **Config, CLI, and environment management.** TOML parsing, package resolution against PyPI / private registries, uv-backed venv creation, monorepo discovery. These benefit from a rich ecosystem (`pydantic`, `click`, `uv`, the Python packaging stack) and don't sit on the hot path.
 2. **Hot-path execution.** DAG-based parallel subprocess fan-out, file glob matching, SHA-256 cache key generation, git plumbing. Latency here is the whole point — a hook runner that adds 300 ms before doing anything useful loses the comparison against pre-commit before it starts.
 
 Pure Python gives away the second category. Pure Rust gives away the first (rewriting the Python packaging world in Rust is out of scope for this project).
 
-The user-facing distribution constraint: `pip install gatecheck` must work without requiring a Rust toolchain. Wheels need to be prebuilt.
+The user-facing distribution constraint: `pip install hooksmith` must work without requiring a Rust toolchain. Wheels need to be prebuilt.
 
 ## Decision
 
-`gatecheck` is implemented as a **Python host** (`src/gatecheck/`, click + rich + pydantic) that imports a **Rust core** (`gatecheck-rs/`, PyO3 bindings, packaged as a maturin-built wheel named `gatecheck-core`). The CLI entry point, config parsing, and environment management live in Python. The DAG solver, parallel runner, cache hashing, git integration, and glob engine live in Rust.
+`hooksmith` is implemented as a **Python host** (`src/hooksmith/`, click + rich + pydantic) that imports a **Rust core** (`hooksmith-rs/`, PyO3 bindings, packaged as a maturin-built wheel named `hooksmith-core`). The CLI entry point, config parsing, and environment management live in Python. The DAG solver, parallel runner, cache hashing, git integration, and glob engine live in Rust.
 
 ## Consequences
 

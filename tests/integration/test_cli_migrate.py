@@ -1,4 +1,4 @@
-"""Integration test for `gatecheck migrate` (STY-0020 / GAT-23).
+"""Integration test for `hooksmith migrate` (STY-0020 / GAT-23).
 
 End-to-end via ``CliRunner``: a fixture ``.pre-commit-config.yaml`` is migrated to a
 ``check.toml`` that loads back as a valid config, with warnings surfaced.
@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from gatecheck.cli.main import main
-from gatecheck.config import load_config
+from hooksmith.cli.main import main
+from hooksmith.config import load_config
 
 pytestmark = pytest.mark.integration
 

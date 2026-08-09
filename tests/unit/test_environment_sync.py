@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.env.sync_environments (STY-0021 / GAT-20).
+"""Unit tests for hooksmith.env.sync_environments (STY-0021 / GAT-20).
 
 Hermetic — the EnvManager is a dependency-injected fake returning canned ``explain``
 statuses; no real env resolution. Covers built (miss → resolve), cached (hit → no
@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import CacheExplanation, EnvError, ResolvedEnv, sync_environments
+from hooksmith.config import HooksmithConfig
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import CacheExplanation, EnvError, ResolvedEnv, sync_environments
 
 
 class FakeEnvManager:
@@ -42,9 +42,9 @@ class FakeEnvManager:
         return ResolvedEnv(bin_dir=Path("/c/bin"), cache_key="k")
 
 
-def _config(*ids: str) -> GatecheckConfig:
+def _config(*ids: str) -> HooksmithConfig:
     hooks = [{"id": hid, "from": "system", "run": hid} for hid in ids]
-    return GatecheckConfig.model_validate({"hook": hooks})
+    return HooksmithConfig.model_validate({"hook": hooks})
 
 
 def test_miss_builds_and_reports_built() -> None:

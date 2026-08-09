@@ -1,5 +1,5 @@
-# gatecheck checks gatecheck. This is the project's own config, and the CI
-# `self-host` job runs `gatecheck run full --all-files` against it.
+# hooksmith checks hooksmith. This is the project's own config, and the CI
+# `self-host` job runs `hooksmith run full --all-files` against it.
 #
 # The hooks are CHECK-mode, not auto-fix: a gate's job is to fail on a problem, not
 # to silently rewrite your tree (a run that "passes" but modified files is
@@ -11,7 +11,7 @@
 default-registry = "https://pypi.org/simple"
 
 # ruff is pinned exactly: reproducible, stable cache key, and offline-capable. The
-# same pin is in pyproject.toml's [dev] extra so gatecheck's isolated ruff and the
+# same pin is in pyproject.toml's [dev] extra so hooksmith's isolated ruff and the
 # ruff the direct CI steps use are byte-identical.
 [[hook]]
 id    = "ruff"
@@ -38,13 +38,13 @@ when       = { env-not = "SKIP_MYPY" }
 [[hook]]
 id         = "cargo-fmt-check"
 from       = "system"
-run        = "cargo fmt --manifest-path gatecheck-rs/Cargo.toml -- --check"
+run        = "cargo fmt --manifest-path hooksmith-rs/Cargo.toml -- --check"
 pass-files = false
 
 [[hook]]
 id         = "cargo-clippy"
 from       = "system"
-run        = "cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings"
+run        = "cargo clippy --manifest-path hooksmith-rs/Cargo.toml -- -D warnings"
 pass-files = false
 depends-on = ["cargo-fmt-check"]
 
@@ -58,7 +58,7 @@ from = "pypi:detect-secrets==1.5.0"
 run  = "detect-secrets-hook --baseline .secrets.baseline {files}"
 
 # Conventional-commit gate on the message itself (GAT-51). Runs from the commit-msg
-# hook: git passes the pending message file, which gatecheck forwards as {commit-msg}.
+# hook: git passes the pending message file, which hooksmith forwards as {commit-msg}.
 # `cz check` fails a message that doesn't match the conventional format.
 [[hook]]
 id   = "conventional-commit"
@@ -86,7 +86,7 @@ fail-fast = false
 on-event  = "push"
 
 # Conventional-commit check on the message. Wired to .git/hooks/commit-msg by
-# `gatecheck install`; not part of `full` since it needs the message file, not files.
+# `hooksmith install`; not part of `full` since it needs the message file, not files.
 [group.msg]
 hooks    = ["conventional-commit"]
 on-event = "commit-msg"

@@ -1,24 +1,24 @@
 # check.toml Reference
 
-gatecheck is configured via `check.toml`, or via a `[tool.gatecheck]` table in `pyproject.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
+hooksmith is configured via `check.toml`, or via a `[tool.hooksmith]` table in `pyproject.toml`. In a monorepo, each package can have its own `check.toml` that inherits from the workspace root.
 
 ## Locating the file
 
-When you don't pass `--config`, gatecheck searches **upward** from the current
+When you don't pass `--config`, hooksmith searches **upward** from the current
 directory — like ruff, pre-commit and friends — so it works from any subdirectory of
 your project. At each level it looks for:
 
 1. `check.toml`
-2. `pyproject.toml` containing a `[tool.gatecheck]` table
+2. `pyproject.toml` containing a `[tool.hooksmith]` table
 
 The first match wins, and the search stops at the repository root (the directory
 containing `.git`). Point somewhere explicit with `--config PATH`:
 
 ```bash
-gatecheck run --config config/check.toml
+hooksmith run --config config/check.toml
 ```
 
-If nothing is found, gatecheck says so plainly rather than failing obscurely.
+If nothing is found, hooksmith says so plainly rather than failing obscurely.
 
 ## Top-level sections
 
@@ -100,7 +100,7 @@ when = { env-not = "SKIP_MYPY", branch-not = "release/*" }
 | `env` | string | Run only if this env var is set |
 | `env-not` | string | Skip if this env var is set |
 | `on-ci` | bool | `true` = CI only, `false` = never on CI |
-| `requires-network` | bool | `true` = **skip** (not fail) when the run is offline (`GATECHECK_OFFLINE` / `run --offline`) |
+| `requires-network` | bool | `true` = **skip** (not fail) when the run is offline (`HOOKSMITH_OFFLINE` / `run --offline`) |
 
 All glob patterns are `fnmatch`-style and case-sensitive (as with the `files` /
 `exclude` globs), so `/` is matched like any other character. CI is detected via the
@@ -150,7 +150,7 @@ on-event  = "commit"
 | `max-workers` | int ≥ 1 | 4 | Max hooks in flight at once when `parallel = true` (the concurrency cap) |
 | `on-event` | string | (none) | Git event: `"commit"`, `"push"`, or `"commit-msg"` |
 
-When `on-event` is set and `gatecheck install` is run, this group is automatically wired to the corresponding git hook — `commit` → `.git/hooks/pre-commit`, `push` → `.git/hooks/pre-push`, `commit-msg` → `.git/hooks/commit-msg`. Several groups may target the same event; they are written into that hook in declared order. Any other value is rejected at config load. A `commit-msg` group checks the pending commit message rather than the changeset: its hooks receive the message-file path via the `{commit-msg}` placeholder (see `run` below).
+When `on-event` is set and `hooksmith install` is run, this group is automatically wired to the corresponding git hook — `commit` → `.git/hooks/pre-commit`, `push` → `.git/hooks/pre-push`, `commit-msg` → `.git/hooks/commit-msg`. Several groups may target the same event; they are written into that hook in declared order. Any other value is rejected at config load. A `commit-msg` group checks the pending commit message rather than the changeset: its hooks receive the message-file path via the `{commit-msg}` placeholder (see `run` below).
 
 ---
 
@@ -221,10 +221,10 @@ See [Source Types](sources.md) for detailed documentation on each source type.
 
 ### Parsed source model
 
-For tools that need to classify a hook's `from` spec, `gatecheck.sources.parse_source` turns the raw string into a typed, validated model. It performs **pure parsing only** — no filesystem, network, or subprocess access — and is the entry point the resolver and runner use to `match` on a source's kind without re-parsing the raw string.
+For tools that need to classify a hook's `from` spec, `hooksmith.sources.parse_source` turns the raw string into a typed, validated model. It performs **pure parsing only** — no filesystem, network, or subprocess access — and is the entry point the resolver and runner use to `match` on a source's kind without re-parsing the raw string.
 
 ```python
-from gatecheck.sources import parse_source
+from hooksmith.sources import parse_source
 
 parse_source("pypi:ruff>=0.4,<1")
 # PyPISource(kind='pypi', requirement='ruff>=0.4,<1', registry=None)
@@ -250,7 +250,7 @@ The `requirement` string is carried through **verbatim** — it is not PEP 508 /
 Because `ParsedSource` is a `kind`-discriminated union, callers can branch with structural pattern matching:
 
 ```python
-from gatecheck.sources import (
+from hooksmith.sources import (
     parse_source, PyPISource, ProjectSource, SystemSource, UnsupportedSource,
 )
 
@@ -272,10 +272,10 @@ When the spec came from a loaded `check.toml`, `load_config` catches the `Source
 
 ### Resolving `project` / `system` sources
 
-Where `parse_source` gives a `from` spec *meaning*, `gatecheck.sources.resolve_source` gives the two non-network kinds *location* — it turns a `SystemSource` or `ProjectSource` into a concrete, absolute executable on this machine. It is a **filesystem lookup only**: no network, no venv creation, no subprocess execution. It resolves what already exists; it never builds an environment.
+Where `parse_source` gives a `from` spec *meaning*, `hooksmith.sources.resolve_source` gives the two non-network kinds *location* — it turns a `SystemSource` or `ProjectSource` into a concrete, absolute executable on this machine. It is a **filesystem lookup only**: no network, no venv creation, no subprocess execution. It resolves what already exists; it never builds an environment.
 
 ```python
-from gatecheck.sources import parse_source, resolve_source
+from hooksmith.sources import parse_source, resolve_source
 
 resolve_source(parse_source("system"), "ruff")
 # ResolvedTool(tool='ruff', executable=PosixPath('/usr/bin/ruff'), origin='system')
@@ -339,11 +339,11 @@ Unlike `SourceSpecError` — a *syntax* error in `check.toml`, knowable at load 
 
 ### Resolving `pypi:` / `pypi+alias:` sources
 
-Where `resolve_source` handles the two non-network kinds, `gatecheck.registry.resolve_pypi_source` handles the network kind: it turns a `PyPISource` into a **pinned distribution descriptor** by querying the registry's [PEP 503](https://peps.python.org/pep-0503/) simple index (with [PEP 691](https://peps.python.org/pep-0691/) JSON content negotiation and an HTML fallback). It resolves the requirement to a single exact version against a known index URL; it does **not** create a venv, download an artifact, or install anything — that is the Environments feature's job.
+Where `resolve_source` handles the two non-network kinds, `hooksmith.registry.resolve_pypi_source` handles the network kind: it turns a `PyPISource` into a **pinned distribution descriptor** by querying the registry's [PEP 503](https://peps.python.org/pep-0503/) simple index (with [PEP 691](https://peps.python.org/pep-0691/) JSON content negotiation and an HTML fallback). It resolves the requirement to a single exact version against a known index URL; it does **not** create a venv, download an artifact, or install anything — that is the Environments feature's job.
 
 ```python
-from gatecheck.registry import resolve_pypi_source
-from gatecheck.sources import parse_source
+from hooksmith.registry import resolve_pypi_source
+from hooksmith.sources import parse_source
 
 resolve_pypi_source(parse_source("pypi:ruff>=0.4,<1"), cfg.sources)
 # ResolvedPyPISource(kind='pypi', requirement='ruff>=0.4,<1', name='ruff',
@@ -364,7 +364,7 @@ def resolve_pypi_source(
 | Argument | Default | Description |
 |---|---|---|
 | `source` | required | The `PyPISource` from `parse_source(hook.from_)` — its verbatim `requirement` and optional registry alias (`registry`). |
-| `sources` | required | The parsed `[sources]` table (`GatecheckConfig.sources`, may be `None`). Supplies `default-registry` and `extra-registries`. |
+| `sources` | required | The parsed `[sources]` table (`HooksmithConfig.sources`, may be `None`). Supplies `default-registry` and `extra-registries`. |
 | `client` | `UrllibRegistryClient()` | The injectable network seam (a `RegistryClient` Protocol). Tests pass a fake to stay hermetic; auth/proxy config plugs in here later. |
 | `allow_prereleases` | `False` | Caller override for pre-release selection. The specifier itself can still opt in per PEP 440. |
 
@@ -392,7 +392,7 @@ The **load-bearing contract is `name` + `version` + `index_url`** — enough to 
 
 #### Registry failures are runtime, not config, errors
 
-Every failure raises `gatecheck.registry.RegistryError` (a `ValueError` subclass) with structured `requirement` / `index_url` / `reason` fields and the message form:
+Every failure raises `hooksmith.registry.RegistryError` (a `ValueError` subclass) with structured `requirement` / `index_url` / `reason` fields and the message form:
 
 ```
 cannot resolve '<requirement>' against <index>: <reason>
@@ -412,10 +412,10 @@ Like `SourceResolutionError`, a `RegistryError` is a **runtime/environment** con
 
 ### Environments — resolving a hook to an executable
 
-Where `parse_source` classifies a `from` spec and `resolve_source` locates the two non-network kinds, `gatecheck.env.EnvManager` turns a whole `HookDef` into an **executable environment**. It derives the tool name from the hook's `run`, dispatches on the source kind, and returns a `ResolvedEnv`. This is the **non-venv path**: `project` / `system` reuse an already-existing binary; it performs no network, no subprocess, no venv creation, and no filesystem writes.
+Where `parse_source` classifies a `from` spec and `resolve_source` locates the two non-network kinds, `hooksmith.env.EnvManager` turns a whole `HookDef` into an **executable environment**. It derives the tool name from the hook's `run`, dispatches on the source kind, and returns a `ResolvedEnv`. This is the **non-venv path**: `project` / `system` reuse an already-existing binary; it performs no network, no subprocess, no venv creation, and no filesystem writes.
 
 ```python
-from gatecheck.env import EnvManager, ResolvedEnv
+from hooksmith.env import EnvManager, ResolvedEnv
 
 EnvManager().resolve(hook)  # hook.from_ == "system", hook.run == "ruff check ."
 # ResolvedEnv(bin_dir=PosixPath('/usr/bin'), cache_key='…64 hex chars…')
@@ -455,7 +455,7 @@ The tool to locate is the **first shell token of `run`**: `shlex.split(hook.run)
 
 #### `EnvError` and propagated errors
 
-`EnvManager` raises `gatecheck.env.EnvError` (a `ValueError` subclass) for the env-domain cases above. It carries structured `hook_id` / `reason` fields with the message form:
+`EnvManager` raises `hooksmith.env.EnvError` (a `ValueError` subclass) for the env-domain cases above. It carries structured `hook_id` / `reason` fields with the message form:
 
 ```
 cannot resolve environment for hook '<id>': <reason>
@@ -464,7 +464,7 @@ cannot resolve environment for hook '<id>': <reason>
 | Case | `reason` |
 |---|---|
 | `run` yields no tool name (empty / whitespace-only) or unbalanced quotes | `cannot derive a tool name from run = '<run>'` |
-| `pypi:` — `uv` binary not found on the host | `uv is required to build pypi environments but was not found (set GATECHECK_UV or install uv; auto-bootstrap is STY-0010)` |
+| `pypi:` — `uv` binary not found on the host | `uv is required to build pypi environments but was not found (set HOOKSMITH_UV or install uv; auto-bootstrap is STY-0010)` |
 | `pypi:` — `uv` failed to build the venv (non-zero exit) | `uv failed to build the environment for '<name>==<version>': <detail>` |
 | `pypi:` — built venv lacks the tool named by `run` | `tool '<tool>' is not present in the built environment for '<name>==<version>'` |
 | `local:` / `git:` / `docker:` source | `'<scheme>' sources are not supported` |
@@ -481,26 +481,26 @@ content-addressed virtualenv built by [uv](https://docs.astral.sh/uv/):
 3. On a cache **miss**, `uv venv` + `uv pip install <name>==<version> --index-url <url>` build the venv in a temp directory that is atomically published into the cache slot (a failed build never leaves a partial environment). When the registry supplied a `sha256`, the install uses `--require-hashes`.
 4. `bin_dir` is the cached venv's `bin/` directory.
 
-The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/gatecheck/env-v1/<key>/` (falling back to `~/.cache/gatecheck/env-v1/<key>/`).
+The cache lives under the **user cache directory** — `$XDG_CACHE_HOME/hooksmith/env-v1/<key>/` (falling back to `~/.cache/hooksmith/env-v1/<key>/`).
 
-**`uv` is discovered or auto-bootstrapped.** `uv` is a host binary, **not** a Python dependency in `pyproject.toml`. It is located at run time via the `GATECHECK_UV` override, else `PATH`. If it is not found, gatecheck **auto-bootstraps** a pinned, checksum-verified `uv` into the user cache (`$XDG_CACHE_HOME/gatecheck/bin/uv`) and reuses it thereafter — a one-time network download from the Astral GitHub releases, verified against a hardcoded SHA-256. Auto-bootstrap supports Linux and macOS (x86_64 / aarch64); on other platforms, or when disabled, `EnvManager` raises `EnvError`.
+**`uv` is discovered or auto-bootstrapped.** `uv` is a host binary, **not** a Python dependency in `pyproject.toml`. It is located at run time via the `HOOKSMITH_UV` override, else `PATH`. If it is not found, hooksmith **auto-bootstraps** a pinned, checksum-verified `uv` into the user cache (`$XDG_CACHE_HOME/hooksmith/bin/uv`) and reuses it thereafter — a one-time network download from the Astral GitHub releases, verified against a hardcoded SHA-256. Auto-bootstrap supports Linux and macOS (x86_64 / aarch64); on other platforms, or when disabled, `EnvManager` raises `EnvError`.
 
-Set **`GATECHECK_NO_BOOTSTRAP`** (any non-empty value) to disable auto-bootstrap — useful for air-gapped or CI environments that must provide their own `uv`; a missing `uv` then errors instead of downloading.
+Set **`HOOKSMITH_NO_BOOTSTRAP`** (any non-empty value) to disable auto-bootstrap — useful for air-gapped or CI environments that must provide their own `uv`; a missing `uv` then errors instead of downloading.
 
-Run **`gatecheck sync`** to pre-create (or verify) every hook's environment ahead of time — it reports each hook as `built` (a new uv venv), `cached` (already present), `ready` (a `project` / `system` binary that needs no environment), or `error`, and exits non-zero if any could not be resolved.
+Run **`hooksmith sync`** to pre-create (or verify) every hook's environment ahead of time — it reports each hook as `built` (a new uv venv), `cached` (already present), `ready` (a `project` / `system` binary that needs no environment), or `error`, and exits non-zero if any could not be resolved.
 
 ### Cache — explaining a hook's environment
 
-`gatecheck cache why <hook>` explains, for a single hook in `check.toml`, how its cache key is derived and whether its environment is already cached — **read-only**: it never builds a venv or writes to the cache.
+`hooksmith cache why <hook>` explains, for a single hook in `check.toml`, how its cache key is derived and whether its environment is already cached — **read-only**: it never builds a venv or writes to the cache.
 
 ```console
-$ gatecheck cache why ruff
+$ hooksmith cache why ruff
 hook:      ruff
 source:    pypi ruff==0.4.2 @ https://pypi.org/simple  (pypi)
 status:    miss — no cached venv yet — built on the next run
 cache key: 3f9a…(64 hex chars)
   hashed:  sha256('env-v1' + 'pypi' + 'ruff' + '0.4.2' + 'https://pypi.org/simple')
-cache dir: /home/you/.cache/gatecheck/env-v1/3f9a…
+cache dir: /home/you/.cache/hooksmith/env-v1/3f9a…
 ```
 
 - **`status`** is `hit` when the content-addressed venv slot already exists, `miss` when it would be built on the next run, or `not-applicable` for `project` / `system` hooks (which reuse an existing binary and cache no environment).
@@ -508,11 +508,11 @@ cache dir: /home/you/.cache/gatecheck/env-v1/3f9a…
 - For a `pypi:` hook this pins the requirement, which **may query the registry** (network); it never builds the venv.
 - `--json` emits the same fields as a JSON object for tooling. `--config` points at a non-default `check.toml`. An unknown `<hook>` exits non-zero and lists the available hook ids.
 
-> Cache eviction (`gatecheck cache clear`) is not yet implemented.
+> Cache eviction (`hooksmith cache clear`) is not yet implemented.
 
 ### Runner — resolving the changeset
 
-Before running hooks, `gatecheck.runner.resolve_changeset` determines **which files each hook runs against**:
+Before running hooks, `hooksmith.runner.resolve_changeset` determines **which files each hook runs against**:
 
 - The base file set is the **staged** files by default (`git diff --cached`), or **every tracked** file with `--all-files` (`git ls-files`). Deleted files are excluded (you can't lint a file that's gone).
 - Each hook then receives: **no files** when `pass-files = false`; the **whole changeset** when it has no `files` glob; otherwise only the files matching its **`files`** glob. Matching is `fnmatch`-style and case-sensitive, so `files = "*.py"` matches `.py` files at any depth.
@@ -521,7 +521,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 ### Runner — the execution plan
 
-`gatecheck.runner.build_plan` turns the config into a dependency-ordered `ExecutionPlan` (no execution):
+`hooksmith.runner.build_plan` turns the config into a dependency-ordered `ExecutionPlan` (no execution):
 
 - **Selection:** a named `[group.<name>]` (hooks in the group's order) or every hook (declared order) when no group is given.
 - **`when` filter:** hooks excluded by their `when` conditions (`env` / `env-not`, `on-ci`, `branch` / `branch-not` / `branch-matches`, `files-match`) are set aside as **skipped, with a reason**, not dropped silently. The current branch and the changeset are passed in from the git seam; when that context is absent a branch/`files-match` condition is fail-open (the hook runs). CI is detected via the `CI` or `GITHUB_ACTIONS` environment variables.
@@ -530,7 +530,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 ### Runner — executing a hook
 
-`gatecheck.runner.run_hook` runs one hook and returns a `HookResult`:
+`hooksmith.runner.run_hook` runs one hook and returns a `HookResult`:
 
 - **Command:** `run` is tokenized (`shlex`); a standalone **`{files}`** token expands to the hook's files in place, otherwise the files are appended after the command. The files are the ones routed to that hook by the changeset step, so `pass-files = false` simply yields no file arguments. In a `commit-msg` run, a **`{commit-msg}`** token expands to the pending message-file path; outside that mode it is left untouched.
 - **Environment:** the hook's `ResolvedEnv` (from the Environments layer) contributes its `bin/` directory to the front of `PATH`, so the hook's own tool is found first.
@@ -538,7 +538,7 @@ The git query is the only side effect and sits behind an injectable seam, so res
 
 ### Runner — parallel execution engine
 
-`gatecheck.runner.run_plan` executes an `ExecutionPlan` through the native **`gatecheck_core`** (Rust) **dynamic scheduler** (`run_graph`):
+`hooksmith.runner.run_plan` executes an `ExecutionPlan` through the native **`hooksmith_core`** (Rust) **dynamic scheduler** (`run_graph`):
 
 - The plan's running hooks and their in-plan dependency edges are handed to Rust as a graph. A hook starts **the moment all of its dependencies finish** — there is **no wave barrier**, so a freed hook begins while unrelated peers are still running. On uneven graphs (one slow hook in a level) this cuts wall-clock versus the old wave scheduler. Because a hook's environment work and subprocess wait release the GIL, concurrently-scheduled hooks genuinely overlap (rayon).
 - **Fail-fast** (a group setting): the first hook that does not pass stops the scheduling of any **not-yet-started** hook (in-flight hooks finish). A hook downstream of a failure therefore never starts — its dependencies only complete after the failure is recorded. When independent hooks race the failing one, the exact set that started is best-effort (as with any parallel runner), but the returned ordering is always deterministic.
@@ -609,11 +609,11 @@ on-event  = "push"
 
 ## Python API
 
-For tools that need to consume `check.toml` programmatically, `gatecheck.config.load_config` is the entry point. It returns a fully validated `GatecheckConfig` object built from four pydantic models that mirror the documented schema. The function is synchronous and side-effect-free beyond reading the file.
+For tools that need to consume `check.toml` programmatically, `hooksmith.config.load_config` is the entry point. It returns a fully validated `HooksmithConfig` object built from four pydantic models that mirror the documented schema. The function is synchronous and side-effect-free beyond reading the file.
 
 ```python
 from pathlib import Path
-from gatecheck.config import load_config
+from hooksmith.config import load_config
 
 cfg = load_config(Path("check.toml"))
 for hook in cfg.hook:
@@ -622,27 +622,27 @@ for name, group in cfg.group.items():
     print(name, group.hooks, group.parallel)
 ```
 
-The package exposes exactly seven public symbols, all re-exported from `gatecheck.config`:
+The package exposes exactly seven public symbols, all re-exported from `hooksmith.config`:
 
 | Symbol | Kind | Source module |
 |---|---|---|
-| `ConfigError` | exception | `gatecheck.config.config_error` |
-| `GatecheckConfig` | pydantic model | `gatecheck.config.gatecheck_config` |
-| `GroupDef` | pydantic model | `gatecheck.config.group_def` |
-| `HookDef` | pydantic model | `gatecheck.config.hook_def` |
-| `SourceSpec` | pydantic model | `gatecheck.config.source_spec` |
-| `dump_config` | function | `gatecheck.config.dumper` |
-| `load_config` | function | `gatecheck.config.loader` |
+| `ConfigError` | exception | `hooksmith.config.config_error` |
+| `HooksmithConfig` | pydantic model | `hooksmith.config.hooksmith_config` |
+| `GroupDef` | pydantic model | `hooksmith.config.group_def` |
+| `HookDef` | pydantic model | `hooksmith.config.hook_def` |
+| `SourceSpec` | pydantic model | `hooksmith.config.source_spec` |
+| `dump_config` | function | `hooksmith.config.dumper` |
+| `load_config` | function | `hooksmith.config.loader` |
 
 ### `dump_config`
 
 ```python
-from gatecheck.config import dump_config
+from hooksmith.config import dump_config
 
-dump_config(config: GatecheckConfig, path: Path) -> None
+dump_config(config: HooksmithConfig, path: Path) -> None
 ```
 
-Serialize a `GatecheckConfig` back to a valid `check.toml` file at `path`. Complements `load_config` — where `load_config` reads and validates a TOML file into a typed model, `dump_config` writes a typed model back to a TOML file.
+Serialize a `HooksmithConfig` back to a valid `check.toml` file at `path`. Complements `load_config` — where `load_config` reads and validates a TOML file into a typed model, `dump_config` writes a typed model back to a TOML file.
 
 #### Round-trip contract
 
@@ -650,7 +650,7 @@ Serialize a `GatecheckConfig` back to a valid `check.toml` file at `path`. Compl
 
 ```python
 from pathlib import Path
-from gatecheck.config import dump_config, load_config
+from hooksmith.config import dump_config, load_config
 
 original = load_config(Path("check.toml"))
 dump_config(original, Path("check.copy.toml"))
@@ -658,7 +658,7 @@ copy = load_config(Path("check.copy.toml"))
 assert original == copy  # round-trip fidelity
 ```
 
-Any `GatecheckConfig` produced by `load_config` can be passed to `dump_config`, and the resulting file will produce an equal `GatecheckConfig` when loaded again.
+Any `HooksmithConfig` produced by `load_config` can be passed to `dump_config`, and the resulting file will produce an equal `HooksmithConfig` when loaded again.
 
 #### Field omission
 
@@ -692,9 +692,9 @@ TOML key names use hyphens (`pass-files`, `depends-on`, `from`, `on-event`, `fai
 
 ```python
 from pathlib import Path
-from gatecheck.config import GatecheckConfig, HookDef, dump_config
+from hooksmith.config import HooksmithConfig, HookDef, dump_config
 
-cfg = GatecheckConfig(
+cfg = HooksmithConfig(
     hook=[
         HookDef(**{"id": "ruff", "from": "pypi:ruff>=0.4", "run": "ruff check --fix {files}", "files": "*.py"}),
     ]
@@ -718,7 +718,7 @@ Note that `pass-files` is absent because its value (`true`) equals the default.
 
 ### Error handling
 
-`load_config` raises `gatecheck.config.ConfigError` for any config-shape problem — malformed TOML or a schema violation. `ConfigError` subclasses `ValueError`, so existing `except ValueError:` callers continue to work without changes.
+`load_config` raises `hooksmith.config.ConfigError` for any config-shape problem — malformed TOML or a schema violation. `ConfigError` subclasses `ValueError`, so existing `except ValueError:` callers continue to work without changes.
 
 #### `ConfigError` format
 
@@ -734,7 +734,7 @@ check.toml:5:3: Field required (field: hook.0.id)
 
 ```python
 from pathlib import Path
-from gatecheck.config import ConfigError, load_config
+from hooksmith.config import ConfigError, load_config
 
 try:
     cfg = load_config(Path("check.toml"))
@@ -749,7 +749,7 @@ except ConfigError as exc:
 
 ```python
 import pydantic
-from gatecheck.config import ConfigError, load_config
+from hooksmith.config import ConfigError, load_config
 
 try:
     cfg = load_config(Path("check.toml"))
@@ -772,7 +772,7 @@ Errors raised before TOML parsing propagate as their native exception types and 
 TOML keys idiomatically use hyphens, but Python identifiers cannot. Every hyphenated key (`pass-files`, `depends-on`, `on-event`, `fail-fast`, `env-not`, `on-ci`, `default-registry`) maps to an underscored Python attribute (`pass_files`, `depends_on`, `on_event`, etc.). The reserved-word case `from` maps to `from_`. Because each model sets `populate_by_name=True`, both forms work at construction time:
 
 ```python
-from gatecheck.config import HookDef
+from hooksmith.config import HookDef
 
 HookDef(**{"id": "ruff", "from": "pypi:ruff", "run": "ruff check"})
 ```

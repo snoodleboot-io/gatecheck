@@ -1,9 +1,9 @@
-# `gatecheck run`
+# `hooksmith run`
 
 Execute hooks against a changeset and report the result.
 
 ```console
-$ gatecheck run [OPTIONS] [GROUP]
+$ hooksmith run [OPTIONS] [GROUP]
 ```
 
 With no `GROUP`, every hook in `check.toml` runs. With one, only that
@@ -13,12 +13,12 @@ With no `GROUP`, every hook in `check.toml` runs. With one, only that
 
 | Option | Default | Description |
 |---|---|---|
-| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.gatecheck]` `pyproject.toml`. |
+| `--config FILE` | discovered | Path to the config. Default: found by searching upward for `check.toml` or a `[tool.hooksmith]` `pyproject.toml`. |
 | `--all-files` | off | Run against every **tracked** file instead of the staged set. |
 | `--base REF` | — | Run against files changed since `REF`. Mutually exclusive with `--all-files`. |
 | `--affected` | off | Monorepo: run only the hooks of [affected packages](../guides/monorepo.md). |
 | `--commit-msg-file FILE` | — | [Message-check mode](#message-check-mode): check `FILE` (the commit message) instead of a changeset. Mutually exclusive with `--all-files`, `--base`, and `--affected`. |
-| `--offline` | off | Never touch the network; sets `GATECHECK_OFFLINE`. See [Air-gapped](../guides/air-gapped.md). |
+| `--offline` | off | Never touch the network; sets `HOOKSMITH_OFFLINE`. See [Air-gapped](../guides/air-gapped.md). |
 | `--json` | off | Emit the report as JSON instead of the human rendering. |
 
 ## Choosing the changeset
@@ -28,7 +28,7 @@ This is the decision that matters most, and the default is the one you want loca
 === "Staged (default)"
 
     ```bash
-    gatecheck run
+    hooksmith run
     ```
 
     The files in the git index — exactly what a commit would contain. This is what
@@ -37,7 +37,7 @@ This is the decision that matters most, and the default is the one you want loca
 === "Since a ref"
 
     ```bash
-    gatecheck run --base main
+    hooksmith run --base main
     ```
 
     Everything changed relative to `REF`, using **merge-base** semantics
@@ -48,7 +48,7 @@ This is the decision that matters most, and the default is the one you want loca
 === "Everything tracked"
 
     ```bash
-    gatecheck run --all-files
+    hooksmith run --all-files
     ```
 
     Every tracked file. Useful for a one-off sweep after adopting a new hook.
@@ -60,7 +60,7 @@ Deleted files are never included — you can't lint a file that's gone.
 `--commit-msg-file FILE` runs a group against the pending **commit message** rather
 than a changeset. This is what the [`commit-msg`](install.md) git hook uses: git
 writes the message to a temporary file and passes its path, and the installed hook
-forwards it as `gatecheck run <group> --commit-msg-file "$1"`.
+forwards it as `hooksmith run <group> --commit-msg-file "$1"`.
 
 Hooks in the group reference the message file with the **`{commit-msg}`** placeholder,
 which expands to `FILE` in place. There's no changeset, so a hook's `files` glob is
@@ -78,7 +78,7 @@ on-event = "commit-msg"
 ```
 
 ```console
-$ gatecheck run msg --commit-msg-file .git/COMMIT_EDITMSG
+$ hooksmith run msg --commit-msg-file .git/COMMIT_EDITMSG
 FAIL  conventional-commit   (0.28s)
       commit validation failed: message does not match the conventional format
 ```
@@ -89,7 +89,7 @@ those select a file changeset, which message-check mode doesn't use.
 ## Reading the output
 
 ```console
-$ gatecheck run
+$ hooksmith run
 
 ok    ruff             (0.31s)
 FAIL  mypy             (1.44s)
@@ -133,7 +133,7 @@ they don't affect the exit code.
 straight into `jq`. The exit code is unchanged, so it still works as a gate.
 
 ```console
-$ gatecheck run --json | jq '.summary'
+$ hooksmith run --json | jq '.summary'
 {
   "passed": 4,
   "failed": 1,
@@ -177,20 +177,20 @@ and `max-workers`.
 
 ```bash
 # Before committing — check what's staged
-gatecheck run
+hooksmith run
 
 # Just the lint group
-gatecheck run lint
+hooksmith run lint
 
 # CI on a pull request
-gatecheck run --base "$GITHUB_BASE_REF"
+hooksmith run --base "$GITHUB_BASE_REF"
 
 # Monorepo CI — only packages the PR touches, and their dependents
-gatecheck run --affected --base main
+hooksmith run --affected --base main
 
 # Sandboxed runner with a warm cache
-gatecheck run --offline --base main
+hooksmith run --offline --base main
 
 # Feed results to another tool
-gatecheck run --json | jq -r '.results[] | select(.status=="failed") | .hook_id'
+hooksmith run --json | jq -r '.results[] | select(.status=="failed") | .hook_id'
 ```

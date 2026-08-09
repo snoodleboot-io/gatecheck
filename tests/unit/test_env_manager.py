@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.env.EnvManager (STY-0007 / TSK-007).
+"""Unit tests for hooksmith.env.EnvManager (STY-0007 / TSK-007).
 
 Contract under test is LOCKED by
 ``planning/build-plans/0007-architecture-decision.md``:
@@ -32,11 +32,11 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.config.hook_def import HookDef
-from gatecheck.env import EnvError, EnvManager, ResolvedEnv
-from gatecheck.registry import ProjectFile, ProjectPage, RegistryError
-from gatecheck.sources import SourceResolutionError, SourceSpecError
-from gatecheck.venv import bin_dir_name
+from hooksmith.config.hook_def import HookDef
+from hooksmith.env import EnvError, EnvManager, ResolvedEnv
+from hooksmith.registry import ProjectFile, ProjectPage, RegistryError
+from hooksmith.sources import SourceResolutionError, SourceSpecError
+from hooksmith.venv import bin_dir_name
 
 _CACHE_KEY_SCHEME = "env-v1"
 
@@ -255,9 +255,9 @@ def test_pypi_unknown_alias_propagates_registry_error() -> None:
 
 def test_pypi_source_does_not_reach_resolve_source(monkeypatch: pytest.MonkeyPatch) -> None:
     # The pypi branch delegates to resolve_pypi_source, never resolve_source. Spy on
-    # the name resolve_source() imported into gatecheck.env.manager.
+    # the name resolve_source() imported into hooksmith.env.manager.
     # Arrange
-    import gatecheck.env.manager as manager_mod
+    import hooksmith.env.manager as manager_mod
 
     calls: list[object] = []
 
@@ -424,7 +424,7 @@ def test_env_error_caught_as_value_error(tmp_path: Path) -> None:
     # Arrange — fully hermetic: an injected index page (no PyPI query) and an injected
     # uv runner that fails the build (no real uv, no network), so resolve() raises
     # EnvError deterministically.
-    from gatecheck.env.uv_runner import UvNotFound
+    from hooksmith.env.uv_runner import UvNotFound
 
     class _FailingUvRunner:
         def build_venv(self, pinned: object, dest: Path) -> None:
@@ -492,11 +492,11 @@ def test_project_miss_creates_no_venv_directory(tmp_path: Path) -> None:
 
 
 def test_public_import_surface() -> None:
-    # AC-14: EnvManager / ResolvedEnv / EnvError all import from gatecheck.env.
+    # AC-14: EnvManager / ResolvedEnv / EnvError all import from hooksmith.env.
     # Arrange / Act
-    from gatecheck.env import EnvError as _EnvError
-    from gatecheck.env import EnvManager as _EnvManager
-    from gatecheck.env import ResolvedEnv as _ResolvedEnv
+    from hooksmith.env import EnvError as _EnvError
+    from hooksmith.env import EnvManager as _EnvManager
+    from hooksmith.env import ResolvedEnv as _ResolvedEnv
 
     # Assert
     assert isinstance(_EnvManager, type)

@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.workspace.affected_packages (STY-0018 / GAT-24).
+"""Unit tests for hooksmith.workspace.affected_packages (STY-0018 / GAT-24).
 
 Hermetic — real monorepo layouts under ``tmp_path`` (no git; changed files passed
 directly). Covers directly-changed detection, transitive dependent propagation,
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck.workspace import WorkspaceError, affected_packages, discover_workspace, run_affected
+from hooksmith.workspace import WorkspaceError, affected_packages, discover_workspace, run_affected
 
 
 def _write(path: Path, body: str) -> None:
@@ -140,7 +140,7 @@ def test_run_affected_passes_package_python_to_env_manager(
 
     # Spy on the EnvManager the affected runner constructs.
     captured: dict[str, object] = {}
-    import gatecheck.workspace.affected as affected_mod
+    import hooksmith.workspace.affected as affected_mod
 
     real_env_manager = affected_mod.EnvManager
 
@@ -164,7 +164,7 @@ def test_run_affected_python_version_none_when_unset(
     _package(tmp_path, "api")
     workspace = _workspace(tmp_path)
     captured: dict[str, object] = {}
-    import gatecheck.workspace.affected as affected_mod
+    import hooksmith.workspace.affected as affected_mod
 
     real = affected_mod.EnvManager
     monkeypatch.setattr(

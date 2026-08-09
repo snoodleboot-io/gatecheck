@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.build_report / RunReport (STY-0015 / GAT-17).
+"""Unit tests for hooksmith.runner.build_report / RunReport (STY-0015 / GAT-17).
 
 Pure — constructed ``HookResult``s and a plan; no execution. Covers the exit code
 (all-pass → 0, any failure/error → 1), the ``not_run`` computation (fail-fast
@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import json
 
-from gatecheck.config import GatecheckConfig
-from gatecheck.runner import HookResult, build_plan, build_report
+from hooksmith.config import HooksmithConfig
+from hooksmith.runner import HookResult, build_plan, build_report
 
 
-def _config(hooks: list[dict[str, object]]) -> GatecheckConfig:
-    return GatecheckConfig.model_validate({"hook": hooks})
+def _config(hooks: list[dict[str, object]]) -> HooksmithConfig:
+    return HooksmithConfig.model_validate({"hook": hooks})
 
 
 def _hook(
@@ -147,7 +147,7 @@ def test_network_skip_is_surfaced_and_not_a_failure() -> None:
     # Arrange — a requires network but the run is offline → skipped, not failed
     plan = build_plan(
         _config([_hook("net", when={"requires-network": True})]),
-        environ={"GATECHECK_OFFLINE": "1"},
+        environ={"HOOKSMITH_OFFLINE": "1"},
     )
     # Act
     report = build_report(plan, [])

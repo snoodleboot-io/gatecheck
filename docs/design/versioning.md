@@ -1,79 +1,61 @@
 # Versioning & Stability
 
-gatecheck follows [Semantic Versioning 2.0.0](https://semver.org/) with one strict constraint:
+hooksmith follows [Semantic Versioning 2.0.0](https://semver.org/) with one strict constraint:
 
 > **The MAJOR version can only be bumped through CI.**
 
 ## The rule
 
-There are no `VERSION` files. No `__version__ = "..."` strings to keep in sync. No `pyproject.toml` version fields to update before releasing. The version number lives exclusively in git tags; a maintainer computes the next one with `scripts/compute_version.py` and pushes the tag, and the build derives the package version from it.
-
-This means:
-
-- A developer cannot accidentally release a major version by editing a file
-- The release history is always consistent with the commit history
-- The changelog is always generated from the actual commits, not from what someone remembered to write
+There are no `VERSION` files to hand-edit and no version tags to cut. The version is
+**computed in CI at build time** from PyPI history plus the GitHub event, then injected
+into both distributions before they build. A developer cannot release a particular
+version by editing a file — the pipeline decides it.
 
 ## How versions are computed
 
-CI runs `scripts/compute_version.py` on every push to `main`. It:
+The version is `MAJOR.MINOR.PATCH[.devN]`, produced by
+[`.github/scripts/calculate_version.py`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/scripts/calculate_version.py):
 
-1. Finds the most recent `vX.Y.Z` tag via `git describe`
-2. Reads all commits since that tag using `git log`
-3. Parses each commit message for Conventional Commits syntax
-4. Determines the bump level from the highest-priority commit type
+| Segment | Source |
+|---|---|
+| `MAJOR` | the `MAJOR_VERSION` env in `release.yml` — the **only** place it can change. Currently `0`. |
+| `MINOR` | the latest `MINOR` for that `MAJOR` published on PyPI, **+ 1**. First release starts at `0.1.0`. |
+| `PATCH` | the PR number on PR builds; `0` on a push to `main`. |
+| `.devN` | the GitHub run number — TestPyPI preview builds only. |
 
-```
-Commit types → bump level
-─────────────────────────
-BREAKING CHANGE footer  → MAJOR
-feat:                   → MINOR  
-fix: / perf: / refactor:→ PATCH
-docs: / test: / chore:  → (none)
-```
-
-5. Prints the next version (and whether there is anything releasable)
-
-A maintainer runs it to decide the next version, then **creates and pushes that tag by
-hand** — tagging is a deliberate human action, not auto-pushed from `main`. Pushing the
-tag is what triggers the release workflow.
+Because MINOR is read back from PyPI and incremented, **every merge to `main` is a new
+MINOR** (`0.1.0`, `0.2.0`, …). Nothing to remember, nothing to sync.
 
 ## The MAJOR bump special case
 
-A MAJOR bump requires one of:
+Bumping MAJOR — for example cutting the first stable `1.0.0` — is a deliberate edit to
+`MAJOR_VERSION` in [`release.yml`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/workflows/release.yml).
+MINOR then restarts at `1` for the new major. This is intentional friction: a MAJOR bump
+means committing to a backwards-incompatible change, so it lives in a reviewed change to
+the release workflow rather than falling out of a commit message.
 
-1. **A `BREAKING CHANGE:` footer** in any commit message since the last tag:
-   ```
-   feat(config): rename pass-filenames to pass-files
-   
-   BREAKING CHANGE: The `pass-filenames` key in check.toml has been renamed
-   to `pass-files`. Update the key in your check.toml.
-   ```
+## Both distributions, one version
 
-2. **A `!` after the type** (shorthand):
-   ```
-   feat!: drop Python 3.10 support
-   ```
-
-3. **The `--force-major` flag** to `compute_version.py` — for the rare case where a MAJOR bump is appropriate but no commit message cleanly expresses it.
-
-This is intentional friction. Bumping MAJOR means committing to a backwards-incompatible change. Having to make that declaration in the commit message itself means it's tied to the specific commit that introduces the break, making the git history self-documenting.
+hooksmith ships two packages — the `hooksmith` host and the compiled `hooksmith-core`.
+[`inject_version.sh`](https://github.com/snoodleboot-io/hooksmith/blob/main/.github/scripts/inject_version.sh)
+writes the single computed version into `src/hooksmith/__about__.py` (host),
+`hooksmith-rs/Cargo.toml` (core), and the host's `hooksmith-core==` pin, so a given
+release is always the *same* version across both.
 
 ## Commit message policy
 
-All commits on `main` must follow [Conventional Commits](https://www.conventionalcommits.org/). The branch protection ruleset enforces this via a commit message regex:
-
-```
-^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9-]+\))?(!)?: .{1,100}
-```
-
-PR titles are also validated (squash merges use the PR title as the commit message).
+All commits on `main` follow [Conventional Commits](https://www.conventionalcommits.org/),
+enforced by the `commit-msg` hook (`cz check`) and by branch protection. This keeps the
+history readable and PR titles meaningful (squash merges use the PR title). It no longer
+drives version numbers — that is PyPI's job now — but it remains the house style.
 
 ## Stability policy
 
 ### `0.x.y` — initial development
 
-In the `0.x.y` range, MINOR bumps may include breaking changes. This is standard semver for pre-1.0 software. Once the API stabilises, we'll ship `1.0.0`.
+In the `0.x.y` range, MINOR bumps may include breaking changes. This is standard semver
+for pre-1.0 software. Once the API stabilises, we'll ship `1.0.0` by bumping
+`MAJOR_VERSION`.
 
 ### `1.x.y` and above
 
@@ -84,46 +66,30 @@ Full semver guarantees:
 
 ### Deprecation policy
 
-Features deprecated in `X.Y.0` are removed no earlier than `X+1.0.0`. Deprecation warnings are emitted at runtime for at least one minor version before removal.
+Features deprecated in `X.Y.0` are removed no earlier than `X+1.0.0`. Deprecation
+warnings are emitted at runtime for at least one minor version before removal.
 
 ## Release cadence
 
-gatecheck does not follow a fixed release calendar. Releases happen when releasable commits accumulate on `main`. In practice this means:
-
-- Bug fixes ship within days of landing on `main`
-- Features ship when they're ready (typically with the PR that adds them)
-- There are no "release trains" or scheduled dates
+hooksmith does not follow a fixed release calendar. Because a release *is* a merge to
+`main` (behind a manual approval before PyPI), features and fixes ship when their PR
+lands. There are no "release trains" or scheduled dates.
 
 ## Version in code
 
-The package version is read at runtime from the installed package metadata:
+The package version is read at runtime from the installed package metadata, falling back
+to the injected placeholder when running from an uninstalled checkout:
 
 ```python
-# src/gatecheck/__init__.py
+# src/hooksmith/__init__.py
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("gatecheck")
+    __version__ = version("hooksmith")
 except PackageNotFoundError:
-    __version__ = "0.0.0+dev"  # running from source, uninstalled
+    from hooksmith.__about__ import __version__  # source checkout, uninstalled
 ```
 
-This means the version in code is always derived from the installed package, which is always derived from the git tag. No manual sync required.
-
-## Verifying the next version locally
-
-```bash
-python scripts/compute_version.py
-# Current version : 0.2.1
-# Commits analysed: 7
-# Bump level      : MINOR
-# Next version    : 0.3.0
-```
-
-With `--force-major`:
-
-```bash
-python scripts/compute_version.py --force-major=true
-# Bump level      : MAJOR
-# Next version    : 1.0.0
-```
+`src/hooksmith/__about__.py` holds a `0.0.0.dev0` placeholder locally; CI rewrites it to
+the computed version at build time. See [Releasing hooksmith](https://github.com/snoodleboot-io/hooksmith/blob/main/RELEASING.md)
+for the full flow.

@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.env.uv_bootstrap (STY-0010 / GAT-12).
+"""Unit tests for hooksmith.env.uv_bootstrap (STY-0010 / GAT-12).
 
 Hermetic — no real network and no real uv download: the network boundary is a
 dependency-injected ``FakeDownloader`` returning an in-memory ``.tar.gz``, and the
@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from gatecheck import venv
-from gatecheck.env.uv_bootstrap import (
+from hooksmith import venv
+from hooksmith.env.uv_bootstrap import (
     UvBootstrapError,
     bootstrap_uv,
     select_asset,

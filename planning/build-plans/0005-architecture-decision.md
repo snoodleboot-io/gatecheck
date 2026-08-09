@@ -14,12 +14,12 @@ date: 2026-07-05
 
 ---
 
-## §1 Placement — `gatecheck.sources.resolver` (LOCKED)
+## §1 Placement — `hooksmith.sources.resolver` (LOCKED)
 
 ### Decision
 
-The resolver lands in the **existing leaf package** `src/gatecheck/sources/`,
-alongside `parser.py` — **not** in `gatecheck.env`. `resolve_source` is the
+The resolver lands in the **existing leaf package** `src/hooksmith/sources/`,
+alongside `parser.py` — **not** in `hooksmith.env`. `resolve_source` is the
 natural second half of the STY-0004 parse→resolve slice: it consumes a
 `ParsedSource` (defined here) and produces a single located binary with no
 notion of a cached environment.
@@ -30,11 +30,11 @@ notion of a cached environment.
    …)` `match`es on the union STY-0004 defined and returns a value object built
    from the same idioms. `parse_source` → `resolve_source` reads as one arc in
    one package.
-2. **It stays a pure, dependency-light leaf.** `gatecheck.sources` imports
-   nothing from `gatecheck.config` or `gatecheck.env`; keeping the resolver here
+2. **It stays a pure, dependency-light leaf.** `hooksmith.sources` imports
+   nothing from `hooksmith.config` or `hooksmith.env`; keeping the resolver here
    preserves that. It needs only stdlib `os` / `shutil` / `pathlib` / `typing`
    plus the already-present `pydantic`.
-3. **`gatecheck.env` is a different abstraction.** `EnvManager.resolve(hook) ->
+3. **`hooksmith.env` is a different abstraction.** `EnvManager.resolve(hook) ->
    ResolvedEnv(bin_dir, cache_key)` is about uv-backed venv creation and caching
    (the Environments feature). STY-0005 produces **no** cache key and creates
    **no** env, so it does not fit that contract. Later, `EnvManager` (or the
@@ -47,17 +47,17 @@ notion of a cached environment.
 
 ---
 
-## §2 Module layout — additions to `src/gatecheck/sources/`
+## §2 Module layout — additions to `src/hooksmith/sources/`
 
 One class / function-group per file (core conventions: filename = snake_case of
 the class).
 
 | File | Status | Single responsibility |
 |---|---|---|
-| `src/gatecheck/sources/resolved_tool.py` | **NEW** | `ResolvedTool` frozen pydantic model. |
-| `src/gatecheck/sources/source_resolution_error.py` | **NEW** | `SourceResolutionError(ValueError)`. |
-| `src/gatecheck/sources/resolver.py` | **NEW** | `resolve_source(...) -> ResolvedTool` + private helpers. No class. |
-| `src/gatecheck/sources/__init__.py` | **EDIT** | Extend imports + `__all__` with the three new symbols. |
+| `src/hooksmith/sources/resolved_tool.py` | **NEW** | `ResolvedTool` frozen pydantic model. |
+| `src/hooksmith/sources/source_resolution_error.py` | **NEW** | `SourceResolutionError(ValueError)`. |
+| `src/hooksmith/sources/resolver.py` | **NEW** | `resolve_source(...) -> ResolvedTool` + private helpers. No class. |
+| `src/hooksmith/sources/__init__.py` | **EDIT** | Extend imports + `__all__` with the three new symbols. |
 | `parsed_source.py`, `pypi_source.py`, `project_source.py`, `system_source.py`, `unsupported_source.py`, `parser.py`, `source_spec_error.py` | UNCHANGED | STY-0004 models / parser — consumed, not modified. |
 
 ### `__init__.py` exports / `__all__` (LOCKED)
@@ -66,19 +66,19 @@ Alphabetical, uppercase before lowercase (matching STY-0004 §2). The three new
 symbols interleave into the existing list:
 
 ```python
-"""Public facade for gatecheck.sources (BUILD-0004-ARCH §2, BUILD-0005-ARCH §2)."""
+"""Public facade for hooksmith.sources (BUILD-0004-ARCH §2, BUILD-0005-ARCH §2)."""
 from __future__ import annotations
 
-from gatecheck.sources.parsed_source import ParsedSource
-from gatecheck.sources.parser import parse_source
-from gatecheck.sources.project_source import ProjectSource
-from gatecheck.sources.pypi_source import PyPISource
-from gatecheck.sources.resolved_tool import ResolvedTool
-from gatecheck.sources.resolver import resolve_source
-from gatecheck.sources.source_resolution_error import SourceResolutionError
-from gatecheck.sources.source_spec_error import SourceSpecError
-from gatecheck.sources.system_source import SystemSource
-from gatecheck.sources.unsupported_source import UnsupportedSource
+from hooksmith.sources.parsed_source import ParsedSource
+from hooksmith.sources.parser import parse_source
+from hooksmith.sources.project_source import ProjectSource
+from hooksmith.sources.pypi_source import PyPISource
+from hooksmith.sources.resolved_tool import ResolvedTool
+from hooksmith.sources.resolver import resolve_source
+from hooksmith.sources.source_resolution_error import SourceResolutionError
+from hooksmith.sources.source_spec_error import SourceSpecError
+from hooksmith.sources.system_source import SystemSource
+from hooksmith.sources.unsupported_source import UnsupportedSource
 
 __all__ = [
     "ParsedSource",
@@ -152,8 +152,8 @@ Notes:
 from collections.abc import Mapping
 from pathlib import Path
 
-from gatecheck.sources.parsed_source import ParsedSource
-from gatecheck.sources.resolved_tool import ResolvedTool
+from hooksmith.sources.parsed_source import ParsedSource
+from hooksmith.sources.resolved_tool import ResolvedTool
 
 
 def resolve_source(
@@ -345,13 +345,13 @@ Contrast table:
 
 ## §7 Import direction / no cycle (LOCKED)
 
-- `gatecheck.sources` (including the three new modules) imports **only** stdlib
+- `hooksmith.sources` (including the three new modules) imports **only** stdlib
   (`os`, `shutil`, `pathlib`, `collections.abc`, `typing`), `pydantic`, and its
   **own** sibling modules (`parsed_source`, the four kind-models, `resolved_tool`).
-- It imports **nothing** from `gatecheck.config` or `gatecheck.env` at runtime.
+- It imports **nothing** from `hooksmith.config` or `hooksmith.env` at runtime.
   `resolve_source` receives `tool` as an explicit string rather than a `HookDef`,
   precisely so `sources` need not import `config`.
-- **No dependency on `gatecheck.env`.** The resolver does not touch the env
+- **No dependency on `hooksmith.env`.** The resolver does not touch the env
   package; the `.gitignore` un-ignore is a separate chore (charter § Split-out).
 - **Import direction:** `config` → `sources` (one-directional; STY-0004 §6
   wired `config/_error_translator.py` + `config/loader.py` to import
@@ -408,9 +408,9 @@ Contrast table:
 - Windows `Scripts\` / `.exe` / `PATHEXT` project-branch handling (§6).
 - Cache key / hit-miss explainability (Cache feature) — `origin` is carried, no
   cache key produced.
-- The `.gitignore` `env/` un-ignore + committing `src/gatecheck/env/` — separate
+- The `.gitignore` `env/` un-ignore + committing `src/hooksmith/env/` — separate
   chore (charter § Split-out; STY-0005 TSK-008).
-- Any new public symbol on `gatecheck.config`; any new runtime dependency.
+- Any new public symbol on `hooksmith.config`; any new runtime dependency.
 
 ---
 
@@ -421,18 +421,18 @@ Contrast table:
 - Feature: `planning/features/FEAT-0002-source-resolution/feature.md`
 - Build charter: `planning/build-plans/0005-charter.md`
 - Predecessor architecture documents:
-  - `0004-architecture-decision.md` — `gatecheck.sources` package, frozen-model
+  - `0004-architecture-decision.md` — `hooksmith.sources` package, frozen-model
     idiom, `ParsedSource` plain-union, `__all__` ordering, `SourceSpecError`,
     import direction (`config` → `sources`).
 - Consumed (unchanged) STY-0004 code:
-  - `src/gatecheck/sources/parsed_source.py` — `ParsedSource` union (the `match`
+  - `src/hooksmith/sources/parsed_source.py` — `ParsedSource` union (the `match`
     surface).
-  - `src/gatecheck/sources/{system,project,pypi,unsupported}_source.py` — the
+  - `src/hooksmith/sources/{system,project,pypi,unsupported}_source.py` — the
     four `kind`-models.
 - Config references (read for §5 justification, not modified):
-  - `src/gatecheck/config/config_error.py` — `ConfigError(path, [(line, col,
+  - `src/hooksmith/config/config_error.py` — `ConfigError(path, [(line, col,
     msg)])` (why resolution errors do NOT map here).
-  - `src/gatecheck/config/hook_def.py` — `HookDef.run` / `from_` (where the
+  - `src/hooksmith/config/hook_def.py` — `HookDef.run` / `from_` (where the
     runner derives `tool`; resolver takes `tool` explicitly).
 - New unit tests (red): `tests/unit/test_source_resolve.py`.
 - New acceptance tests (red):

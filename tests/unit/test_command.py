@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.command.tokenize (STY-0025 / GAT-27).
+"""Unit tests for hooksmith.command.tokenize (STY-0025 / GAT-27).
 
 Hermetic — platform simulated via ``venv._is_windows`` (patching ``os.name`` would
 break ``pathlib`` on POSIX). Covers POSIX splitting, Windows backslash preservation,
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from gatecheck import venv
-from gatecheck.command import tokenize
+from hooksmith import venv
+from hooksmith.command import tokenize
 
 
 def test_posix_splits_and_consumes_backslashes(monkeypatch: pytest.MonkeyPatch) -> None:

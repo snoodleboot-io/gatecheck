@@ -1,27 +1,27 @@
 # Contributing
 
 Bug reports, questions and pull requests are all welcome at
-[snoodleboot-io/gatecheck](https://github.com/snoodleboot-io/gatecheck).
+[snoodleboot-io/hooksmith](https://github.com/snoodleboot-io/hooksmith).
 
 ## Getting set up
 
-gatecheck is a Python host around a compiled Rust core, so you need both toolchains:
+hooksmith is a Python host around a compiled Rust core, so you need both toolchains:
 
 ```bash
-git clone https://github.com/snoodleboot-io/gatecheck
-cd gatecheck
+git clone https://github.com/snoodleboot-io/hooksmith
+cd hooksmith
 
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,docs]"
 
 # build and install the Rust extension into the venv
-maturin develop --release -m gatecheck-rs/Cargo.toml
+maturin develop --release -m hooksmith-rs/Cargo.toml
 ```
 
 Verify:
 
 ```bash
-gatecheck --version
+hooksmith --version
 pytest -q -m "not network"
 ```
 
@@ -37,14 +37,14 @@ mypy src
 pytest -m "not network"
 
 # the Rust side
-cargo fmt --manifest-path gatecheck-rs/Cargo.toml -- --check
-cargo clippy --manifest-path gatecheck-rs/Cargo.toml -- -D warnings
-cargo test --manifest-path gatecheck-rs/Cargo.toml
+cargo fmt --manifest-path hooksmith-rs/Cargo.toml -- --check
+cargo clippy --manifest-path hooksmith-rs/Cargo.toml -- -D warnings
+cargo test --manifest-path hooksmith-rs/Cargo.toml
 ```
 
 Coverage is gated at 85%.
 
-gatecheck also checks itself — `gatecheck run full --all-files` runs the same tools
+hooksmith also checks itself — `hooksmith run full --all-files` runs the same tools
 through its own runner.
 
 ## Test markers
@@ -78,7 +78,7 @@ the requirement and index URL. The rendered message is derived from those fields
 formatted at the raise site.
 
 **Docs are checked against the CLI.** `tests/unit/test_docs_cli_accuracy.py` extracts
-every `gatecheck …` invocation written in the docs and walks it against the real click
+every `hooksmith …` invocation written in the docs and walks it against the real click
 command tree. If you document a flag before adding it to the CLI, that test fails —
 deliberately.
 
@@ -111,11 +111,11 @@ site, and it is much cheaper to catch here than after publishing.
 
 ## Working on the Rust core
 
-The crate lives in `gatecheck-rs/` and is exposed to Python through PyO3. After
+The crate lives in `hooksmith-rs/` and is exposed to Python through PyO3. After
 changing it, rebuild before running the Python tests:
 
 ```bash
-maturin develop --release -m gatecheck-rs/Cargo.toml
+maturin develop --release -m hooksmith-rs/Cargo.toml
 ```
 
 The boundary is deliberately narrow — see [Rust Core](design/rust-core.md) for what

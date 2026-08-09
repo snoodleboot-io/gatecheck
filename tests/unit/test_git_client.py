@@ -1,4 +1,4 @@
-"""Unit tests for gatecheck.runner.SubprocessGitClient (STY-0011 / GAT-13).
+"""Unit tests for hooksmith.runner.SubprocessGitClient (STY-0011 / GAT-13).
 
 Hermetic — ``subprocess.run`` is patched at the module boundary; no real git.
 Covers the argv for staged / tracked queries, NUL-delimited parsing (including
@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from gatecheck.runner import GitError, SubprocessGitClient
-from gatecheck.runner import git_client as git_client_module
+from hooksmith.runner import GitError, SubprocessGitClient
+from hooksmith.runner import git_client as git_client_module
 
 
 def _patch_run(monkeypatch: pytest.MonkeyPatch, recorded: list[list[str]], result: object) -> None:
